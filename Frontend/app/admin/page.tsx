@@ -1,6 +1,6 @@
 "use client";
 
-import { SystemAdminDashboard } from '@/components/SystemAdminDashboard';
+import { SystemAdminDashboard } from '@/Frontend/components/SystemAdminDashboard';
 import { useApp } from '@/lib/context';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';

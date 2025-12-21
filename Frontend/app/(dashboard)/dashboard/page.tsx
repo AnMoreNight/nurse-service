@@ -1,15 +1,15 @@
 "use client";
 
-import { Dashboard } from '@/components/Dashboard';
-import { ShiftManager } from '@/components/ShiftManager';
-import { UserManagement } from '@/components/UserManagement';
-import { CompanySettingsView } from '@/components/CompanySettings';
-import { VisitModal } from '@/components/VisitModal';
-import { StaffFormModal } from '@/components/StaffFormModal';
-import { ScheduleSuggestionModal } from '@/components/ScheduleSuggestionModal';
-import { SearchVisitsModal } from '@/components/SearchVisitsModal';
-import { ExportModal } from '@/components/ExportModal';
-import { Toast } from '@/components/Toast';
+import { Dashboard } from '@/Frontend/components/Dashboard';
+import { ShiftManager } from '@/Frontend/components/ShiftManager';
+import { UserManagement } from '@/Frontend/components/UserManagement';
+import { CompanySettingsView } from '@/Frontend/components/CompanySettings';
+import { VisitModal } from '@/Frontend/components/VisitModal';
+import { StaffFormModal } from '@/Frontend/components/StaffFormModal';
+import { ScheduleSuggestionModal } from '@/Frontend/components/ScheduleSuggestionModal';
+import { SearchVisitsModal } from '@/Frontend/components/SearchVisitsModal';
+import { ExportModal } from '@/Frontend/components/ExportModal';
+import { Toast } from '@/Frontend/components/Toast';
 import { useApp } from '@/lib/context';
 import { useSearchParams } from 'next/navigation';
 import { useState, useMemo } from 'react';

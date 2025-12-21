@@ -9,19 +9,19 @@ import {
   VisitWithStaff, Staff, RecurrenceScope, Visit, ShiftAssignment, ShiftType, 
   AuthUser, UserAccount, ScheduleSuggestion, Company, CompanySettings 
 } from '@/lib/types';
-import { Dashboard } from '@/components/Dashboard';
-import { ShiftManager } from '@/components/ShiftManager';
-import { VisitModal } from '@/components/VisitModal';
-import { ExportModal } from '@/components/ExportModal';
-import { StaffFormModal } from '@/components/StaffFormModal';
-import { Login } from '@/components/Login';
-import { SystemAdminDashboard } from '@/components/SystemAdminDashboard';
-import { UserManagement } from '@/components/UserManagement';
-import { ScheduleSuggestionModal } from '@/components/ScheduleSuggestionModal';
-import { ChangePasswordModal } from '@/components/ChangePasswordModal';
-import { CompanySettingsView } from '@/components/CompanySettings';
-import { SearchVisitsModal } from '@/components/SearchVisitsModal';
-import { Toast } from '@/components/Toast';
+import { Dashboard } from '@/Frontend/components/Dashboard';
+import { ShiftManager } from '@/Frontend/components/ShiftManager';
+import { VisitModal } from '@/Frontend/components/VisitModal';
+import { ExportModal } from '@/Frontend/components/ExportModal';
+import { StaffFormModal } from '@/Frontend/components/StaffFormModal';
+import { Login } from '@/Frontend/components/Login';
+import { SystemAdminDashboard } from '@/Frontend/components/SystemAdminDashboard';
+import { UserManagement } from '@/Frontend/components/UserManagement';
+import { ScheduleSuggestionModal } from '@/Frontend/components/ScheduleSuggestionModal';
+import { ChangePasswordModal } from '@/Frontend/components/ChangePasswordModal';
+import { CompanySettingsView } from '@/Frontend/components/CompanySettings';
+import { SearchVisitsModal } from '@/Frontend/components/SearchVisitsModal';
+import { Toast } from '@/Frontend/components/Toast';
 import { 
   Calendar, Notebook, LogOut, X, AlertTriangle, Download, 
   Sparkles, Search, Users, Key, Settings, User, Menu 
