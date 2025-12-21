@@ -1,9 +1,10 @@
+"use client";
 
 import React, { useState, useEffect } from 'react';
-import { Staff, VisitWithStaff, ScheduleSuggestion } from '../types';
+import { Staff, VisitWithStaff, ScheduleSuggestion } from '@/lib/types';
 import { X, Sparkles, MapPin, Clock, Calendar, Check, AlertCircle } from 'lucide-react';
-import { suggestSchedule } from '../services/geminiService';
-import { toLocalISOString } from '../constants';
+import { suggestSchedule } from '@/services/geminiService';
+import { toLocalISOString } from '@/lib/constants';
 
 interface ScheduleSuggestionModalProps {
   onClose: () => void;
@@ -33,8 +34,6 @@ export const ScheduleSuggestionModal: React.FC<ScheduleSuggestionModalProps> = (
   const [isProcessing, setIsProcessing] = useState(false);
   const [suggestions, setSuggestions] = useState<ScheduleSuggestion[]>([]);
   const [error, setError] = useState('');
-
-  // const weekDayLabels = ['日', '月', '火', '水', '木', '金', '土']; // Removed unused
 
   useEffect(() => {
       if (initialValues) {
@@ -112,10 +111,10 @@ export const ScheduleSuggestionModal: React.FC<ScheduleSuggestionModalProps> = (
         if (result.length === 0) {
             setError("条件に合う空き枠が見つかりませんでした。条件を緩和して再度お試しください。");
         }
-    } catch (e: any) {
+    } catch (e: unknown) {
         console.error("Analysis Error:", e);
         // Show specific error if available
-        const msg = e.message || "AI分析中にエラーが発生しました。";
+        const msg = e instanceof Error ? e.message : "AI分析中にエラーが発生しました。";
         if (msg.includes("API key")) {
              setError("APIキー設定エラー: 環境変数を確認してください。");
         } else {
@@ -216,8 +215,6 @@ export const ScheduleSuggestionModal: React.FC<ScheduleSuggestionModalProps> = (
                          </div>
                     </div>
                 </div>
-
-                {/* Week Day Selection Removed - auto handled by date */}
 
                 <div>
                     <label className="block text-xs font-bold text-gray-500 mb-2">候補スタッフ (複数選択可) <span className="text-red-500">*</span></label>

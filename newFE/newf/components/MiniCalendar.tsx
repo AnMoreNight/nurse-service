@@ -1,3 +1,4 @@
+"use client";
 
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -37,7 +38,7 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({ currentDate, onDateS
     // 0 = Sunday, 1 = Monday...
     const startDayOfWeek = firstDayOfMonth.getDay(); 
     
-    const days = [];
+    const days: (Date | null)[] = [];
     
     // Empty slots for previous month
     for (let i = 0; i < startDayOfWeek; i++) {

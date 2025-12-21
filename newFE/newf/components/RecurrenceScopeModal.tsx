@@ -1,6 +1,7 @@
+"use client";
 
 import React, { useState } from 'react';
-import { RecurrenceScope } from '../types';
+import { RecurrenceScope } from '@/lib/types';
 
 interface RecurrenceScopeModalProps {
   mode: 'update' | 'delete';

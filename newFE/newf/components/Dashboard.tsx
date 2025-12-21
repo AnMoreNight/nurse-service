@@ -1,10 +1,11 @@
+"use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { VisitWithStaff, Staff, ShiftAssignment, ShiftType, CompanySettings, RecurrenceScope } from '../types';
-import { Repeat, ChevronLeft, ChevronRight, ChevronDown, Calendar as CalendarIcon, Moon, ListChecks, GripVertical, Notebook } from 'lucide-react';
+import { VisitWithStaff, Staff, ShiftAssignment, ShiftType, CompanySettings, RecurrenceScope } from '@/lib/types';
+import { Repeat, ChevronLeft, ChevronRight, ChevronDown, Moon, GripVertical, Notebook } from 'lucide-react';
 import { MiniCalendar } from './MiniCalendar';
 import { RecurrenceScopeModal } from './RecurrenceScopeModal';
-import { getEffectiveShiftType } from '../constants';
+import { getEffectiveShiftType } from '@/lib/constants';
 
 interface DashboardProps {
   visits: VisitWithStaff[];
@@ -70,7 +71,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
   const currentTimeTop = currentMinutes * MINUTE_HEIGHT;
 
-  // Parse date manually to avoid timezone shifts (e.g. UTC vs Local)
   const [y, m, d] = currentDate.split('-').map(Number);
   const dateObj = new Date(y, m - 1, d);
   const isToday = new Date().toDateString() === dateObj.toDateString();
@@ -171,7 +171,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const handleColumnDragLeave = (e: React.DragEvent) => {
       if (isReadOnly) return;
-      // Prevent flickering when entering children
       if (e.currentTarget.contains(e.relatedTarget as Node)) return;
       setDragOverColumnIndex(null);
   };
@@ -191,7 +190,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   useEffect(() => {
-      // Scroll to 08:00 on mount with a slight delay to ensure rendering is complete
       const timer = setTimeout(() => {
           const el = document.getElementById('dashboard-scroll-container');
           if (el) el.scrollTop = 8 * SLOT_HEIGHT;
@@ -233,7 +231,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
       return layoutMap;
   };
 
-  // Dynamic Styling based on Company Settings
   const getVisitStyles = (visit: VisitWithStaff, isHoliday: boolean) => {
       const config = companySettings.visitStatuses.find(s => s.key === visit.status);
       let bgClass = 'bg-blue-100 border-blue-500 text-blue-900 hover:bg-blue-200';
@@ -241,7 +238,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       if (config) {
           const color = config.color;
-          // Cancelled usually has strict styling
           if (visit.status === 'CANCELLED') {
               bgClass = `bg-${color}-200 border-${color}-400 text-${color}-500 line-through hover:bg-${color}-300`;
               opacity = 'opacity-80';
@@ -277,7 +273,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     )}
                 </div>
             </div>
-            {/* Dynamic Legend */}
             <div className="hidden md:flex items-center gap-3 overflow-x-auto max-w-[50%]">
                 <div className="flex items-center gap-2 text-xs text-gray-500 mr-4 whitespace-nowrap">
                      {companySettings.visitStatuses.map(status => (
@@ -343,7 +338,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                             ${effectiveType === 'night2_holiday' ? 'bg-pink-500 text-white border-pink-600 ring-2 ring-gray-300' : ''} 
                                             ${effectiveType === 'holiday' ? 'bg-gray-500 text-white border-gray-600' : ''} 
                                             ${effectiveType === 'none' || effectiveType === 'work' ? 'bg-gray-100 text-gray-400 border-gray-300 hover:border-gray-400' : ''}`}
-                                            value={effectiveType === 'none' ? 'work' : effectiveType}
+                                            value={effectiveType === 'none' || effectiveType === null ? 'work' : effectiveType}
                                             onChange={(e) => { e.stopPropagation(); onUpdateShift(staff.id, currentDate, e.target.value as ShiftType); }}
                                             onMouseDown={(e) => e.stopPropagation()}
                                         >

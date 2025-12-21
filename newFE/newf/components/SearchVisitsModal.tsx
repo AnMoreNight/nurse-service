@@ -1,8 +1,9 @@
+"use client";
 
 import React, { useState, useMemo } from 'react';
-import { Visit, VisitWithStaff, Staff, CompanySettings } from '../types';
+import { VisitWithStaff, Staff, CompanySettings } from '@/lib/types';
 import { X, Search, Calendar, User, Clock, MapPin, ArrowRight } from 'lucide-react';
-import { checkVisitVisibility, toLocalISOString } from '../constants';
+import { checkVisitVisibility, toLocalISOString } from '@/lib/constants';
 
 interface SearchVisitsModalProps {
   onClose: () => void;

@@ -1,7 +1,8 @@
+"use client";
 
 import React, { useState } from 'react';
-import { UserAccount, UserRole } from '../types';
-import { Plus, Edit, Trash2, Key, User, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { UserAccount, UserRole } from '@/lib/types';
+import { Plus, Edit, Trash2, Key, User, ShieldCheck, Eye, EyeOff, Users } from 'lucide-react';
 
 interface UserManagementProps {
   companyId: string;
@@ -99,7 +100,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({ companyId, users
         {/* Header */}
         <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
             <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                <UsersIcon className="w-5 h-5 text-purple-600" />
+                <Users className="w-5 h-5 text-purple-600" />
                 ユーザー管理
             </h2>
             <button 
@@ -277,12 +278,3 @@ export const UserManagement: React.FC<UserManagementProps> = ({ companyId, users
     </div>
   );
 };
-
-const UsersIcon = ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-      <circle cx="9" cy="7" r="4"></circle>
-      <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
-      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-    </svg>
-);

@@ -1,6 +1,7 @@
+"use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { VisitWithStaff, Staff, RecurrenceRule, RecurrenceScope, CompanySettings } from '../types';
+import { VisitWithStaff, Staff, RecurrenceRule, RecurrenceScope, CompanySettings } from '@/lib/types';
 import { X, Save, User, Trash2, FileText, Repeat, Users, Check, MapPin, ExternalLink, Copy, Calendar, Sparkles, AlertTriangle } from 'lucide-react';
 import { RecurrenceScopeModal } from './RecurrenceScopeModal';
 
@@ -97,7 +98,6 @@ export const VisitModal: React.FC<VisitModalProps> = ({
 
   // Check for unsaved changes
   const hasChanges = () => {
-    // Check primitives
     if (
         date !== visit.date ||
         startTime !== visit.startTime ||
@@ -109,13 +109,11 @@ export const VisitModal: React.FC<VisitModalProps> = ({
         recurrence !== visit.recurrence
     ) return true;
 
-    // Check staff array
     const currentStaffIds = [...staffIds].sort();
     const originalStaffIds = [...visit.staffIds].sort();
     if (currentStaffIds.length !== originalStaffIds.length) return true;
     if (currentStaffIds.some((id, i) => id !== originalStaffIds[i])) return true;
 
-    // Check recurrence rule
     if (recurrence === 'custom') {
         return JSON.stringify(recurrenceRule) !== JSON.stringify(visit.recurrenceRule);
     }
@@ -142,7 +140,6 @@ export const VisitModal: React.FC<VisitModalProps> = ({
           return;
       }
 
-      // Check recurring
       if (!isNew && isRecurring) {
           setShowScopeModal('update');
       } else {
@@ -194,7 +191,6 @@ export const VisitModal: React.FC<VisitModalProps> = ({
       window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`, '_blank');
   };
 
-  // Helper to format staff names
   const selectedStaffNames = staffList
     .filter(s => staffIds.includes(s.id))
     .map(s => s.name)
@@ -205,7 +201,6 @@ export const VisitModal: React.FC<VisitModalProps> = ({
       return s ? s.color : 'gray';
   };
 
-  // Helper to detect recurrence mode for UI
   const getRecurrenceMode = () => {
       if (recurrence === 'none') return 'none';
       if (recurrence === 'custom' && recurrenceRule) {
@@ -214,7 +209,6 @@ export const VisitModal: React.FC<VisitModalProps> = ({
       return 'none'; 
   };
 
-  // Helper to get current day label for Weekly option
   const getDayOfWeekLabel = () => {
       if (!date) return '';
       const [y, m, d] = date.split('-').map(Number);
@@ -229,13 +223,12 @@ export const VisitModal: React.FC<VisitModalProps> = ({
           setRecurrenceRule(undefined);
       } else {
           setRecurrence('custom');
-          // Default rule creation based on mode
           const [y, m, d] = date.split('-').map(Number);
           const dateObj = new Date(y, m - 1, d);
           const dayOfWeek = dateObj.getDay();
           
           setRecurrenceRule({
-              frequency: mode as any,
+              frequency: mode as 'daily' | 'weekly' | 'monthly' | 'yearly',
               interval: 1,
               weekDays: mode === 'weekly' ? [dayOfWeek] : [],
               endType: 'never',
@@ -247,7 +240,6 @@ export const VisitModal: React.FC<VisitModalProps> = ({
   const handleStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newStartTime = e.target.value;
     
-    // Calculate duration from current state and update endTime
     if (startTime && endTime && newStartTime) {
         const [oldH, oldM] = startTime.split(':').map(Number);
         const [endH, endM] = endTime.split(':').map(Number);
@@ -257,12 +249,11 @@ export const VisitModal: React.FC<VisitModalProps> = ({
         const oldEndMins = endH * 60 + endM;
         
         let duration = oldEndMins - oldStartMins;
-        if (duration < 0) duration += 24 * 60; // Handle crossing midnight
+        if (duration < 0) duration += 24 * 60;
         
         const newStartMins = newH * 60 + newM;
-        let newEndMins = newStartMins + duration;
+        const newEndMins = newStartMins + duration;
         
-        // Format new end time
         let finalEndH = Math.floor(newEndMins / 60);
         const finalEndM = newEndMins % 60;
         
@@ -439,7 +430,7 @@ export const VisitModal: React.FC<VisitModalProps> = ({
                 </div>
             </div>
 
-            {/* Recurrence - Simplified UI */}
+            {/* Recurrence */}
             {!isReadOnly && (
                 <div>
                     <label className="block text-xs font-bold text-gray-500 mb-1">繰り返し設定</label>

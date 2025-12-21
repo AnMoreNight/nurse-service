@@ -1,7 +1,8 @@
+"use client";
 
 import React, { useState } from 'react';
 import { X, Download, Calendar, Notebook } from 'lucide-react';
-import { toLocalISOString } from '../constants';
+import { toLocalISOString } from '@/lib/constants';
 
 interface ExportModalProps {
   onClose: () => void;
@@ -85,7 +86,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport }) =
                 <label className="block text-xs text-gray-400 mb-1">開始日</label>
                 <input 
                   type="date" 
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none text-gray-700"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none text-gray-700"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                 />
@@ -95,7 +96,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport }) =
                 <label className="block text-xs text-gray-400 mb-1">終了日</label>
                 <input 
                   type="date" 
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none text-gray-700"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none text-gray-700"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                 />

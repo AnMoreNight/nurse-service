@@ -1,7 +1,8 @@
+"use client";
 
 import React, { useState, useEffect } from 'react';
-import { CompanySettings } from '../types';
-import { Settings, Plus, Trash2, Save, AlertCircle } from 'lucide-react';
+import { CompanySettings } from '@/lib/types';
+import { Settings, Plus, Trash2, Save } from 'lucide-react';
 
 interface CompanySettingsProps {
   settings: CompanySettings;

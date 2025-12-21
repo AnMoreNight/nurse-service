@@ -1,6 +1,7 @@
+"use client";
 
 import React, { useState } from 'react';
-import { VisitWithStaff, CompanySettings } from '../types';
+import { VisitWithStaff, CompanySettings } from '@/lib/types';
 import { AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface VisitListProps {
@@ -23,14 +24,12 @@ export const VisitList: React.FC<VisitListProps> = ({ visits, onSelectVisit, com
       );
   }
 
-  // Sort: Date -> Time
   const sortedVisits = [...visits].sort((a, b) => {
       const dateDiff = a.date.localeCompare(b.date);
       if (dateDiff !== 0) return dateDiff;
       return a.startTime.localeCompare(b.startTime);
   });
 
-  // Pagination Logic
   const totalPages = Math.ceil(sortedVisits.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const paginatedVisits = sortedVisits.slice(startIndex, startIndex + ITEMS_PER_PAGE);
@@ -45,7 +44,6 @@ export const VisitList: React.FC<VisitListProps> = ({ visits, onSelectVisit, com
           if (color === 'gray' || color === 'slate') return `bg-${color}-100 text-${color}-500 border-${color}-200`;
           return `bg-${color}-50 text-${color}-600 border-${color}-100`;
       }
-      // Fallback
       return 'bg-blue-50 text-blue-600 border-blue-100';
   };
 
@@ -127,7 +125,6 @@ export const VisitList: React.FC<VisitListProps> = ({ visits, onSelectVisit, com
             </table>
         </div>
 
-        {/* Pagination Controls */}
         {totalPages > 1 && (
             <div className="p-3 border-t bg-gray-50 flex justify-between items-center text-sm text-gray-600">
                 <div>

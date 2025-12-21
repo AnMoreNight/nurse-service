@@ -1,6 +1,7 @@
+"use client";
 
 import React, { useState, useEffect } from 'react';
-import { Staff } from '../types';
+import { Staff } from '@/lib/types';
 import { X, Save, Calendar, Briefcase } from 'lucide-react';
 
 interface StaffFormModalProps {
@@ -74,7 +75,7 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({
             <label className="block text-xs font-bold text-gray-500 mb-1">名前</label>
             <input 
               type="text"
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none bg-white"
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none bg-white"
               placeholder="例: 看護師C (山田)"
               autoFocus
               value={name}
@@ -88,7 +89,7 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({
             <div className="relative">
                 <Briefcase className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                 <select
-                    className="w-full pl-9 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none bg-white appearance-none cursor-pointer"
+                    className="w-full pl-9 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none bg-white appearance-none cursor-pointer"
                     value={jobTitle}
                     onChange={(e) => setJobTitle(e.target.value)}
                 >
@@ -106,7 +107,7 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({
                 <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                 <input 
                   type="date"
-                  className="w-full pl-9 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none bg-white"
+                  className="w-full pl-9 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none bg-white"
                   value={joinedDate}
                   onChange={(e) => setJoinedDate(e.target.value)}
                 />
@@ -135,7 +136,7 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({
 
         <div className="p-5 border-t bg-gray-50 flex justify-end gap-3 mt-auto md:mt-0 pb-safe">
           <button onClick={onClose} className="px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-200 transition-colors text-sm font-medium">キャンセル</button>
-          <button onClick={handleSave} disabled={!name.trim()} className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-secondary transition-colors shadow-md flex items-center gap-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+          <button onClick={handleSave} disabled={!name.trim()} className="px-4 py-2 rounded-lg bg-teal-600 text-white hover:bg-teal-700 transition-colors shadow-md flex items-center gap-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed">
             <Save className="w-4 h-4" />
             {isEdit ? '更新' : '追加'}
           </button>

@@ -1,7 +1,8 @@
+"use client";
 
 import React, { useState } from 'react';
-import { RecurrenceRule, RecurrenceFrequency } from '../types';
-import { X, Check } from 'lucide-react';
+import { RecurrenceRule, RecurrenceFrequency } from '@/lib/types';
+import { X } from 'lucide-react';
 
 interface CustomRecurrenceModalProps {
   initialRule?: RecurrenceRule;
@@ -109,7 +110,7 @@ export const CustomRecurrenceModal: React.FC<CustomRecurrenceModalProps> = ({ in
           <div>
             <label className="block text-sm font-bold text-gray-600 mb-2">繰り返す頻度:</label>
             <select 
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none bg-gray-50 cursor-pointer"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none bg-gray-50 cursor-pointer"
                 value={frequency}
                 onChange={(e) => {
                     const val = e.target.value as RecurrenceFrequency;
@@ -202,7 +203,7 @@ export const CustomRecurrenceModal: React.FC<CustomRecurrenceModalProps> = ({ in
         </div>
 
         <div className="p-5 border-t bg-gray-50 rounded-b-none md:rounded-b-2xl flex justify-end gap-3 mt-auto md:mt-0 pb-safe">
-             <button onClick={onClose} className="px-5 py-2 text-primary hover:bg-teal-50 rounded-lg font-bold transition-colors">
+             <button onClick={onClose} className="px-5 py-2 text-teal-600 hover:bg-teal-50 rounded-lg font-bold transition-colors">
                  キャンセル
              </button>
              <button onClick={handleSave} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-bold shadow-md transition-transform active:scale-95">

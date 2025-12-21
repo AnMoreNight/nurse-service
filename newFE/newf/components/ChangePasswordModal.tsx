@@ -1,3 +1,4 @@
+"use client";
 
 import React, { useState } from 'react';
 import { X, Save, Key, Lock } from 'lucide-react';
@@ -45,7 +46,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClos
                 <Lock className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                 <input 
                   type="password"
-                  className="w-full pl-9 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none bg-white"
+                  className="w-full pl-9 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none bg-white"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="新しいパスワード"
@@ -59,7 +60,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClos
                 <Lock className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                 <input 
                   type="password"
-                  className="w-full pl-9 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none bg-white"
+                  className="w-full pl-9 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none bg-white"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="もう一度入力"
@@ -81,7 +82,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClos
           </button>
           <button 
             onClick={handleSave}
-            className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-secondary transition-colors shadow-md flex items-center gap-2 text-sm font-medium"
+            className="px-4 py-2 rounded-lg bg-teal-600 text-white hover:bg-teal-700 transition-colors shadow-md flex items-center gap-2 text-sm font-medium"
           >
             <Save className="w-4 h-4" />
             変更する

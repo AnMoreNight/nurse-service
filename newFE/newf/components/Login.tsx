@@ -1,6 +1,7 @@
+"use client";
 
 import React, { useState } from 'react';
-import { AuthUser, UserAccount } from '../types';
+import { AuthUser, UserAccount } from '@/lib/types';
 import { Lock, User, LogIn } from 'lucide-react';
 
 interface LoginProps {
@@ -32,7 +33,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, dbUsers }) => {
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-300">
         
         {/* Header */}
-        <div className="bg-primary p-8 text-center relative overflow-hidden">
+        <div className="bg-teal-600 p-8 text-center relative overflow-hidden">
           <div className="relative z-10">
             <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm shadow-inner border border-white/10">
               <span className="text-3xl font-bold text-white">N</span>
@@ -64,7 +65,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, dbUsers }) => {
                 <User className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all bg-gray-50 focus:bg-white"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition-all bg-gray-50 focus:bg-white"
                   placeholder="IDを入力"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
@@ -78,7 +79,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, dbUsers }) => {
                 <Lock className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                 <input
                   type="password"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all bg-gray-50 focus:bg-white"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition-all bg-gray-50 focus:bg-white"
                   placeholder="パスワードを入力"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -95,7 +96,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, dbUsers }) => {
 
             <button
               type="submit"
-              className="w-full bg-primary hover:bg-secondary text-white font-bold py-3 rounded-xl shadow-lg shadow-teal-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+              className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-teal-200 transition-all active:scale-95 flex items-center justify-center gap-2"
             >
               <LogIn className="w-5 h-5" />
               ログイン
