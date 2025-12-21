@@ -15,6 +15,7 @@ import { useSearchParams } from 'next/navigation';
 import { useState, useMemo } from 'react';
 import { toLocalISOString, checkVisitVisibility, formatDateForCSV, getEffectiveShiftType } from '@/lib/constants';
 import { VisitWithStaff, Staff, RecurrenceScope, Visit, ShiftType, ScheduleSuggestion, ShiftAssignment } from '@/lib/types';
+import { X } from 'lucide-react';
 
 export default function Page() {
   const { currentUser, masterStaff, masterVisits, masterShifts, masterCompanies, dbUsers, setMasterVisits, setMasterStaff, setMasterShifts, setDbUsers, setMasterCompanies } = useApp();

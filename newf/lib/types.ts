@@ -63,7 +63,7 @@ export interface VisitWithStaff extends Visit {
 export type RecurrenceScope = 'this' | 'following' | 'all';
 
 // Updated to include holiday+night combinations
-export type ShiftType = 'night1' | 'night2' | 'holiday' | 'work' | 'night1_holiday' | 'night2_holiday' | null;
+export type ShiftType = 'night1' | 'night2' | 'holiday' | 'work' | 'night1_holiday' | 'night2_holiday' | 'none' | null;
 
 export interface ShiftAssignment {
   id: string;
@@ -115,5 +115,4 @@ export interface ScheduleSuggestion {
   date: string;
   startTime: string;
   endTime: string;
-  // reason: string; // Removed as requested
 }

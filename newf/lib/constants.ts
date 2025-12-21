@@ -1,6 +1,4 @@
-
-
-import { Visit, VisitStatus, Staff, ShiftAssignment, ShiftType, Company, UserAccount, CompanySettings } from './types';
+import { Visit, Staff, ShiftAssignment, ShiftType, Company, UserAccount, CompanySettings } from './types';
 
 // Helper for dates to ensure Local Time usage
 export const toLocalISOString = (date: Date) => {
@@ -107,11 +105,6 @@ const getToday = () => toLocalISOString(new Date());
 const getTomorrow = () => {
     const d = new Date();
     d.setDate(d.getDate() + 1);
-    return toLocalISOString(d);
-};
-const getYesterday = () => {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
     return toLocalISOString(d);
 };
 
