@@ -242,7 +242,7 @@ class AuditLog(Base):
     action = Column(String, nullable=False)
     target_type = Column(String, nullable=False)
     target_id = Column(UUID(as_uuid=True), nullable=True)
-    metadata = Column(JSON, nullable=True)
+    log_metadata = Column(JSON, nullable=True)
     ip_address = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
     
