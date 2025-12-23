@@ -12,7 +12,7 @@ async def create_status(req: ScheduleStatusCreate, request: Request):
     company_id = UUID(user['company_id'])
     return await StatusController.create_status(company_id, req.name, req.color)
 
-@router.get("", dependencies=[Depends(require_role("SuperAdmin", "CompanyAdmin", "NormalUser"))])
+@router.get("", dependencies=[Depends(require_role("SystemAdmin", "CompanyAdmin", "User"))])
 async def get_statuses(request: Request):
     user = await get_current_user(request)
     company_id = UUID(user['company_id'])

@@ -13,7 +13,7 @@ async def create_shift(req: ShiftCreate, request: Request):
     company_id = UUID(user['company_id'])
     return await ShiftController.create_shift(company_id, req.user_id, req.shift_date, req.shift_type)
 
-@router.get("", dependencies=[Depends(require_role("SuperAdmin", "CompanyAdmin", "NormalUser"))])
+@router.get("", dependencies=[Depends(require_role("SystemAdmin", "CompanyAdmin", "User"))])
 async def get_shifts(
     request: Request,
     user_id: Optional[UUID] = Query(None),

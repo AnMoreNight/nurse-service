@@ -17,7 +17,7 @@ async def create_schedule(req: ScheduleCreate, request: Request):
         req.assigned_user_ids, req.recurring_rule.dict() if req.recurring_rule else None
     )
 
-@router.get("", dependencies=[Depends(require_role("SuperAdmin", "CompanyAdmin", "NormalUser"))])
+@router.get("", dependencies=[Depends(require_role("SystemAdmin", "CompanyAdmin", "User"))])
 async def get_schedules(
     request: Request,
     start_date: Optional[str] = Query(None),

@@ -13,13 +13,13 @@ async def create_patient(req: PatientCreate, request: Request):
     company_id = UUID(user['company_id'])
     return await PatientController.create_patient(company_id, req.name, req.address, req.phone, req.notes)
 
-@router.get("", dependencies=[Depends(require_role("SuperAdmin", "CompanyAdmin", "NormalUser"))])
+@router.get("", dependencies=[Depends(require_role("SystemAdmin", "CompanyAdmin", "User"))])
 async def get_patients(request: Request, search: Optional[str] = Query(None)):
     user = await get_current_user(request)
     company_id = UUID(user['company_id'])
     return await PatientController.get_patients(company_id, search)
 
-@router.get("/{patient_id}", dependencies=[Depends(require_role("SuperAdmin", "CompanyAdmin", "NormalUser"))])
+@router.get("/{patient_id}", dependencies=[Depends(require_role("SystemAdmin", "CompanyAdmin", "User"))])
 async def get_patient(patient_id: UUID, request: Request):
     user = await get_current_user(request)
     company_id = UUID(user['company_id'])
