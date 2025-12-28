@@ -1,12 +1,12 @@
 "use client";
 
-import { SystemAdminDashboard } from '@/Frontend/components/SystemAdminDashboard';
+import { SystemAdminDashboard } from '@/components/SystemAdminDashboard';
 import { useApp } from '@/lib/context';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 export default function AdminPage() {
-  const { currentUser, setCurrentUser, dbUsers, setDbUsers, masterCompanies } = useApp();
+  const { currentUser, setCurrentUser, dbUsers, setDbUsers, masterCompanies, setMasterCompanies } = useApp();
   const router = useRouter();
 
   useEffect(() => {
@@ -38,12 +38,14 @@ export default function AdminPage() {
   if (currentUser?.role !== 'system_admin') return null;
 
   return (
-    <SystemAdminDashboard 
+    <SystemAdminDashboard
       companies={masterCompanies}
-      onLoginAsCompany={handleImpersonateLogin}
-      onLogout={handleLogout}
+      onAddCompany={(c) => setMasterCompanies([...masterCompanies, c])}
+      onUpdateCompany={(c) => setMasterCompanies(masterCompanies.map(comp => comp.id === c.id ? c : comp))}
+      onDeleteCompany={(id) => setMasterCompanies(masterCompanies.filter(c => c.id !== id))}
+      onImpersonate={(c) => handleImpersonateLogin(c.id)}
       dbUsers={dbUsers}
-      onAddUser={(u) => setDbUsers([...dbUsers, u])}
+      onAddDbUser={(u) => setDbUsers([...dbUsers, u])}
     />
   );
 }

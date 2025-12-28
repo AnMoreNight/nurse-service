@@ -23,8 +23,9 @@ Login with email and password.
   "user": {
     "user_id": "uuid",
     "email": "user@example.com",
-    "role": "CompanyAdmin",
-    "name": "John Doe"
+    "role": "ADMIN",
+    "name": "John Doe",
+    "company_id": "uuid"
   }
 }
 ```
@@ -42,8 +43,7 @@ Request password reset email.
 **Response:**
 ```json
 {
-  "message": "If email exists, reset link sent",
-  "token": "reset-token-here"
+  "message": "If email exists, reset link sent"
 }
 ```
 
@@ -80,7 +80,7 @@ Accept user invitation.
 **Response:**
 ```json
 {
-  "message": "Account created successfully",
+  "message": "Invitation accepted",
   "user_id": "uuid"
 }
 ```
@@ -90,11 +90,11 @@ Accept user invitation.
 ## Bootstrap
 
 ### POST /bootstrap/create-admin
-Create first SystemAdmin (requires `X-Bootstrap-Secret` header).
+Create first SuperAdmin (requires `X-Bootstrap-Secret` header).
 
 **Headers:**
 ```
-X-Bootstrap-Secret: super-secret-bootstrap-key-change-this
+X-Bootstrap-Secret: your-bootstrap-secret
 ```
 
 **Request:**
@@ -110,18 +110,18 @@ X-Bootstrap-Secret: super-secret-bootstrap-key-change-this
 **Response:**
 ```json
 {
-  "message": "SystemAdmin created successfully",
+  "message": "SuperAdmin created successfully",
   "user_id": "uuid",
   "company_id": "uuid",
   "email": "admin@example.com",
-  "role": "SystemAdmin"
+  "role": "SUPER_ADMIN"
 }
 ```
 
 ---
 
 ## Companies
-*Requires: SystemAdmin role*
+*Requires: SUPER_ADMIN role*
 
 ### POST /companies
 Create new company.
@@ -137,7 +137,8 @@ Create new company.
 ```json
 {
   "company_id": "uuid",
-  "name": "New Company"
+  "name": "New Company",
+  "created_at": "2025-12-28T00:00:00"
 }
 ```
 
@@ -150,7 +151,7 @@ Get all companies.
   {
     "company_id": "uuid",
     "name": "Company Name",
-    "created_at": "2025-12-27T00:00:00"
+    "created_at": "2025-12-28T00:00:00"
   }
 ]
 ```
@@ -163,7 +164,26 @@ Get company by ID.
 {
   "company_id": "uuid",
   "name": "Company Name",
-  "created_at": "2025-12-27T00:00:00"
+  "created_at": "2025-12-28T00:00:00"
+}
+```
+
+### PUT /companies/{company_id}
+Update company.
+
+**Request:**
+```json
+{
+  "name": "Updated Company Name"
+}
+```
+
+**Response:**
+```json
+{
+  "company_id": "uuid",
+  "name": "Updated Company Name",
+  "created_at": "2025-12-28T00:00:00"
 }
 ```
 
@@ -180,7 +200,7 @@ Delete company.
 ---
 
 ## Users
-*Requires: CompanyAdmin or SystemAdmin*
+*Requires: Authentication*
 
 ### POST /users
 Create new user.
@@ -190,11 +210,13 @@ Create new user.
 {
   "email": "user@example.com",
   "password": "password123",
-  "role": "User",
+  "role": "USER",
   "name": "John Doe",
   "profession": "Nurse",
   "job_title": "Senior Nurse",
-  "display_color": "#FF5733"
+  "display_color": "#FF5733",
+  "join_date": "2025-01-01",
+  "left_date": null
 }
 ```
 
@@ -202,7 +224,19 @@ Create new user.
 ```json
 {
   "user_id": "uuid",
-  "email": "user@example.com"
+  "company_id": "uuid",
+  "email": "user@example.com",
+  "role": "USER",
+  "name": "John Doe",
+  "profession": "Nurse",
+  "job_title": "Senior Nurse",
+  "display_color": "#FF5733",
+  "avatar_url": null,
+  "sort_order": null,
+  "is_active": true,
+  "join_date": "2025-01-01",
+  "left_date": null,
+  "created_at": "2025-12-28T00:00:00"
 }
 ```
 
@@ -213,7 +247,7 @@ Invite user via email.
 ```json
 {
   "email": "newuser@example.com",
-  "role": "User"
+  "role": "USER"
 }
 ```
 
@@ -221,7 +255,7 @@ Invite user via email.
 ```json
 {
   "message": "Invitation sent",
-  "token": "invitation-token"
+  "user_id": "uuid"
 }
 ```
 
@@ -235,7 +269,7 @@ Get all users in company.
     "user_id": "uuid",
     "company_id": "uuid",
     "email": "user@example.com",
-    "role": "User",
+    "role": "USER",
     "name": "John Doe",
     "profession": "Nurse",
     "job_title": "Senior Nurse",
@@ -243,7 +277,9 @@ Get all users in company.
     "avatar_url": null,
     "sort_order": 1,
     "is_active": true,
-    "created_at": "2025-12-27T00:00:00"
+    "join_date": "2025-01-01",
+    "left_date": null,
+    "created_at": "2025-12-28T00:00:00"
   }
 ]
 ```
@@ -257,7 +293,7 @@ Get user by ID.
   "user_id": "uuid",
   "company_id": "uuid",
   "email": "user@example.com",
-  "role": "User",
+  "role": "USER",
   "name": "John Doe",
   "profession": "Nurse",
   "job_title": "Senior Nurse",
@@ -265,11 +301,13 @@ Get user by ID.
   "avatar_url": null,
   "sort_order": 1,
   "is_active": true,
-  "created_at": "2025-12-27T00:00:00"
+  "join_date": "2025-01-01",
+  "left_date": null,
+  "created_at": "2025-12-28T00:00:00"
 }
 ```
 
-### PATCH /users/{user_id}
+### PUT /users/{user_id}
 Update user.
 
 **Request:**
@@ -277,19 +315,37 @@ Update user.
 {
   "name": "John Updated",
   "profession": "Head Nurse",
+  "job_title": "Lead Nurse",
   "display_color": "#00FF00",
-  "is_active": true
+  "avatar_url": "https://example.com/avatar.jpg",
+  "role": "ADMIN",
+  "is_active": true,
+  "join_date": "2025-01-01",
+  "left_date": null
 }
 ```
 
 **Response:**
 ```json
 {
-  "message": "User updated"
+  "user_id": "uuid",
+  "company_id": "uuid",
+  "email": "user@example.com",
+  "role": "ADMIN",
+  "name": "John Updated",
+  "profession": "Head Nurse",
+  "job_title": "Lead Nurse",
+  "display_color": "#00FF00",
+  "avatar_url": "https://example.com/avatar.jpg",
+  "sort_order": 1,
+  "is_active": true,
+  "join_date": "2025-01-01",
+  "left_date": null,
+  "created_at": "2025-12-28T00:00:00"
 }
 ```
 
-### POST /users/sort-order
+### PUT /users/sort-order
 Update user sort orders.
 
 **Request:**
@@ -326,7 +382,7 @@ Deactivate user.
 ---
 
 ## Patients
-*Requires: CompanyAdmin (create/update/delete), User (read)*
+*Requires: Authentication*
 
 ### POST /patients
 Create patient.
@@ -345,7 +401,13 @@ Create patient.
 ```json
 {
   "patient_id": "uuid",
-  "name": "Patient Name"
+  "company_id": "uuid",
+  "name": "Patient Name",
+  "address": "123 Main St",
+  "phone": "555-1234",
+  "notes": "Special care needed",
+  "is_active": true,
+  "created_at": "2025-12-28T00:00:00"
 }
 ```
 
@@ -366,7 +428,7 @@ Get all patients (with optional search).
     "phone": "555-1234",
     "notes": "Special care needed",
     "is_active": true,
-    "created_at": "2025-12-27T00:00:00"
+    "created_at": "2025-12-28T00:00:00"
   }
 ]
 ```
@@ -384,11 +446,11 @@ Get patient by ID.
   "phone": "555-1234",
   "notes": "Special care needed",
   "is_active": true,
-  "created_at": "2025-12-27T00:00:00"
+  "created_at": "2025-12-28T00:00:00"
 }
 ```
 
-### PATCH /patients/{patient_id}
+### PUT /patients/{patient_id}
 Update patient.
 
 **Request:**
@@ -405,24 +467,31 @@ Update patient.
 **Response:**
 ```json
 {
-  "message": "Patient updated"
+  "patient_id": "uuid",
+  "company_id": "uuid",
+  "name": "Updated Name",
+  "address": "456 New St",
+  "phone": "555-5678",
+  "notes": "Updated notes",
+  "is_active": true,
+  "created_at": "2025-12-28T00:00:00"
 }
 ```
 
 ### DELETE /patients/{patient_id}
-Deactivate patient.
+Delete patient.
 
 **Response:**
 ```json
 {
-  "message": "Patient deactivated"
+  "message": "Patient deleted"
 }
 ```
 
 ---
 
 ## Schedule Statuses
-*Requires: CompanyAdmin (create/update/delete), User (read)*
+*Requires: Authentication*
 
 ### POST /statuses
 Create schedule status.
@@ -439,7 +508,12 @@ Create schedule status.
 ```json
 {
   "status_id": "uuid",
-  "name": "Emergency Visit"
+  "company_id": "uuid",
+  "name": "Emergency Visit",
+  "color": "#FF0000",
+  "is_active": true,
+  "is_default": false,
+  "sort_order": null
 }
 ```
 
@@ -456,13 +530,12 @@ Get all statuses.
     "color": "#FF0000",
     "is_active": true,
     "is_default": false,
-    "sort_order": 1,
-    "created_at": "2025-12-27T00:00:00"
+    "sort_order": 1
   }
 ]
 ```
 
-### PATCH /statuses/{status_id}
+### PUT /statuses/{status_id}
 Update status.
 
 **Request:**
@@ -478,12 +551,18 @@ Update status.
 **Response:**
 ```json
 {
-  "message": "Status updated"
+  "status_id": "uuid",
+  "company_id": "uuid",
+  "name": "Updated Status",
+  "color": "#00FF00",
+  "is_active": true,
+  "is_default": false,
+  "sort_order": 2
 }
 ```
 
 ### DELETE /statuses/{status_id}
-Deactivate status (cannot delete default statuses).
+Delete status.
 
 **Response:**
 ```json
@@ -495,7 +574,7 @@ Deactivate status (cannot delete default statuses).
 ---
 
 ## Schedules
-*Requires: CompanyAdmin (create/update/delete), User (read)*
+*Requires: Authentication*
 
 ### POST /schedules
 Create schedule (with optional recurring rule).
@@ -506,26 +585,52 @@ Create schedule (with optional recurring rule).
   "patient_id": "uuid",
   "patient_name": "Patient Name",
   "visit_address": "123 Main St",
-  "start_time": "2025-12-27T10:00:00",
-  "end_time": "2025-12-27T11:00:00",
+  "start_time": "2025-12-28T10:00:00",
+  "end_time": "2025-12-28T11:00:00",
   "status_id": "uuid",
   "memo": "Regular checkup",
   "assigned_user_ids": ["uuid1", "uuid2"],
   "recurring_rule": {
     "frequency": "Weekly",
     "day_of_week": [1, 3, 5],
+    "week_of_month": null,
+    "day_of_week_monthly": null,
+    "month_of_year": null,
+    "day_of_month": null,
     "interval": 1,
-    "start_date": "2025-12-27",
-    "end_date": "2026-12-27"
+    "start_date": "2025-12-28",
+    "end_date": "2026-12-28"
   }
 }
 ```
+*frequency: "Weekly" | "Monthly" | "Yearly"*
 
 **Response:**
 ```json
 {
   "schedule_id": "uuid",
-  "recurring_series_id": "uuid"
+  "company_id": "uuid",
+  "patient_id": "uuid",
+  "patient_name": "Patient Name",
+  "visit_address": "123 Main St",
+  "start_time": "2025-12-28T10:00:00",
+  "end_time": "2025-12-28T11:00:00",
+  "status_id": "uuid",
+  "memo": "Regular checkup",
+  "recurring_series_id": "uuid",
+  "is_exception": false,
+  "assigned_users": [
+    {
+      "user_id": "uuid",
+      "email": "user@example.com",
+      "role": "USER",
+      "name": "John Doe",
+      "profession": "Nurse",
+      "display_color": "#FF5733",
+      "avatar_url": null
+    }
+  ],
+  "created_at": "2025-12-28T00:00:00"
 }
 ```
 
@@ -546,8 +651,8 @@ Get schedules with filters.
     "patient_id": "uuid",
     "patient_name": "Patient Name",
     "visit_address": "123 Main St",
-    "start_time": "2025-12-27T10:00:00",
-    "end_time": "2025-12-27T11:00:00",
+    "start_time": "2025-12-28T10:00:00",
+    "end_time": "2025-12-28T11:00:00",
     "status_id": "uuid",
     "memo": "Regular checkup",
     "recurring_series_id": "uuid",
@@ -556,19 +661,19 @@ Get schedules with filters.
       {
         "user_id": "uuid",
         "email": "user@example.com",
-        "role": "User",
+        "role": "USER",
         "name": "John Doe",
         "profession": "Nurse",
         "display_color": "#FF5733",
         "avatar_url": null
       }
     ],
-    "created_at": "2025-12-27T00:00:00"
+    "created_at": "2025-12-28T00:00:00"
   }
 ]
 ```
 
-### PATCH /schedules/{schedule_id}
+### PUT /schedules/{schedule_id}
 Update schedule.
 
 **Request:**
@@ -576,8 +681,8 @@ Update schedule.
 {
   "patient_name": "Updated Name",
   "visit_address": "456 New St",
-  "start_time": "2025-12-27T14:00:00",
-  "end_time": "2025-12-27T15:00:00",
+  "start_time": "2025-12-28T14:00:00",
+  "end_time": "2025-12-28T15:00:00",
   "status_id": "uuid",
   "memo": "Updated memo",
   "assigned_user_ids": ["uuid1"],
@@ -589,7 +694,8 @@ Update schedule.
 **Response:**
 ```json
 {
-  "message": "Schedule updated"
+  "message": "Schedule updated",
+  "affected_count": 1
 }
 ```
 
@@ -609,8 +715,14 @@ Copy schedule data for duplication.
 **Response:**
 ```json
 {
+  "patient_id": "uuid",
   "patient_name": "Patient Name",
-  "visit_address": "123 Main St"
+  "visit_address": "123 Main St",
+  "start_time": "2025-12-28T10:00:00",
+  "end_time": "2025-12-28T11:00:00",
+  "status_id": "uuid",
+  "memo": "Regular checkup",
+  "assigned_user_ids": ["uuid1", "uuid2"]
 }
 ```
 
@@ -621,12 +733,12 @@ Export schedules to CSV.
 - `start_date` (optional): YYYY-MM-DD
 - `end_date` (optional): YYYY-MM-DD
 
-**Response:** CSV file download
+**Response:** CSV file download (schedules.csv)
 
 ---
 
 ## Shifts
-*Requires: CompanyAdmin (create/update/delete), User (read)*
+*Requires: Authentication*
 
 ### POST /shifts
 Create shift.
@@ -635,7 +747,7 @@ Create shift.
 ```json
 {
   "user_id": "uuid",
-  "shift_date": "2025-12-27",
+  "shift_date": "2025-12-28",
   "shift_type": "Workday"
 }
 ```
@@ -644,7 +756,42 @@ Create shift.
 **Response:**
 ```json
 {
-  "shift_id": "uuid"
+  "shift_id": "uuid",
+  "company_id": "uuid",
+  "user_id": "uuid",
+  "shift_date": "2025-12-28",
+  "shift_type": "Workday",
+  "is_auto_reflected": false,
+  "memo": null,
+  "created_at": "2025-12-28T00:00:00"
+}
+```
+
+### POST /shifts/bulk
+Bulk create shifts.
+
+**Request:**
+```json
+{
+  "user_id": "uuid",
+  "shifts": [
+    {
+      "shift_date": "2025-12-28",
+      "shift_type": "Workday"
+    },
+    {
+      "shift_date": "2025-12-29",
+      "shift_type": "ScheduledDayOff"
+    }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Shifts created",
+  "count": 2
 }
 ```
 
@@ -663,16 +810,16 @@ Get shifts with filters.
     "shift_id": "uuid",
     "company_id": "uuid",
     "user_id": "uuid",
-    "shift_date": "2025-12-27",
+    "shift_date": "2025-12-28",
     "shift_type": "Workday",
     "is_auto_reflected": false,
     "memo": null,
-    "created_at": "2025-12-27T00:00:00"
+    "created_at": "2025-12-28T00:00:00"
   }
 ]
 ```
 
-### PATCH /shifts/{shift_id}
+### PUT /shifts/{shift_id}
 Update shift.
 
 **Request:**
@@ -685,7 +832,14 @@ Update shift.
 **Response:**
 ```json
 {
-  "message": "Shift updated"
+  "shift_id": "uuid",
+  "company_id": "uuid",
+  "user_id": "uuid",
+  "shift_date": "2025-12-28",
+  "shift_type": "ScheduledDayOff",
+  "is_auto_reflected": false,
+  "memo": null,
+  "created_at": "2025-12-28T00:00:00"
 }
 ```
 
@@ -706,16 +860,22 @@ Create weekly off rule.
 ```json
 {
   "user_id": "uuid",
-  "day_of_week": "Sun",
+  "day_of_week": "Sunday",
   "shift_type": "ScheduledDayOff"
 }
 ```
-*day_of_week: "Sun" | "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat"*
+*day_of_week: "Sunday" | "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday"*
 
 **Response:**
 ```json
 {
-  "rule_id": "uuid"
+  "rule_id": "uuid",
+  "company_id": "uuid",
+  "user_id": "uuid",
+  "day_of_week": 6,
+  "shift_type": "ScheduledDayOff",
+  "is_active": true,
+  "created_at": "2025-12-28T00:00:00"
 }
 ```
 
@@ -732,25 +892,26 @@ Get weekly off rules.
     "rule_id": "uuid",
     "company_id": "uuid",
     "user_id": "uuid",
-    "day_of_week": "Sun",
+    "day_of_week": 6,
     "shift_type": "ScheduledDayOff",
     "is_active": true,
-    "created_at": "2025-12-27T00:00:00"
+    "created_at": "2025-12-28T00:00:00"
   }
 ]
 ```
 
 ### POST /shifts/apply-weekly-rules
-Apply weekly off rules to date range.
+Apply weekly off rules to month.
 
 **Query Params:**
-- `start_date` (required): YYYY-MM-DD
-- `end_date` (required): YYYY-MM-DD
+- `year` (required): 2025
+- `month` (required): 1-12
 
 **Response:**
 ```json
 {
-  "message": "Weekly off rules applied"
+  "message": "Weekly off rules applied",
+  "shifts_created": 4
 }
 ```
 
@@ -758,10 +919,10 @@ Apply weekly off rules to date range.
 Export shifts to CSV.
 
 **Query Params:**
-- `start_date` (optional): YYYY-MM-DD
-- `end_date` (optional): YYYY-MM-DD
+- `start_date` (required): YYYY-MM-DD
+- `end_date` (required): YYYY-MM-DD
 
-**Response:** CSV file download
+**Response:** CSV file download (shifts.csv)
 
 ---
 
@@ -801,6 +962,45 @@ Authorization: Bearer <access_token>
 
 ## Role Permissions
 
-- **SystemAdmin**: Full access to all companies
-- **CompanyAdmin**: Full access within their company
-- **User**: Read-only access to schedules, shifts, patients, statuses
+- **SUPER_ADMIN**: Full access to all companies and system-wide operations
+- **ADMIN**: Full access within their company (create/update/delete)
+- **USER**: Read-only access to schedules, shifts, patients, statuses within their company
+
+## Error Responses
+
+All endpoints may return the following error responses:
+
+**401 Unauthorized:**
+```json
+{
+  "detail": "Not authenticated"
+}
+```
+
+**403 Forbidden:**
+```json
+{
+  "detail": "Insufficient permissions"
+}
+```
+
+**404 Not Found:**
+```json
+{
+  "detail": "Resource not found"
+}
+```
+
+**400 Bad Request:**
+```json
+{
+  "detail": "Invalid request data"
+}
+```
+
+**500 Internal Server Error:**
+```json
+{
+  "detail": "Internal server error"
+}
+```

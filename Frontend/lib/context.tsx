@@ -6,17 +6,17 @@ import { MOCK_COMPANIES, MOCK_STAFF, MOCK_VISITS, MOCK_SHIFTS, MOCK_DB_USERS } f
 
 interface AppContextType {
   currentUser: AuthUser | null;
-  setCurrentUser: (user: AuthUser | null) => void;
+  setCurrentUser: React.Dispatch<React.SetStateAction<AuthUser | null>>;
   dbUsers: UserAccount[];
-  setDbUsers: (users: UserAccount[]) => void;
+  setDbUsers: React.Dispatch<React.SetStateAction<UserAccount[]>>;
   masterCompanies: Company[];
-  setMasterCompanies: (companies: Company[]) => void;
+  setMasterCompanies: React.Dispatch<React.SetStateAction<Company[]>>;
   masterStaff: Staff[];
-  setMasterStaff: (staff: Staff[]) => void;
+  setMasterStaff: React.Dispatch<React.SetStateAction<Staff[]>>;
   masterVisits: Visit[];
-  setMasterVisits: (visits: Visit[]) => void;
+  setMasterVisits: React.Dispatch<React.SetStateAction<Visit[]>>;
   masterShifts: ShiftAssignment[];
-  setMasterShifts: (shifts: ShiftAssignment[]) => void;
+  setMasterShifts: React.Dispatch<React.SetStateAction<ShiftAssignment[]>>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);

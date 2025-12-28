@@ -1,7 +1,10 @@
-from fastapi import APIRouter, HTTPException, status, Header
+from fastapi import APIRouter, HTTPException, status, Header, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 from pydantic import BaseModel, EmailStr
-from db.db import get_pool
+from models.orm import Company, User
 from utils.utils import hash_password
+from db.database import get_db
 from uuid import uuid4
 from datetime import datetime
 import os
@@ -15,9 +18,13 @@ class BootstrapAdmin(BaseModel):
     company_name: str
 
 @router.post("/create-admin")
-async def create_first_admin(data: BootstrapAdmin, x_bootstrap_secret: str = Header(...)):
+async def create_first_admin(
+    data: BootstrapAdmin, 
+    x_bootstrap_secret: str = Header(...),
+    db: AsyncSession = Depends(get_db)
+):
     """
-    Create the first SystemAdmin user. Requires BOOTSTRAP_SECRET header.
+    Create the first SuperAdmin user. Requires BOOTSTRAP_SECRET header.
     This route can only be used when no users exist in the system.
     """
     bootstrap_secret = os.getenv("BOOTSTRAP_SECRET")
@@ -25,30 +32,36 @@ async def create_first_admin(data: BootstrapAdmin, x_bootstrap_secret: str = Hea
     if not bootstrap_secret or x_bootstrap_secret != bootstrap_secret:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid bootstrap secret")
     
-    pool = get_pool()
-    async with pool.acquire() as conn:
-        existing_users = await conn.fetchval("SELECT COUNT(*) FROM users")
-        if existing_users > 0:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Admin already exists")
-        
-        company_id = uuid4()
-        await conn.execute(
-            "INSERT INTO companies (company_id, name, created_at, updated_at) VALUES ($1, $2, $3, $3)",
-            company_id, data.company_name, datetime.utcnow()
-        )
-        
-        user_id = uuid4()
-        hashed_password = hash_password(data.password)
-        await conn.execute(
-            """INSERT INTO users (user_id, company_id, email, password_hash, role, name, is_active, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, 'SystemAdmin', $5, true, $6, $6)""",
-            user_id, company_id, data.email, hashed_password, data.name, datetime.utcnow()
-        )
-        
-        return {
-            "message": "SystemAdmin created successfully",
-            "user_id": str(user_id),
-            "company_id": str(company_id),
-            "email": data.email,
-            "role": "SystemAdmin"
-        }
+    # Check if any users exist
+    result = await db.execute(select(func.count(User.user_id)))
+    existing_users = result.scalar()
+    
+    if existing_users > 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Admin already exists")
+    
+    # Create company
+    company = Company(name=data.company_name)
+    db.add(company)
+    await db.flush()
+    
+    # Create super admin user
+    hashed_password = hash_password(data.password)
+    user = User(
+        company_id=company.company_id,
+        email=data.email,
+        password_hash=hashed_password,
+        role="SUPER_ADMIN",
+        name=data.name,
+        is_active=True
+    )
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    
+    return {
+        "message": "SuperAdmin created successfully",
+        "user_id": str(user.user_id),
+        "company_id": str(company.company_id),
+        "email": user.email,
+        "role": user.role
+    }

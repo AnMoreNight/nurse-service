@@ -3,9 +3,20 @@
 import { useApp } from '@/lib/context';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Calendar, Notebook, Users, Settings, LogOut, Menu, X, User, Download, Search, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+const NavButton = ({ active, onClick, icon, label }: any) => (
+  <button
+    onClick={onClick}
+    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${active ? 'bg-teal-600 text-white font-bold shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+      }`}
+  >
+    {icon}
+    <span className="block">{label}</span>
+  </button>
+);
+
+function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const { currentUser, setCurrentUser } = useApp();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -39,8 +50,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-[55] md:hidden backdrop-blur-sm transition-opacity"
+        <div
+          className="fixed inset-0 bg-white/30 z-[55] md:hidden backdrop-blur-md transition-opacity"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
@@ -64,15 +75,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <nav className="flex-1 py-6 space-y-2 px-3 overflow-y-auto">
           <NavButton active={isActive('schedule')} onClick={() => setView('schedule')} icon={<Calendar size={20} />} label="スケジュール" />
           <NavButton active={isActive('shifts')} onClick={() => setView('shifts')} icon={<Notebook size={20} />} label="シフト管理" />
-          
+
           <div className="hidden md:block">
             <NavButton active={isActive('search')} onClick={() => setView('search')} icon={<Search size={20} />} label="検索" />
           </div>
-          
+
           <div className="hidden md:block">
             <NavButton active={isActive('export')} onClick={() => setView('export')} icon={<Download size={20} />} label="データ出力" />
           </div>
-          
+
           {currentUser?.role === 'admin' && (
             <>
               <div className="my-2 border-t border-slate-800 mx-4 opacity-50"></div>
@@ -84,7 +95,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <div className="p-4 border-t border-slate-800">
           {currentUser?.role !== 'user' && (
-            <button 
+            <button
               onClick={() => setView('ai')}
               className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-2 rounded-lg flex items-center justify-center gap-2 hover:shadow-lg transition-all active:scale-95 mb-4 group"
             >
@@ -92,7 +103,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <span className="font-bold">AI提案</span>
             </button>
           )}
-          
+
           <div className="flex items-center gap-3 px-2 mb-4 overflow-hidden">
             <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center shrink-0">
               <User size={16} />
@@ -118,14 +129,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   );
 }
 
-const NavButton = ({ active, onClick, icon, label }: any) => (
-  <button 
-    onClick={onClick}
-    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-      active ? 'bg-teal-600 text-white font-bold shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-    }`}
-  >
-    {icon}
-    <span className="block">{label}</span>
-  </button>
-);
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-screen"><div className="w-12 h-12 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div></div>}>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+    </Suspense>
+  );
+}

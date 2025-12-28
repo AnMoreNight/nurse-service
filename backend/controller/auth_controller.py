@@ -1,4 +1,7 @@
-from db.db import get_pool
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+from models.orm import User, Company
 from utils.utils import hash_password, verify_password, create_access_token
 from fastapi import HTTPException, status
 from uuid import UUID, uuid4
@@ -7,95 +10,126 @@ import secrets
 
 class AuthController:
     @staticmethod
-    async def login(email: str, password: str):
-        pool = get_pool()
-        async with pool.acquire() as conn:
-            user = await conn.fetchrow(
-                "SELECT user_id, company_id, email, password_hash, role, name, is_active FROM users WHERE email = $1",
-                email
+    async def login(db: AsyncSession, email: str, password: str):
+        result = await db.execute(
+            select(User).where(User.email == email)
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user or not verify_password(password, user.password_hash):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        
+        if not user.is_active:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is inactive")
+        
+        # Get company name if user has a company
+        company_name = None
+        if user.company_id:
+            company_result = await db.execute(
+                select(Company).where(Company.company_id == user.company_id)
             )
-            
-            if not user or not verify_password(password, user['password_hash']):
-                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-            
-            if not user['is_active']:
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is inactive")
-            
-            token = create_access_token({
-                "user_id": str(user['user_id']),
-                "company_id": str(user['company_id']) if user['company_id'] else None,
-                "role": user['role'],
-                "email": user['email']
-            })
-            
-            return {
-                "access_token": token,
-                "token_type": "bearer",
-                "user": {
-                    "user_id": str(user['user_id']),
-                    "email": user['email'],
-                    "role": user['role'],
-                    "name": user['name']
-                }
+            company = company_result.scalar_one_or_none()
+            company_name = company.name if company else None
+        
+        token = create_access_token({
+            "user_id": str(user.user_id),
+            "company_id": str(user.company_id) if user.company_id else None,
+            "role": user.role,
+            "email": user.email
+        })
+        
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "user": {
+                "user_id": str(user.user_id),
+                "company_id": str(user.company_id) if user.company_id else None,
+                "company_name": company_name,
+                "email": user.email,
+                "role": user.role,
+                "name": user.name
             }
+        }
     
     @staticmethod
-    async def request_password_reset(email: str):
-        pool = get_pool()
-        async with pool.acquire() as conn:
-            user = await conn.fetchrow("SELECT user_id FROM users WHERE email = $1", email)
-            if not user:
-                return {"message": "If email exists, reset link sent"}
-            
-            token = secrets.token_urlsafe(32)
-            expires_at = datetime.utcnow() + timedelta(hours=1)
-            
-            await conn.execute(
-                "INSERT INTO password_reset_tokens (token_id, user_id, token, expires_at) VALUES ($1, $2, $3, $4)",
-                uuid4(), user['user_id'], token, expires_at
-            )
-            
-            return {"message": "If email exists, reset link sent", "token": token}
+    async def request_password_reset(db: AsyncSession, email: str):
+        from models.orm import PasswordResetToken
+        
+        result = await db.execute(select(User).where(User.email == email))
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            return {"message": "If email exists, reset link sent"}
+        
+        token = secrets.token_urlsafe(32)
+        expires_at = datetime.utcnow() + timedelta(hours=1)
+        
+        reset_token = PasswordResetToken(
+            user_id=user.user_id,
+            token=token,
+            expires_at=expires_at
+        )
+        db.add(reset_token)
+        await db.commit()
+        
+        return {"message": "If email exists, reset link sent", "token": token}
     
     @staticmethod
-    async def reset_password(token: str, new_password: str):
-        pool = get_pool()
-        async with pool.acquire() as conn:
-            reset = await conn.fetchrow(
-                "SELECT user_id FROM password_reset_tokens WHERE token = $1 AND expires_at > $2 AND used_at IS NULL",
-                token, datetime.utcnow()
+    async def reset_password(db: AsyncSession, token: str, new_password: str):
+        from models.orm import PasswordResetToken
+        
+        result = await db.execute(
+            select(PasswordResetToken).where(
+                PasswordResetToken.token == token,
+                PasswordResetToken.expires_at > datetime.utcnow(),
+                PasswordResetToken.used_at.is_(None)
             )
-            
-            if not reset:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired token")
-            
-            hashed = hash_password(new_password)
-            await conn.execute("UPDATE users SET password_hash = $1 WHERE user_id = $2", hashed, reset['user_id'])
-            await conn.execute("UPDATE password_reset_tokens SET used_at = $1 WHERE token = $2", datetime.utcnow(), token)
-            
-            return {"message": "Password reset successful"}
+        )
+        reset_token = result.scalar_one_or_none()
+        
+        if not reset_token:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired token")
+        
+        # Update user password
+        user_result = await db.execute(select(User).where(User.user_id == reset_token.user_id))
+        user = user_result.scalar_one_or_none()
+        
+        if user:
+            user.password_hash = hash_password(new_password)
+            reset_token.used_at = datetime.utcnow()
+            await db.commit()
+        
+        return {"message": "Password reset successful"}
     
     @staticmethod
-    async def accept_invitation(token: str, password: str, name: str):
-        pool = get_pool()
-        async with pool.acquire() as conn:
-            invite = await conn.fetchrow(
-                "SELECT invitation_id, company_id, email, role FROM user_invitations WHERE token = $1 AND expires_at > $2 AND accepted_at IS NULL",
-                token, datetime.utcnow()
+    async def accept_invitation(db: AsyncSession, token: str, password: str, name: str):
+        from models.orm import UserInvitation
+        
+        result = await db.execute(
+            select(UserInvitation).where(
+                UserInvitation.token == token,
+                UserInvitation.expires_at > datetime.utcnow(),
+                UserInvitation.accepted_at.is_(None)
             )
-            
-            if not invite:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired invitation")
-            
-            hashed = hash_password(password)
-            user_id = uuid4()
-            
-            await conn.execute(
-                """INSERT INTO users (user_id, company_id, email, password_hash, role, name, is_active, created_at, updated_at)
-                   VALUES ($1, $2, $3, $4, $5, $6, true, $7, $7)""",
-                user_id, invite['company_id'], invite['email'], hashed, invite['role'], name, datetime.utcnow()
-            )
-            
-            await conn.execute("UPDATE user_invitations SET accepted_at = $1 WHERE invitation_id = $2", datetime.utcnow(), invite['invitation_id'])
-            
-            return {"message": "Account created successfully", "user_id": str(user_id)}
+        )
+        invite = result.scalar_one_or_none()
+        
+        if not invite:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired invitation")
+        
+        # Create user
+        new_user = User(
+            company_id=invite.company_id,
+            email=invite.email,
+            password_hash=hash_password(password),
+            role=invite.role,
+            name=name,
+            is_active=True
+        )
+        db.add(new_user)
+        
+        invite.accepted_at = datetime.utcnow()
+        await db.commit()
+        await db.refresh(new_user)
+        
+        return {"message": "Account created successfully", "user_id": str(new_user.user_id)}

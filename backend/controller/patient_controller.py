@@ -1,73 +1,109 @@
-from db.db import get_pool
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, update
+from models.orm import Patient
 from fastapi import HTTPException, status
-from uuid import UUID, uuid4
+from uuid import UUID
 from datetime import datetime
 
 class PatientController:
     @staticmethod
-    async def create_patient(company_id: UUID, name: str, address: str = None, phone: str = None, notes: str = None):
-        pool = get_pool()
-        patient_id = uuid4()
+    async def create_patient(db: AsyncSession, company_id: UUID, name: str, address: str = None, 
+                            phone: str = None, notes: str = None):
+        patient = Patient(
+            company_id=company_id,
+            name=name,
+            address=address,
+            phone=phone,
+            notes=notes
+        )
+        db.add(patient)
+        await db.commit()
+        await db.refresh(patient)
         
-        async with pool.acquire() as conn:
-            await conn.execute(
-                """INSERT INTO patients (patient_id, company_id, name, address, phone, notes, is_active, created_at, updated_at)
-                   VALUES ($1, $2, $3, $4, $5, $6, true, $7, $7)""",
-                patient_id, company_id, name, address, phone, notes, datetime.utcnow()
-            )
-            return {"patient_id": str(patient_id), "name": name}
+        return {
+            "patient_id": str(patient.patient_id),
+            "company_id": str(patient.company_id),
+            "name": patient.name,
+            "address": patient.address,
+            "phone": patient.phone,
+            "notes": patient.notes,
+            "is_active": patient.is_active,
+            "created_at": patient.created_at.isoformat() if patient.created_at else None
+        }
     
     @staticmethod
-    async def get_patients(company_id: UUID, search: str = None):
-        pool = get_pool()
-        async with pool.acquire() as conn:
-            if search:
-                rows = await conn.fetch(
-                    """SELECT patient_id, company_id, name, address, phone, notes, is_active, created_at
-                       FROM patients WHERE company_id = $1 AND name ILIKE $2 ORDER BY created_at DESC""",
-                    company_id, f"%{search}%"
-                )
-            else:
-                rows = await conn.fetch(
-                    """SELECT patient_id, company_id, name, address, phone, notes, is_active, created_at
-                       FROM patients WHERE company_id = $1 ORDER BY created_at DESC""",
-                    company_id
-                )
-            return [dict(row) for row in rows]
-    
-    @staticmethod
-    async def get_patient(patient_id: UUID, company_id: UUID):
-        pool = get_pool()
-        async with pool.acquire() as conn:
-            row = await conn.fetchrow(
-                """SELECT patient_id, company_id, name, address, phone, notes, is_active, created_at
-                   FROM patients WHERE patient_id = $1 AND company_id = $2""",
-                patient_id, company_id
-            )
-            if not row:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
-            return dict(row)
-    
-    @staticmethod
-    async def update_patient(patient_id: UUID, company_id: UUID, **updates):
-        pool = get_pool()
-        set_clause = ", ".join([f"{k} = ${i+3}" for i, k in enumerate(updates.keys())])
-        values = list(updates.values())
+    async def get_patients(db: AsyncSession, company_id: UUID, search: str = None):
+        query = select(Patient).where(Patient.company_id == company_id, Patient.is_active == True)
         
-        async with pool.acquire() as conn:
-            result = await conn.execute(
-                f"UPDATE patients SET {set_clause}, updated_at = $1 WHERE patient_id = $2 AND company_id = ${len(values)+3}",
-                datetime.utcnow(), patient_id, *values, company_id
-            )
-            if result == "UPDATE 0":
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
-            return {"message": "Patient updated"}
+        if search:
+            query = query.where(Patient.name.ilike(f"%{search}%"))
+        
+        query = query.order_by(Patient.name)
+        result = await db.execute(query)
+        patients = result.scalars().all()
+        
+        return [
+            {
+                "patient_id": str(p.patient_id),
+                "company_id": str(p.company_id),
+                "name": p.name,
+                "address": p.address,
+                "phone": p.phone,
+                "notes": p.notes,
+                "is_active": p.is_active,
+                "created_at": p.created_at.isoformat() if p.created_at else None
+            }
+            for p in patients
+        ]
     
     @staticmethod
-    async def delete_patient(patient_id: UUID, company_id: UUID):
-        pool = get_pool()
-        async with pool.acquire() as conn:
-            result = await conn.execute("UPDATE patients SET is_active = false WHERE patient_id = $1 AND company_id = $2", patient_id, company_id)
-            if result == "UPDATE 0":
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
-            return {"message": "Patient deactivated"}
+    async def get_patient(db: AsyncSession, patient_id: UUID, company_id: UUID):
+        result = await db.execute(
+            select(Patient).where(Patient.patient_id == patient_id, Patient.company_id == company_id)
+        )
+        patient = result.scalar_one_or_none()
+        
+        if not patient:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
+        
+        return {
+            "patient_id": str(patient.patient_id),
+            "company_id": str(patient.company_id),
+            "name": patient.name,
+            "address": patient.address,
+            "phone": patient.phone,
+            "notes": patient.notes,
+            "is_active": patient.is_active,
+            "created_at": patient.created_at.isoformat() if patient.created_at else None
+        }
+    
+    @staticmethod
+    async def update_patient(db: AsyncSession, patient_id: UUID, company_id: UUID, **updates):
+        result = await db.execute(
+            select(Patient).where(Patient.patient_id == patient_id, Patient.company_id == company_id)
+        )
+        patient = result.scalar_one_or_none()
+        
+        if not patient:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
+        
+        for key, value in updates.items():
+            if value is not None and hasattr(patient, key):
+                setattr(patient, key, value)
+        
+        await db.commit()
+        return {"message": "Patient updated"}
+    
+    @staticmethod
+    async def delete_patient(db: AsyncSession, patient_id: UUID, company_id: UUID):
+        result = await db.execute(
+            select(Patient).where(Patient.patient_id == patient_id, Patient.company_id == company_id)
+        )
+        patient = result.scalar_one_or_none()
+        
+        if not patient:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
+        
+        patient.is_active = False
+        await db.commit()
+        return {"message": "Patient deleted"}

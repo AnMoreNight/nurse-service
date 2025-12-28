@@ -53,7 +53,7 @@ export interface Visit {
   recurrenceRule?: RecurrenceRule;
   excludeDates?: string[]; // Dates to skip (ISO YYYY-MM-DD)
   recurrenceEndDate?: string; // Date when the series stops
-  notes: string; 
+  notes: string;
 }
 
 export interface VisitWithStaff extends Visit {

@@ -1,26 +1,45 @@
 from fastapi import Request, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from utils.utils import decode_token
-from typing import Optional
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from models.orm import User
+from utils.utils import verify_access_token
+from uuid import UUID
 
-security = HTTPBearer()
-
-async def get_current_user(request: Request):
-    auth = request.headers.get("Authorization")
-    if not auth or not auth.startswith("Bearer "):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+async def get_current_user(request: Request, db: AsyncSession) -> dict:
+    """Extract and verify the current user from the request token."""
+    auth_header = request.headers.get("Authorization")
     
-    token = auth.split(" ")[1]
-    try:
-        payload = decode_token(token)
-        return payload
-    except:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing or invalid authorization header")
+    
+    token = auth_header.split(" ")[1]
+    payload = verify_access_token(token)
+    
+    if not payload:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
+    
+    # Return user info from token
+    return {
+        "user_id": UUID(payload.get("user_id")),
+        "company_id": UUID(payload.get("company_id")) if payload.get("company_id") else None,
+        "role": payload.get("role"),
+        "email": payload.get("email")
+    }
 
-def require_role(*allowed_roles: str):
-    async def role_checker(request: Request):
-        user = await get_current_user(request)
-        if user.get("role") not in allowed_roles:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
-        return user
-    return role_checker
+async def require_super_admin(request: Request, db: AsyncSession) -> dict:
+    """Require the current user to be a super admin."""
+    user = await get_current_user(request, db)
+    
+    if user["role"] != "SUPER_ADMIN":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required")
+    
+    return user
+
+async def require_company_admin(request: Request, db: AsyncSession) -> dict:
+    """Require the current user to be at least a company admin."""
+    user = await get_current_user(request, db)
+    
+    if user["role"] not in ["SUPER_ADMIN", "COMPANY_ADMIN"]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    
+    return user

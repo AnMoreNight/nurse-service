@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
-from db.db import init_db, close_db
+from db.database import init_db, close_db
 from routes import auth, company, user, patient, schedule, shift, status, bootstrap
 
 load_dotenv()

@@ -29,9 +29,9 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport }) =
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-[80] flex justify-center items-center p-0 md:p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 bg-white/30 z-[80] flex justify-center items-center p-0 md:p-4 backdrop-blur-md">
       <div className="bg-white rounded-none md:rounded-2xl shadow-2xl w-full h-full md:h-auto md:max-w-md animate-in fade-in zoom-in-95 duration-200 flex flex-col justify-center">
-        
+
         <div className="p-5 border-b bg-gray-50 rounded-t-none md:rounded-t-2xl flex justify-between items-center">
           <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
             <Download className="w-5 h-5 text-blue-600" />
@@ -43,7 +43,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport }) =
         </div>
 
         <div className="p-6 space-y-6">
-          
+
           {/* Export Type Selection */}
           <div>
             <label className="block text-sm font-bold text-gray-600 mb-3">出力するデータ</label>
@@ -52,11 +52,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport }) =
                 border rounded-xl p-4 cursor-pointer transition-all flex flex-col items-center gap-2
                 ${exportType === 'visits' ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500' : 'border-gray-200 hover:bg-gray-50 text-gray-600'}
               `}>
-                <input 
-                  type="radio" 
-                  className="hidden" 
-                  checked={exportType === 'visits'} 
-                  onChange={() => setExportType('visits')} 
+                <input
+                  type="radio"
+                  className="hidden"
+                  checked={exportType === 'visits'}
+                  onChange={() => setExportType('visits')}
                 />
                 <Calendar className="w-6 h-6" />
                 <span className="font-bold text-sm">スケジュール</span>
@@ -66,11 +66,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport }) =
                 border rounded-xl p-4 cursor-pointer transition-all flex flex-col items-center gap-2
                 ${exportType === 'shifts' ? 'border-pink-500 bg-pink-50 text-pink-700 ring-1 ring-pink-500' : 'border-gray-200 hover:bg-gray-50 text-gray-600'}
               `}>
-                <input 
-                  type="radio" 
-                  className="hidden" 
-                  checked={exportType === 'shifts'} 
-                  onChange={() => setExportType('shifts')} 
+                <input
+                  type="radio"
+                  className="hidden"
+                  checked={exportType === 'shifts'}
+                  onChange={() => setExportType('shifts')}
                 />
                 <Notebook className="w-6 h-6" />
                 <span className="font-bold text-sm">シフト・夜間待機</span>
@@ -84,8 +84,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport }) =
             <div className="flex items-center gap-3">
               <div className="flex-1">
                 <label className="block text-xs text-gray-400 mb-1">開始日</label>
-                <input 
-                  type="date" 
+                <input
+                  type="date"
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none text-gray-700"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
@@ -94,8 +94,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport }) =
               <span className="text-gray-400 mt-4">～</span>
               <div className="flex-1">
                 <label className="block text-xs text-gray-400 mb-1">終了日</label>
-                <input 
-                  type="date" 
+                <input
+                  type="date"
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none text-gray-700"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
@@ -107,13 +107,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport }) =
         </div>
 
         <div className="p-5 border-t bg-gray-50 rounded-b-none md:rounded-b-2xl flex justify-end gap-3 mt-auto md:mt-0 pb-safe">
-           <button onClick={onClose} className="px-5 py-2 text-gray-600 hover:bg-gray-200 rounded-lg font-bold transition-colors text-sm">
-               キャンセル
-           </button>
-           <button onClick={handleExport} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-md transition-transform active:scale-95 flex items-center gap-2 text-sm">
-               <Download className="w-4 h-4" />
-               CSV出力
-           </button>
+          <button onClick={onClose} className="px-5 py-2 text-gray-600 hover:bg-gray-200 rounded-lg font-bold transition-colors text-sm">
+            キャンセル
+          </button>
+          <button onClick={handleExport} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-md transition-transform active:scale-95 flex items-center gap-2 text-sm">
+            <Download className="w-4 h-4" />
+            CSV出力
+          </button>
         </div>
 
       </div>

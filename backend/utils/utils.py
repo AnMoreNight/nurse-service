@@ -20,3 +20,13 @@ def create_access_token(data: dict, expires_delta: timedelta = timedelta(hours=2
 
 def decode_token(token: str):
     return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+
+def verify_access_token(token: str) -> dict | None:
+    """Verify and decode a JWT token, returning None if invalid."""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None

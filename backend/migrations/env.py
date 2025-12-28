@@ -15,7 +15,11 @@ load_dotenv()
 config = context.config
 
 # Override sqlalchemy.url with environment variable
-config.set_main_option('sqlalchemy.url', os.getenv('DATABASE_URL'))
+db_url = os.getenv('DATABASE_URL', '')
+if db_url.startswith('postgresql+asyncpg://'):
+    db_url = db_url.replace('postgresql+asyncpg://', 'postgresql://')
+db_url = db_url.replace('?ssl=require', '?sslmode=require')
+config.set_main_option('sqlalchemy.url', db_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -24,7 +28,13 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-from db.schema import Base
+from db.database import Base
+# Import all models to register them with Base
+from models.orm import (
+    Company, User, Patient, ScheduleStatus, RecurringRule, 
+    Schedule, ScheduleAssignment, Shift, WeeklyOffRule, 
+    UserInvitation, PasswordResetToken, CompanySetting, AuditLog
+)
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,

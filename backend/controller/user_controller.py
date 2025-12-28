@@ -1,4 +1,6 @@
-from db.db import get_pool
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, update, delete
+from models.orm import User, UserInvitation
 from utils.utils import hash_password
 from fastapi import HTTPException, status
 from uuid import UUID, uuid4
@@ -7,92 +9,154 @@ import secrets
 
 class UserController:
     @staticmethod
-    async def create_user(company_id: UUID, email: str, password: str, role: str, name: str, profession: str = None, job_title: str = None, display_color: str = None):
-        pool = get_pool()
-        user_id = uuid4()
-        hashed = hash_password(password)
+    async def create_user(db: AsyncSession, company_id: UUID, email: str, password: str, role: str, 
+                         name: str, profession: str = None, job_title: str = None, 
+                         display_color: str = None, join_date: str = None, left_date: str = None):
+        # Check if email exists
+        existing = await db.execute(select(User).where(User.email == email))
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already exists")
         
-        async with pool.acquire() as conn:
-            try:
-                await conn.execute(
-                    """INSERT INTO users (user_id, company_id, email, password_hash, role, name, profession, job_title, display_color, is_active, created_at, updated_at)
-                       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, $10, $10)""",
-                    user_id, company_id, email, hashed, role, name, profession, job_title, display_color, datetime.utcnow()
-                )
-                return {"user_id": str(user_id), "email": email}
-            except:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already exists")
+        new_user = User(
+            company_id=company_id,
+            email=email,
+            password_hash=hash_password(password),
+            role=role,
+            name=name,
+            profession=profession,
+            job_title=job_title,
+            display_color=display_color,
+            join_date=datetime.strptime(join_date, "%Y-%m-%d").date() if join_date else None,
+            left_date=datetime.strptime(left_date, "%Y-%m-%d").date() if left_date else None,
+            is_active=True
+        )
+        db.add(new_user)
+        await db.commit()
+        await db.refresh(new_user)
+        
+        return {
+            "user_id": str(new_user.user_id),
+            "email": new_user.email,
+            "role": new_user.role,
+            "name": new_user.name
+        }
     
     @staticmethod
-    async def invite_user(company_id: UUID, email: str, role: str):
-        pool = get_pool()
+    async def invite_user(db: AsyncSession, company_id: UUID, email: str, role: str):
         token = secrets.token_urlsafe(32)
         expires_at = datetime.utcnow() + timedelta(days=7)
         
-        async with pool.acquire() as conn:
-            await conn.execute(
-                """INSERT INTO user_invitations (invitation_id, company_id, email, role, token, expires_at, created_at)
-                   VALUES ($1, $2, $3, $4, $5, $6, $7)""",
-                uuid4(), company_id, email, role, token, expires_at, datetime.utcnow()
-            )
-            return {"message": "Invitation sent", "token": token}
-    
-    @staticmethod
-    async def get_users(company_id: UUID):
-        pool = get_pool()
-        async with pool.acquire() as conn:
-            rows = await conn.fetch(
-                """SELECT user_id, company_id, email, role, name, profession, job_title, display_color, avatar_url, sort_order, is_active, created_at
-                   FROM users WHERE company_id = $1 ORDER BY sort_order NULLS LAST, created_at""",
-                company_id
-            )
-            return [dict(row) for row in rows]
-    
-    @staticmethod
-    async def get_user(user_id: UUID, company_id: UUID):
-        pool = get_pool()
-        async with pool.acquire() as conn:
-            row = await conn.fetchrow(
-                """SELECT user_id, company_id, email, role, name, profession, job_title, display_color, avatar_url, sort_order, is_active, created_at
-                   FROM users WHERE user_id = $1 AND company_id = $2""",
-                user_id, company_id
-            )
-            if not row:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-            return dict(row)
-    
-    @staticmethod
-    async def update_user(user_id: UUID, company_id: UUID, **updates):
-        pool = get_pool()
-        set_clause = ", ".join([f"{k} = ${i+3}" for i, k in enumerate(updates.keys())])
-        values = list(updates.values())
+        invite = UserInvitation(
+            company_id=company_id,
+            email=email,
+            role=role,
+            token=token,
+            expires_at=expires_at
+        )
+        db.add(invite)
+        await db.commit()
         
-        async with pool.acquire() as conn:
-            result = await conn.execute(
-                f"UPDATE users SET {set_clause}, updated_at = $1 WHERE user_id = $2 AND company_id = ${len(values)+3}",
-                datetime.utcnow(), user_id, *values, company_id
+        return {"message": "Invitation sent", "token": token}
+    
+    @staticmethod
+    async def get_users(db: AsyncSession, company_id: UUID):
+        result = await db.execute(
+            select(User).where(User.company_id == company_id).order_by(User.sort_order, User.name)
+        )
+        users = result.scalars().all()
+        
+        return [
+            {
+                "user_id": str(u.user_id),
+                "company_id": str(u.company_id) if u.company_id else None,
+                "email": u.email,
+                "role": u.role,
+                "name": u.name,
+                "profession": u.profession,
+                "job_title": u.job_title,
+                "display_color": u.display_color,
+                "avatar_url": u.avatar_url,
+                "sort_order": u.sort_order,
+                "is_active": u.is_active,
+                "join_date": str(u.join_date) if u.join_date else None,
+                "left_date": str(u.left_date) if u.left_date else None,
+                "created_at": u.created_at.isoformat() if u.created_at else None
+            }
+            for u in users
+        ]
+    
+    @staticmethod
+    async def get_user(db: AsyncSession, user_id: UUID, company_id: UUID):
+        result = await db.execute(
+            select(User).where(User.user_id == user_id, User.company_id == company_id)
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        
+        return {
+            "user_id": str(user.user_id),
+            "company_id": str(user.company_id) if user.company_id else None,
+            "email": user.email,
+            "role": user.role,
+            "name": user.name,
+            "profession": user.profession,
+            "job_title": user.job_title,
+            "display_color": user.display_color,
+            "avatar_url": user.avatar_url,
+            "sort_order": user.sort_order,
+            "is_active": user.is_active,
+            "join_date": str(user.join_date) if user.join_date else None,
+            "left_date": str(user.left_date) if user.left_date else None,
+            "created_at": user.created_at.isoformat() if user.created_at else None
+        }
+    
+    @staticmethod
+    async def update_user(db: AsyncSession, user_id: UUID, company_id: UUID, **updates):
+        result = await db.execute(
+            select(User).where(User.user_id == user_id, User.company_id == company_id)
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        
+        for key, value in updates.items():
+            if value is not None and hasattr(user, key):
+                if key in ['join_date', 'left_date'] and isinstance(value, str):
+                    value = datetime.strptime(value, "%Y-%m-%d").date() if value else None
+                setattr(user, key, value)
+        
+        user.updated_at = datetime.utcnow()
+        await db.commit()
+        
+        return {"message": "User updated"}
+    
+    @staticmethod
+    async def update_sort_orders(db: AsyncSession, company_id: UUID, sort_orders: list):
+        for item in sort_orders:
+            await db.execute(
+                update(User).where(
+                    User.user_id == UUID(item['user_id']),
+                    User.company_id == company_id
+                ).values(sort_order=item['sort_order'])
             )
-            if result == "UPDATE 0":
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-            return {"message": "User updated"}
+        await db.commit()
+        return {"message": "Sort orders updated"}
     
     @staticmethod
-    async def update_sort_orders(company_id: UUID, sort_orders: list):
-        pool = get_pool()
-        async with pool.acquire() as conn:
-            async with conn.transaction():
-                for item in sort_orders:
-                    await conn.execute(
-                        "UPDATE users SET sort_order = $1 WHERE user_id = $2 AND company_id = $3",
-                        item['sort_order'], item['user_id'], company_id
-                    )
-            return {"message": "Sort orders updated"}
-    
-    @staticmethod
-    async def delete_user(user_id: UUID, company_id: UUID):
-        pool = get_pool()
-        async with pool.acquire() as conn:
-            result = await conn.execute("UPDATE users SET is_active = false WHERE user_id = $1 AND company_id = $2", user_id, company_id)
-            if result == "UPDATE 0":
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-            return {"message": "User deactivated"}
+    async def deactivate_user(db: AsyncSession, user_id: UUID, company_id: UUID):
+        result = await db.execute(
+            select(User).where(User.user_id == user_id, User.company_id == company_id)
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        
+        user.is_active = False
+        user.left_date = datetime.utcnow().date()
+        await db.commit()
+        
+        return {"message": "User deactivated"}

@@ -153,19 +153,17 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.email}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    user.role === 'SystemAdmin' ? 'bg-purple-100 text-purple-800' :
-                    user.role === 'CompanyAdmin' ? 'bg-blue-100 text-blue-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
+                  <span className={`px-2 py-1 text-xs rounded-full ${user.role === 'SystemAdmin' ? 'bg-purple-100 text-purple-800' :
+                      user.role === 'CompanyAdmin' ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800'
+                    }`}>
                     {user.role}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.profession || '-'}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
+                  <span className={`px-2 py-1 text-xs rounded-full ${user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
                     {user.is_active ? '有効' : '無効'}
                   </span>
                 </td>
@@ -190,7 +188,7 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-white/30 flex items-center justify-center z-50 backdrop-blur-md">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <h3 className="text-xl font-bold mb-4">
               {isInviteMode ? 'ユーザー招待' : editingUser ? 'ユーザー編集' : 'ユーザー作成'}
@@ -207,7 +205,7 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
                   required
                 />
               </div>
-              
+
               {!isInviteMode && (
                 <>
                   <div>

@@ -1,146 +1,211 @@
-from db.db import get_pool
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, update, delete, and_
+from models.orm import Shift, WeeklyOffRule, User
 from fastapi import HTTPException, status
 from uuid import UUID, uuid4
-from datetime import datetime, date, timedelta
+from datetime import datetime, date
 import csv
 import io
 
 class ShiftController:
     @staticmethod
-    async def create_shift(company_id: UUID, user_id: UUID, shift_date: str, shift_type: str):
-        pool = get_pool()
-        shift_id = uuid4()
+    async def create_shift(db: AsyncSession, company_id: UUID, user_id: UUID, 
+                          shift_date: str, shift_type: str):
+        # Check if shift already exists for this user/date
+        existing = await db.execute(
+            select(Shift).where(
+                Shift.user_id == user_id,
+                Shift.shift_date == datetime.strptime(shift_date, "%Y-%m-%d").date()
+            )
+        )
+        existing_shift = existing.scalar_one_or_none()
         
-        async with pool.acquire() as conn:
-            await conn.execute(
-                """INSERT INTO shifts (shift_id, company_id, user_id, shift_date, shift_type, is_auto_reflected, created_at, updated_at)
-                   VALUES ($1, $2, $3, $4, $5, false, $6, $6)""",
-                shift_id, company_id, user_id, shift_date, shift_type, datetime.utcnow()
-            )
-            return {"shift_id": str(shift_id)}
-    
-    @staticmethod
-    async def get_shifts(company_id: UUID, user_id: UUID = None, start_date: str = None, end_date: str = None):
-        pool = get_pool()
-        async with pool.acquire() as conn:
-            query = """
-                SELECT shift_id, company_id, user_id, shift_date, shift_type, is_auto_reflected, memo, created_at
-                FROM shifts WHERE company_id = $1
-            """
-            params = [company_id]
-            
-            if user_id:
-                query += f" AND user_id = ${len(params)+1}"
-                params.append(user_id)
-            
-            if start_date and end_date:
-                query += f" AND shift_date >= ${len(params)+1} AND shift_date <= ${len(params)+2}"
-                params.extend([start_date, end_date])
-            
-            query += " ORDER BY shift_date, user_id"
-            
-            rows = await conn.fetch(query, *params)
-            return [dict(row) for row in rows]
-    
-    @staticmethod
-    async def update_shift(shift_id: UUID, company_id: UUID, shift_type: str):
-        pool = get_pool()
-        async with pool.acquire() as conn:
-            result = await conn.execute(
-                "UPDATE shifts SET shift_type = $1, is_auto_reflected = false, updated_at = $2 WHERE shift_id = $3 AND company_id = $4",
-                shift_type, datetime.utcnow(), shift_id, company_id
-            )
-            if result == "UPDATE 0":
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shift not found")
-            return {"message": "Shift updated"}
-    
-    @staticmethod
-    async def delete_shift(shift_id: UUID, company_id: UUID):
-        pool = get_pool()
-        async with pool.acquire() as conn:
-            result = await conn.execute("DELETE FROM shifts WHERE shift_id = $1 AND company_id = $2", shift_id, company_id)
-            if result == "DELETE 0":
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shift not found")
-            return {"message": "Shift deleted"}
-    
-    @staticmethod
-    async def create_weekly_off_rule(company_id: UUID, user_id: UUID, day_of_week: str, shift_type: str):
-        pool = get_pool()
-        rule_id = uuid4()
+        if existing_shift:
+            existing_shift.shift_type = shift_type
+            await db.commit()
+            return {"shift_id": str(existing_shift.shift_id), "message": "Shift updated"}
         
-        async with pool.acquire() as conn:
-            await conn.execute(
-                """INSERT INTO weekly_off_rules (rule_id, company_id, user_id, day_of_week, shift_type, is_active, created_at)
-                   VALUES ($1, $2, $3, $4, $5, true, $6)""",
-                rule_id, company_id, user_id, day_of_week, shift_type, datetime.utcnow()
+        shift = Shift(
+            company_id=company_id,
+            user_id=user_id,
+            shift_date=datetime.strptime(shift_date, "%Y-%m-%d").date(),
+            shift_type=shift_type
+        )
+        db.add(shift)
+        await db.commit()
+        await db.refresh(shift)
+        
+        return {"shift_id": str(shift.shift_id), "message": "Shift created"}
+    
+    @staticmethod
+    async def get_shifts(db: AsyncSession, company_id: UUID, start_date: str = None, 
+                        end_date: str = None, user_id: UUID = None):
+        query = select(Shift).where(Shift.company_id == company_id)
+        
+        if start_date:
+            query = query.where(Shift.shift_date >= datetime.strptime(start_date, "%Y-%m-%d").date())
+        if end_date:
+            query = query.where(Shift.shift_date <= datetime.strptime(end_date, "%Y-%m-%d").date())
+        if user_id:
+            query = query.where(Shift.user_id == user_id)
+        
+        query = query.order_by(Shift.shift_date)
+        result = await db.execute(query)
+        shifts = result.scalars().all()
+        
+        return [
+            {
+                "shift_id": str(s.shift_id),
+                "company_id": str(s.company_id),
+                "user_id": str(s.user_id),
+                "shift_date": str(s.shift_date),
+                "shift_type": s.shift_type,
+                "is_auto_reflected": s.is_auto_reflected,
+                "memo": s.memo,
+                "created_at": s.created_at.isoformat() if s.created_at else None
+            }
+            for s in shifts
+        ]
+    
+    @staticmethod
+    async def update_shift(db: AsyncSession, shift_id: UUID, company_id: UUID, shift_type: str):
+        result = await db.execute(
+            select(Shift).where(Shift.shift_id == shift_id, Shift.company_id == company_id)
+        )
+        shift = result.scalar_one_or_none()
+        
+        if not shift:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shift not found")
+        
+        shift.shift_type = shift_type
+        await db.commit()
+        return {"message": "Shift updated"}
+    
+    @staticmethod
+    async def delete_shift(db: AsyncSession, shift_id: UUID, company_id: UUID):
+        result = await db.execute(
+            select(Shift).where(Shift.shift_id == shift_id, Shift.company_id == company_id)
+        )
+        shift = result.scalar_one_or_none()
+        
+        if not shift:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shift not found")
+        
+        await db.delete(shift)
+        await db.commit()
+        return {"message": "Shift deleted"}
+    
+    @staticmethod
+    async def bulk_create_shifts(db: AsyncSession, company_id: UUID, user_id: UUID, shifts: list):
+        created_ids = []
+        for shift_data in shifts:
+            shift = Shift(
+                company_id=company_id,
+                user_id=user_id,
+                shift_date=datetime.strptime(shift_data['shift_date'], "%Y-%m-%d").date(),
+                shift_type=shift_data['shift_type']
             )
-            return {"rule_id": str(rule_id)}
+            db.add(shift)
+            await db.flush()
+            created_ids.append(str(shift.shift_id))
+        
+        await db.commit()
+        return {"message": f"Created {len(created_ids)} shifts", "shift_ids": created_ids}
     
     @staticmethod
-    async def get_weekly_off_rules(company_id: UUID, user_id: UUID = None):
-        pool = get_pool()
-        async with pool.acquire() as conn:
-            if user_id:
-                rows = await conn.fetch(
-                    """SELECT rule_id, company_id, user_id, day_of_week, shift_type, is_active, created_at
-                       FROM weekly_off_rules WHERE company_id = $1 AND user_id = $2 AND is_active = true""",
-                    company_id, user_id
-                )
-            else:
-                rows = await conn.fetch(
-                    """SELECT rule_id, company_id, user_id, day_of_week, shift_type, is_active, created_at
-                       FROM weekly_off_rules WHERE company_id = $1 AND is_active = true""",
-                    company_id
-                )
-            return [dict(row) for row in rows]
+    async def create_weekly_off_rule(db: AsyncSession, company_id: UUID, user_id: UUID, 
+                                    day_of_week: int, shift_type: str):
+        rule = WeeklyOffRule(
+            company_id=company_id,
+            user_id=user_id,
+            day_of_week=day_of_week,
+            shift_type=shift_type
+        )
+        db.add(rule)
+        await db.commit()
+        await db.refresh(rule)
+        
+        return {"rule_id": str(rule.rule_id), "message": "Weekly off rule created"}
     
     @staticmethod
-    async def apply_weekly_off_rules(company_id: UUID, start_date: str, end_date: str):
-        pool = get_pool()
-        async with pool.acquire() as conn:
-            rules = await conn.fetch(
-                "SELECT user_id, day_of_week, shift_type FROM weekly_off_rules WHERE company_id = $1 AND is_active = true",
-                company_id
-            )
-            
-            day_map = {"Sun": 6, "Mon": 0, "Tue": 1, "Wed": 2, "Thu": 3, "Fri": 4, "Sat": 5}
-            start = datetime.strptime(start_date, "%Y-%m-%d").date()
-            end = datetime.strptime(end_date, "%Y-%m-%d").date()
-            
-            async with conn.transaction():
-                for rule in rules:
-                    current = start
-                    target_weekday = day_map[rule['day_of_week']]
-                    
-                    while current <= end:
-                        if current.weekday() == target_weekday:
-                            existing = await conn.fetchval(
-                                "SELECT shift_id FROM shifts WHERE company_id = $1 AND user_id = $2 AND shift_date = $3",
-                                company_id, rule['user_id'], current
-                            )
-                            
-                            if not existing:
-                                await conn.execute(
-                                    """INSERT INTO shifts (shift_id, company_id, user_id, shift_date, shift_type, is_auto_reflected, created_at, updated_at)
-                                       VALUES ($1, $2, $3, $4, $5, true, $6, $6)""",
-                                    uuid4(), company_id, rule['user_id'], current, rule['shift_type'], datetime.utcnow()
-                                )
-                        current += timedelta(days=1)
-            
-            return {"message": "Weekly off rules applied"}
+    async def get_weekly_off_rules(db: AsyncSession, company_id: UUID, user_id: UUID = None):
+        query = select(WeeklyOffRule).where(WeeklyOffRule.company_id == company_id)
+        if user_id:
+            query = query.where(WeeklyOffRule.user_id == user_id)
+        
+        result = await db.execute(query)
+        rules = result.scalars().all()
+        
+        return [
+            {
+                "rule_id": str(r.rule_id),
+                "company_id": str(r.company_id),
+                "user_id": str(r.user_id),
+                "day_of_week": r.day_of_week,
+                "shift_type": r.shift_type
+            }
+            for r in rules
+        ]
     
     @staticmethod
-    async def export_shifts_csv(company_id: UUID, start_date: str = None, end_date: str = None):
-        shifts = await ShiftController.get_shifts(company_id, start_date=start_date, end_date=end_date)
+    async def apply_weekly_off_rules(db: AsyncSession, company_id: UUID, year: int, month: int):
+        # Get all rules for this company
+        rules_result = await db.execute(
+            select(WeeklyOffRule).where(WeeklyOffRule.company_id == company_id)
+        )
+        rules = rules_result.scalars().all()
+        
+        if not rules:
+            return {"message": "No rules to apply"}
+        
+        # Calculate all dates in the month
+        from calendar import monthrange
+        days_in_month = monthrange(year, month)[1]
+        
+        created_count = 0
+        for day in range(1, days_in_month + 1):
+            current_date = date(year, month, day)
+            weekday = current_date.weekday()  # 0=Monday, 6=Sunday
+            
+            for rule in rules:
+                if rule.day_of_week == weekday:
+                    # Create shift if not exists
+                    existing = await db.execute(
+                        select(Shift).where(
+                            Shift.user_id == rule.user_id,
+                            Shift.shift_date == current_date
+                        )
+                    )
+                    if not existing.scalar_one_or_none():
+                        shift = Shift(
+                            company_id=company_id,
+                            user_id=rule.user_id,
+                            shift_date=current_date,
+                            shift_type=rule.shift_type,
+                            is_auto_reflected=True
+                        )
+                        db.add(shift)
+                        created_count += 1
+        
+        await db.commit()
+        return {"message": f"Applied {created_count} shifts from weekly rules"}
+    
+    @staticmethod
+    async def export_shifts_csv(db: AsyncSession, company_id: UUID, start_date: str, end_date: str):
+        shifts = await ShiftController.get_shifts(db, company_id, start_date, end_date)
+        
+        # Get user names
+        user_result = await db.execute(
+            select(User).where(User.company_id == company_id)
+        )
+        users = {str(u.user_id): u.name for u in user_result.scalars().all()}
         
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(['Shift ID', 'User ID', 'Date', 'Shift Type', 'Auto Reflected', 'Memo'])
+        writer.writerow(['Date', 'Staff', 'Shift Type'])
         
         for s in shifts:
-            writer.writerow([
-                str(s['shift_id']), str(s['user_id']), s['shift_date'], 
-                s['shift_type'], s['is_auto_reflected'], s.get('memo', '')
-            ])
+            user_name = users.get(s['user_id'], 'Unknown')
+            writer.writerow([s['shift_date'], user_name, s['shift_type']])
         
         return output.getvalue()

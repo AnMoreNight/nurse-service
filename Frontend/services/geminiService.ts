@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { Staff, VisitWithStaff } from "../types";
+import { Staff, VisitWithStaff } from "@/lib/types";
 
 // Ensure API key is available.
 const apiKey = process.env.API_KEY || '';
@@ -19,19 +19,19 @@ interface SuggestionInput {
 }
 
 export const suggestSchedule = async (input: SuggestionInput) => {
-   if (!apiKey) throw new Error("APIキー未設定: 管理者に連絡してください。");
-   
-   // Optimize payload size: minimize fields sent to AI
-   const staffInfo = input.candidateStaff.map(s => ({ id: s.id, name: s.name }));
-   const visitsInfo = input.existingVisits.map(v => ({
-       sid: v.staffIds[0], 
-       d: v.date,
-       s: v.startTime,
-       e: v.endTime,
-       addr: v.address || '' // Shorten keys to save tokens
-   }));
+    if (!apiKey) throw new Error("APIキー未設定: 管理者に連絡してください。");
 
-   const prompt = `
+    // Optimize payload size: minimize fields sent to AI
+    const staffInfo = input.candidateStaff.map(s => ({ id: s.id, name: s.name }));
+    const visitsInfo = input.existingVisits.map(v => ({
+        sid: v.staffIds[0],
+        d: v.date,
+        s: v.startTime,
+        e: v.endTime,
+        addr: v.address || '' // Shorten keys to save tokens
+    }));
+
+    const prompt = `
    最適化エンジンとして、下記条件で訪問枠を3つ提案せよ。
 
    条件:
@@ -57,36 +57,36 @@ export const suggestSchedule = async (input: SuggestionInput) => {
    Schema:
    [{"staffId":"ID","date":"YYYY-MM-DD","startTime":"HH:mm","endTime":"HH:mm"}]
    `;
-   
-   try {
-     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: Type.ARRAY,
-                items: {
-                    type: Type.OBJECT,
-                    properties: {
-                        staffId: { type: Type.STRING },
-                        date: { type: Type.STRING },
-                        startTime: { type: Type.STRING },
-                        endTime: { type: Type.STRING }
-                    },
-                    required: ["staffId", "date", "startTime", "endTime"],
-                    propertyOrdering: ["staffId", "date", "startTime", "endTime"]
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            staffId: { type: Type.STRING },
+                            date: { type: Type.STRING },
+                            startTime: { type: Type.STRING },
+                            endTime: { type: Type.STRING }
+                        },
+                        required: ["staffId", "date", "startTime", "endTime"],
+                        propertyOrdering: ["staffId", "date", "startTime", "endTime"]
+                    }
                 }
             }
+        });
+
+        if (response.text) {
+            return JSON.parse(response.text);
         }
-     });
-     
-     if (response.text) {
-         return JSON.parse(response.text);
-     }
-     return [];
-   } catch (e) {
-       console.error("Gemini API Error:", e);
-       throw new Error("AI提案の生成に失敗しました。");
-   }
+        return [];
+    } catch (e) {
+        console.error("Gemini API Error:", e);
+        throw new Error("AI提案の生成に失敗しました。");
+    }
 };

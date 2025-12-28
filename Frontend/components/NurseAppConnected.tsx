@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
+import {
   authService, userService, scheduleService, shiftService, statusService, patientService,
   User, Schedule, Shift, ScheduleStatus
 } from '@/services';
@@ -13,16 +13,15 @@ import { StaffFormModal } from './StaffFormModal';
 import { UserManagement } from './UserManagement';
 import { Toast } from './Toast';
 import { toLocalISOString } from '@/lib/constants';
-import { 
-  Calendar, Notebook, LogOut, Download, Search, Users, Settings, Menu, X 
+import {
+  Calendar, Notebook, LogOut, Download, Search, Users, Settings, Menu, X
 } from 'lucide-react';
 
 const NavButton = ({ active, onClick, icon, label }: any) => (
-  <button 
+  <button
     onClick={onClick}
-    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-      active ? 'bg-teal-600 text-white font-bold shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-    }`}
+    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${active ? 'bg-teal-600 text-white font-bold shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+      }`}
   >
     {icon}
     <span className="block">{label}</span>
@@ -32,12 +31,12 @@ const NavButton = ({ active, onClick, icon, label }: any) => (
 export default function NurseAppConnected() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [view, setView] = useState<'schedule' | 'shifts' | 'users' | 'settings'>('schedule');
-  
+
   const [staff, setStaff] = useState<User[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [statuses, setStatuses] = useState<ScheduleStatus[]>([]);
-  
+
   const [currentDate, setCurrentDate] = useState<string>(toLocalISOString(new Date()));
   const [selectedVisit, setSelectedVisit] = useState<any>(null);
   const [staffFormState, setStaffFormState] = useState<{ isOpen: boolean, initialStaff?: any }>({ isOpen: false });
@@ -158,7 +157,7 @@ export default function NurseAppConnected() {
     try {
       const startDateTime = `${visitData.date}T${visitData.startTime}:00`;
       const endDateTime = `${visitData.date}T${visitData.endTime}:00`;
-      
+
       await scheduleService.create({
         patient_name: visitData.patientName,
         visit_address: visitData.address,
@@ -168,7 +167,7 @@ export default function NurseAppConnected() {
         memo: visitData.notes,
         assigned_user_ids: visitData.staffIds,
       });
-      
+
       await loadData();
       showToast('スケジュールを追加しました');
     } catch (error: any) {
@@ -184,7 +183,7 @@ export default function NurseAppConnected() {
       if (updates.status) updateData.status_id = updates.status;
       if (updates.notes !== undefined) updateData.memo = updates.notes;
       if (updates.staffIds) updateData.assigned_user_ids = updates.staffIds;
-      
+
       if (updates.date || updates.startTime || updates.endTime) {
         const visit = visits.find(v => v.id === visitId);
         const date = updates.date || visit?.date;
@@ -193,7 +192,7 @@ export default function NurseAppConnected() {
         updateData.start_time = `${date}T${startTime}:00`;
         updateData.end_time = `${date}T${endTime}:00`;
       }
-      
+
       await scheduleService.update(visitId, updateData);
       await loadData();
       showToast('スケジュールを更新しました');
@@ -216,18 +215,18 @@ export default function NurseAppConnected() {
     try {
       const visit = visits.find(v => v.id === visitId);
       if (!visit) return;
-      
+
       const newStaffIds = visit.staffIds.filter(id => id !== sourceStaffId);
       if (!newStaffIds.includes(targetStaffId)) {
         newStaffIds.push(targetStaffId);
       }
-      
+
       await scheduleService.update(visitId, {
         assigned_user_ids: newStaffIds,
         start_time: `${visit.date}T${newStartTime}:00`,
         update_scope: scope || 'this',
       });
-      
+
       await loadData();
       showToast('スケジュールを移動しました');
     } catch (error: any) {
@@ -238,13 +237,13 @@ export default function NurseAppConnected() {
   const handleUpdateShift = async (staffId: string, date: string, type: any) => {
     try {
       const existing = shifts.find(s => s.user_id === staffId && s.shift_date === date);
-      
+
       if (existing) {
         await shiftService.update(existing.shift_id, { shift_type: type });
       } else {
         await shiftService.create({ user_id: staffId, shift_date: date, shift_type: type });
       }
-      
+
       await loadData();
       showToast('シフトを更新しました');
     } catch (error: any) {
@@ -262,7 +261,7 @@ export default function NurseAppConnected() {
         profession: staffData.jobTitle,
         display_color: staffData.color,
       });
-      
+
       await loadData();
       showToast('スタッフを追加しました');
     } catch (error: any) {
@@ -277,7 +276,7 @@ export default function NurseAppConnected() {
         profession: updates.jobTitle,
         display_color: updates.color,
       });
-      
+
       await loadData();
       showToast('スタッフを更新しました');
     } catch (error: any) {
@@ -290,12 +289,12 @@ export default function NurseAppConnected() {
       const reordered = [...staff];
       const [moved] = reordered.splice(fromIndex, 1);
       reordered.splice(toIndex, 0, moved);
-      
+
       const sortOrders = reordered.map((s, idx) => ({
         user_id: s.user_id,
         sort_order: idx,
       }));
-      
+
       await userService.updateSortOrders(sortOrders);
       await loadData();
     } catch (error: any) {
@@ -433,19 +432,18 @@ export default function NurseAppConnected() {
 
               {view === 'shifts' && (
                 <ShiftManager
-                  staffList={staffList}
+                  staff={staffList}
                   shifts={shiftAssignments}
-                  currentMonth={currentDate.substring(0, 7)}
+                  currentDate={currentDate}
+                  companySettings={companySettings}
                   onUpdateShift={handleUpdateShift}
-                  onPrevMonth={() => {
-                    const [y, m] = currentDate.split('-').map(Number);
-                    const d = new Date(y, m - 2, 1);
-                    setCurrentDate(toLocalISOString(d));
-                  }}
-                  onNextMonth={() => {
-                    const [y, m] = currentDate.split('-').map(Number);
-                    const d = new Date(y, m, 1);
-                    setCurrentDate(toLocalISOString(d));
+                  onOpenStaffForm={(s) => setStaffFormState({ isOpen: true, initialStaff: s })}
+                  onDeleteStaff={async (id) => {
+                    if (window.confirm('このスタッフを削除しますか？')) {
+                      await userService.delete(id);
+                      await loadData();
+                      showToast('スタッフを削除しました');
+                    }
                   }}
                   isReadOnly={isReadOnly}
                 />
@@ -453,11 +451,38 @@ export default function NurseAppConnected() {
 
               {view === 'users' && isAdmin && (
                 <UserManagement
-                  users={staff}
-                  onAddUser={handleAddStaff}
-                  onUpdateUser={handleUpdateStaff}
-                  onDeleteUser={(id) => userService.delete(id).then(loadData)}
-                  onInviteUser={(email, role) => userService.invite({ email, role }).then(() => showToast('招待を送信しました'))}
+                  companyId={currentUser?.company_id || ''}
+                  users={staff.map(s => ({
+                    id: s.user_id,
+                    username: s.email,
+                    name: s.name,
+                    role: s.role === 'CompanyAdmin' ? 'admin' : 'user',
+                    companyId: s.company_id || '',
+                    password: '',
+                  })) as any}
+                  onAddUser={async (user: any) => {
+                    await userService.create({
+                      email: user.username,
+                      password: user.password,
+                      role: user.role === 'admin' ? 'CompanyAdmin' : 'NormalUser',
+                      name: user.name,
+                    });
+                    await loadData();
+                    showToast('ユーザーを追加しました');
+                  }}
+                  onUpdateUser={async (user: any) => {
+                    await userService.update(user.id, {
+                      name: user.name,
+                      role: user.role === 'admin' ? 'CompanyAdmin' : 'NormalUser',
+                    });
+                    await loadData();
+                    showToast('ユーザーを更新しました');
+                  }}
+                  onDeleteUser={async (id) => {
+                    await userService.delete(id);
+                    await loadData();
+                    showToast('ユーザーを削除しました');
+                  }}
                 />
               )}
             </>
@@ -468,39 +493,54 @@ export default function NurseAppConnected() {
       {/* Modals */}
       {selectedVisit && (
         <VisitModal
-          visit={selectedVisit}
+          visit={{
+            id: selectedVisit.id || `new_${Date.now()}`,
+            companyId: currentUser?.company_id || '',
+            staffIds: selectedVisit.staffIds || [],
+            patientName: selectedVisit.patientName || '',
+            address: selectedVisit.address,
+            date: selectedVisit.date,
+            startTime: selectedVisit.startTime,
+            endTime: selectedVisit.endTime,
+            status: selectedVisit.status || (statuses[0]?.status_id) || '',
+            recurrence: selectedVisit.recurrence || 'none',
+            notes: selectedVisit.notes || '',
+            staffMembers: selectedVisit.staffMembers,
+          }}
           staffList={staffList}
           companySettings={companySettings}
           onClose={() => setSelectedVisit(null)}
-          onSave={(data) => {
-            if (selectedVisit.id) {
-              handleUpdateVisit(selectedVisit.id, data);
+          onUpdate={async (updatedVisit, scope) => {
+            if (updatedVisit.id.startsWith('new_')) {
+              await handleAddVisit(updatedVisit);
             } else {
-              handleAddVisit(data);
+              await handleUpdateVisit(updatedVisit.id, { ...updatedVisit, scope });
             }
             setSelectedVisit(null);
           }}
-          onDelete={selectedVisit.id ? () => {
-            handleDeleteVisit(selectedVisit.id);
+          onDelete={async (visitId, scope) => {
+            await handleDeleteVisit(visitId);
             setSelectedVisit(null);
-          } : undefined}
+          }}
           isReadOnly={isReadOnly}
         />
       )}
 
       {staffFormState.isOpen && (
         <StaffFormModal
+          isOpen={staffFormState.isOpen}
           initialStaff={staffFormState.initialStaff}
+          currentDate={currentDate}
+          jobTitles={companySettings.jobTitles}
           onClose={() => setStaffFormState({ isOpen: false })}
-          onSave={(data) => {
+          onSave={async (name, jobTitle, defaultHolidays, joinedDate) => {
             if (staffFormState.initialStaff) {
-              handleUpdateStaff(staffFormState.initialStaff.id, data);
+              await handleUpdateStaff(staffFormState.initialStaff.id, { name, jobTitle });
             } else {
-              handleAddStaff(data);
+              await handleAddStaff({ name, jobTitle });
             }
             setStaffFormState({ isOpen: false });
           }}
-          companySettings={companySettings}
         />
       )}
 

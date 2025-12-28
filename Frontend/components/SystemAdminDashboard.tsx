@@ -15,7 +15,7 @@ interface SystemAdminDashboardProps {
   onAddDbUser: (user: UserAccount) => void;
 }
 
-export const SystemAdminDashboard: React.FC<SystemAdminDashboardProps> = ({ 
+export const SystemAdminDashboard: React.FC<SystemAdminDashboardProps> = ({
   companies, onAddCompany, onUpdateCompany, onDeleteCompany, onImpersonate, dbUsers, onAddDbUser
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,7 +27,7 @@ export const SystemAdminDashboard: React.FC<SystemAdminDashboardProps> = ({
   const [contactPerson, setContactPerson] = useState('');
   const [email, setEmail] = useState('');
 
-  const filteredCompanies = companies.filter(c => 
+  const filteredCompanies = companies.filter(c =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.contactPerson.toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.email.toLowerCase().includes(searchQuery.toLowerCase())
@@ -111,7 +111,7 @@ export const SystemAdminDashboard: React.FC<SystemAdminDashboardProps> = ({
   return (
     <div className="min-h-screen bg-slate-100 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-slate-800 flex items-center gap-3">
@@ -166,15 +166,15 @@ export const SystemAdminDashboard: React.FC<SystemAdminDashboardProps> = ({
           <div className="p-4 md:p-6 border-b bg-slate-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div className="relative w-full md:w-80">
               <Search className="absolute left-3 top-2.5 w-5 h-5 text-slate-400" />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="企業名、担当者名、メールで検索..."
                 className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
               />
             </div>
-            <button 
+            <button
               onClick={() => handleOpenModal()}
               className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition-colors font-bold shadow-sm whitespace-nowrap"
             >
@@ -212,7 +212,7 @@ export const SystemAdminDashboard: React.FC<SystemAdminDashboardProps> = ({
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <button 
+                      <button
                         onClick={() => toggleStatus(company)}
                         className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${company.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}
                       >
@@ -226,21 +226,21 @@ export const SystemAdminDashboard: React.FC<SystemAdminDashboardProps> = ({
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button 
+                        <button
                           onClick={() => onImpersonate(company)}
                           className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                           title="この企業としてログイン"
                         >
                           <LogIn className="w-4 h-4" />
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleOpenModal(company)}
                           className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                           title="編集"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleDelete(company.id)}
                           className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="削除"
@@ -259,7 +259,7 @@ export const SystemAdminDashboard: React.FC<SystemAdminDashboardProps> = ({
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-white/30 z-50 flex justify-center items-center p-4 backdrop-blur-md">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
             <div className="p-5 border-b bg-slate-50 flex justify-between items-center">
               <h3 className="font-bold text-slate-800">{editingCompany ? '企業情報編集' : '新規企業登録'}</h3>
@@ -270,45 +270,45 @@ export const SystemAdminDashboard: React.FC<SystemAdminDashboardProps> = ({
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-bold text-slate-600 mb-1">企業名</label>
-                <input 
-                  type="text" 
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
-                  value={name} 
-                  onChange={e => setName(e.target.value)} 
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
                   placeholder="例: ABCケアサービス"
                 />
               </div>
               <div>
                 <label className="block text-sm font-bold text-slate-600 mb-1">担当者名</label>
-                <input 
-                  type="text" 
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
-                  value={contactPerson} 
-                  onChange={e => setContactPerson(e.target.value)} 
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={contactPerson}
+                  onChange={e => setContactPerson(e.target.value)}
                   placeholder="例: 山田 太郎"
                 />
               </div>
               <div>
                 <label className="block text-sm font-bold text-slate-600 mb-1">メールアドレス</label>
-                <input 
-                  type="email" 
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
-                  value={email} 
-                  onChange={e => setEmail(e.target.value)} 
+                <input
+                  type="email"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
                   placeholder="例: admin@abc-care.jp"
                 />
               </div>
 
               <div className="pt-4 flex justify-end gap-3">
-                <button 
-                  type="button" 
-                  onClick={() => setIsModalOpen(false)} 
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
                   className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-bold"
                 >
                   キャンセル
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-bold shadow-sm"
                 >
                   保存

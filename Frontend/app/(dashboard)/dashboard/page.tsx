@@ -1,27 +1,27 @@
 "use client";
 
-import { Dashboard } from '@/Frontend/components/Dashboard';
-import { ShiftManager } from '@/Frontend/components/ShiftManager';
-import { UserManagement } from '@/Frontend/components/UserManagement';
-import { CompanySettingsView } from '@/Frontend/components/CompanySettings';
-import { VisitModal } from '@/Frontend/components/VisitModal';
-import { StaffFormModal } from '@/Frontend/components/StaffFormModal';
-import { ScheduleSuggestionModal } from '@/Frontend/components/ScheduleSuggestionModal';
-import { SearchVisitsModal } from '@/Frontend/components/SearchVisitsModal';
-import { ExportModal } from '@/Frontend/components/ExportModal';
-import { Toast } from '@/Frontend/components/Toast';
+import { Dashboard } from '@/components/Dashboard';
+import { ShiftManager } from '@/components/ShiftManager';
+import { UserManagement } from '@/components/UserManagement';
+import { CompanySettingsView } from '@/components/CompanySettings';
+import { VisitModal } from '@/components/VisitModal';
+import { StaffFormModal } from '@/components/StaffFormModal';
+import { ScheduleSuggestionModal } from '@/components/ScheduleSuggestionModal';
+import { SearchVisitsModal } from '@/components/SearchVisitsModal';
+import { ExportModal } from '@/components/ExportModal';
+import { Toast } from '@/components/Toast';
 import { useApp } from '@/lib/context';
 import { useSearchParams } from 'next/navigation';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Suspense } from 'react';
 import { toLocalISOString, checkVisitVisibility, formatDateForCSV, getEffectiveShiftType } from '@/lib/constants';
 import { VisitWithStaff, Staff, RecurrenceScope, Visit, ShiftType, ScheduleSuggestion, ShiftAssignment } from '@/lib/types';
 import { X } from 'lucide-react';
 
-export default function Page() {
+function DashboardContent() {
   const { currentUser, masterStaff, masterVisits, masterShifts, masterCompanies, dbUsers, setMasterVisits, setMasterStaff, setMasterShifts, setDbUsers, setMasterCompanies } = useApp();
   const searchParams = useSearchParams();
   const view = searchParams.get('view') || 'schedule';
-  
+
   const [currentDate, setCurrentDate] = useState<string>(toLocalISOString(new Date()));
   const [selectedVisit, setSelectedVisit] = useState<VisitWithStaff | null>(null);
   const [staffFormState, setStaffFormState] = useState<{ isOpen: boolean, initialStaff?: Staff }>({ isOpen: false });
@@ -30,7 +30,7 @@ export default function Page() {
 
   const companyId = currentUser?.companyId;
   const isReadOnly = currentUser?.role === 'user';
-  
+
   const staffList = useMemo(() => {
     if (!companyId) return [];
     return masterStaff.filter(s => s.companyId === companyId && !s.leftDate);
@@ -94,7 +94,7 @@ export default function Page() {
   const handleExport = (type: 'visits' | 'shifts', start: string, end: string) => {
     const BOM = '\uFEFF';
     let csvContent = '';
-    
+
     if (type === 'visits') {
       csvContent = "日付,開始時間,終了時間,患者名,担当者,ステータス,メモ\n";
       const targetVisits = companyVisits.filter(v => v.date >= start && v.date <= end).sort((a, b) => {
@@ -121,7 +121,7 @@ export default function Page() {
         staffList.forEach(staff => {
           const effectiveType = getEffectiveShiftType(staff, dateStr, companyShifts);
           let typeLabel = '';
-          switch(effectiveType) {
+          switch (effectiveType) {
             case 'night1': typeLabel = '夜間待機1'; break;
             case 'night2': typeLabel = '夜間待機2'; break;
             case 'night1_holiday': typeLabel = '夜間待機1(休)'; break;
@@ -214,8 +214,8 @@ export default function Page() {
     setMasterVisits(prev => {
       const targetVisit = prev.find(v => v.id === visitId);
       if (!targetVisit) return prev;
-      const timeToMinutes = (t: string) => { const [h,m] = t.split(':').map(Number); return h*60+m; };
-      const minutesToTime = (tm: number) => `${String(Math.floor(tm/60)).padStart(2,'0')}:${String(tm%60).padStart(2,'0')}`;
+      const timeToMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+      const minutesToTime = (tm: number) => `${String(Math.floor(tm / 60)).padStart(2, '0')}:${String(tm % 60).padStart(2, '0')}`;
       const duration = timeToMinutes(targetVisit.endTime) - timeToMinutes(targetVisit.startTime);
       const newEndTime = minutesToTime(timeToMinutes(newStartTime) + duration);
       const updatedFields = {
@@ -301,7 +301,7 @@ export default function Page() {
     <>
       <div className="flex-1 overflow-hidden p-2 md:p-4">
         {view === 'schedule' && (
-          <Dashboard 
+          <Dashboard
             visits={currentVisits} staffList={staffList} shifts={companyShifts} currentDate={currentDate}
             onSelectVisit={setSelectedVisit} onMoveVisit={handleMoveVisit} onAddVisitSlot={handleAddVisitSlot}
             onPrevDate={() => { const d = new Date(currentDate); d.setDate(d.getDate() - 1); setCurrentDate(toLocalISOString(d)); }}
@@ -313,7 +313,7 @@ export default function Page() {
         )}
 
         {view === 'shifts' && (
-          <ShiftManager 
+          <ShiftManager
             staff={staffList} shifts={companyShifts} currentDate={currentDate}
             onUpdateShift={handleUpdateShift} onOpenStaffForm={(staff) => setStaffFormState({ isOpen: true, initialStaff: staff })}
             onDeleteStaff={handleDeleteStaff} isReadOnly={isReadOnly} companySettings={companySettings}
@@ -321,7 +321,7 @@ export default function Page() {
         )}
 
         {view === 'users' && currentUser?.role === 'admin' && (
-          <UserManagement 
+          <UserManagement
             companyId={companyId!} users={dbUsers}
             onAddUser={(u) => setDbUsers([...dbUsers, u])}
             onUpdateUser={(u) => setDbUsers(dbUsers.map(user => user.id === u.id ? u : user))}
@@ -330,20 +330,20 @@ export default function Page() {
         )}
 
         {view === 'settings' && currentUser?.role === 'admin' && (
-          <CompanySettingsView 
+          <CompanySettingsView
             settings={companySettings}
             onSave={(newSettings) => {
               setMasterCompanies(masterCompanies.map(c => c.id === companyId ? { ...c, settings: newSettings } : c));
               setToastMessage('保存しました');
             }}
-            onDirtyChange={() => {}}
+            onDirtyChange={() => { }}
           />
         )}
       </div>
 
       {view === 'search' && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-md" onClick={() => window.history.back()} />
+          <div className="absolute inset-0 bg-white/30 backdrop-blur-md" onClick={() => window.history.back()} />
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
               <h2 className="text-2xl font-bold text-gray-800">スケジュール検索</h2>
@@ -352,7 +352,7 @@ export default function Page() {
               </button>
             </div>
             <div className="overflow-auto max-h-[calc(90vh-88px)]">
-              <SearchVisitsModal 
+              <SearchVisitsModal
                 onClose={() => window.history.back()} allVisits={allVisits} staffList={staffList}
                 companySettings={companySettings} onSelectVisit={setSelectedVisit}
               />
@@ -363,7 +363,7 @@ export default function Page() {
 
       {view === 'export' && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-md" onClick={() => window.history.back()} />
+          <div className="absolute inset-0 bg-white/30 backdrop-blur-md" onClick={() => window.history.back()} />
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-green-50 to-emerald-50">
               <h2 className="text-2xl font-bold text-gray-800">データ出力</h2>
@@ -379,7 +379,7 @@ export default function Page() {
       )}
 
       {selectedVisit && (
-        <VisitModal 
+        <VisitModal
           visit={selectedVisit} staffList={staffList} companySettings={companySettings}
           onClose={() => setSelectedVisit(null)} onUpdate={handleUpdateVisit} onDelete={handleDeleteVisit}
           onDuplicate={handleDuplicateVisit} onAiQuery={!isReadOnly ? (data) => { setSelectedVisit(null); setSuggestionState({ isOpen: true, initialValues: data }); } : undefined}
@@ -388,14 +388,14 @@ export default function Page() {
       )}
 
       {staffFormState.isOpen && (
-        <StaffFormModal 
+        <StaffFormModal
           isOpen={true} onClose={() => setStaffFormState({ isOpen: false })} onSave={handleSaveStaff}
           initialStaff={staffFormState.initialStaff} currentDate={currentDate} jobTitles={companySettings.jobTitles}
         />
       )}
 
       {suggestionState.isOpen && (
-        <ScheduleSuggestionModal 
+        <ScheduleSuggestionModal
           onClose={() => setSuggestionState({ isOpen: false })} staffList={staffList}
           allVisits={allVisits} onApply={handleApplySuggestion} initialValues={suggestionState.initialValues}
         />
@@ -403,5 +403,13 @@ export default function Page() {
 
       {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage(null)} />}
     </>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-12 h-12 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div></div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }

@@ -43,6 +43,8 @@ class UserCreate(BaseModel):
     profession: Optional[str] = None
     job_title: Optional[str] = None
     display_color: Optional[str] = None
+    join_date: Optional[str] = None  # YYYY-MM-DD
+    left_date: Optional[str] = None  # YYYY-MM-DD
 
 class UserInvite(BaseModel):
     email: EmailStr
@@ -56,6 +58,8 @@ class UserUpdate(BaseModel):
     avatar_url: Optional[str] = None
     role: Optional[str] = None
     is_active: Optional[bool] = None
+    join_date: Optional[str] = None  # YYYY-MM-DD
+    left_date: Optional[str] = None  # YYYY-MM-DD
 
 class UserSortOrder(BaseModel):
     user_id: UUID
@@ -73,6 +77,8 @@ class UserResponse(BaseModel):
     avatar_url: Optional[str]
     sort_order: Optional[int]
     is_active: bool
+    join_date: Optional[str]
+    left_date: Optional[str]
     created_at: datetime
 
 # Patient Models

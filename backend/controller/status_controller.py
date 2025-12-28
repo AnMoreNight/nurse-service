@@ -1,69 +1,90 @@
-from db.db import get_pool
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, update, delete
+from models.orm import ScheduleStatus
 from fastapi import HTTPException, status
-from uuid import UUID, uuid4
+from uuid import UUID
 from datetime import datetime
 
 class StatusController:
     @staticmethod
-    async def create_status(company_id: UUID, name: str, color: str):
-        pool = get_pool()
-        status_id = uuid4()
+    async def create_status(db: AsyncSession, company_id: UUID, name: str, color: str):
+        new_status = ScheduleStatus(
+            company_id=company_id,
+            name=name,
+            color=color
+        )
+        db.add(new_status)
+        await db.commit()
+        await db.refresh(new_status)
         
-        async with pool.acquire() as conn:
-            max_order = await conn.fetchval(
-                "SELECT COALESCE(MAX(sort_order), 0) FROM schedule_statuses WHERE company_id = $1",
-                company_id
-            )
-            
-            await conn.execute(
-                """INSERT INTO schedule_statuses (status_id, company_id, name, color, is_active, is_default, sort_order, created_at)
-                   VALUES ($1, $2, $3, $4, true, false, $5, $6)""",
-                status_id, company_id, name, color, max_order + 1, datetime.utcnow()
-            )
-            return {"status_id": str(status_id), "name": name}
+        return {
+            "status_id": str(new_status.status_id),
+            "company_id": str(new_status.company_id),
+            "name": new_status.name,
+            "color": new_status.color,
+            "is_active": new_status.is_active,
+            "is_default": new_status.is_default,
+            "sort_order": new_status.sort_order
+        }
     
     @staticmethod
-    async def get_statuses(company_id: UUID):
-        pool = get_pool()
-        async with pool.acquire() as conn:
-            rows = await conn.fetch(
-                """SELECT status_id, company_id, name, color, is_active, is_default, sort_order, created_at
-                   FROM schedule_statuses WHERE company_id = $1 AND is_active = true ORDER BY sort_order""",
-                company_id
-            )
-            return [dict(row) for row in rows]
-    
-    @staticmethod
-    async def update_status(status_id: UUID, company_id: UUID, **updates):
-        pool = get_pool()
-        set_clause = ", ".join([f"{k} = ${i+3}" for i, k in enumerate(updates.keys())])
-        values = list(updates.values())
+    async def get_statuses(db: AsyncSession, company_id: UUID):
+        result = await db.execute(
+            select(ScheduleStatus)
+            .where(ScheduleStatus.company_id == company_id)
+            .order_by(ScheduleStatus.sort_order, ScheduleStatus.name)
+        )
+        statuses = result.scalars().all()
         
-        async with pool.acquire() as conn:
-            result = await conn.execute(
-                f"UPDATE schedule_statuses SET {set_clause} WHERE status_id = $1 AND company_id = $2",
-                status_id, company_id, *values
-            )
-            if result == "UPDATE 0":
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Status not found")
-            return {"message": "Status updated"}
+        return [
+            {
+                "status_id": str(s.status_id),
+                "company_id": str(s.company_id),
+                "name": s.name,
+                "color": s.color,
+                "is_active": s.is_active,
+                "is_default": s.is_default,
+                "sort_order": s.sort_order
+            }
+            for s in statuses
+        ]
     
     @staticmethod
-    async def delete_status(status_id: UUID, company_id: UUID):
-        pool = get_pool()
-        async with pool.acquire() as conn:
-            is_default = await conn.fetchval(
-                "SELECT is_default FROM schedule_statuses WHERE status_id = $1 AND company_id = $2",
-                status_id, company_id
+    async def update_status(db: AsyncSession, status_id: UUID, company_id: UUID, **updates):
+        result = await db.execute(
+            select(ScheduleStatus).where(
+                ScheduleStatus.status_id == status_id,
+                ScheduleStatus.company_id == company_id
             )
-            
-            if is_default:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete default status")
-            
-            result = await conn.execute(
-                "UPDATE schedule_statuses SET is_active = false WHERE status_id = $1 AND company_id = $2",
-                status_id, company_id
+        )
+        status_obj = result.scalar_one_or_none()
+        
+        if not status_obj:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Status not found")
+        
+        for key, value in updates.items():
+            if value is not None and hasattr(status_obj, key):
+                setattr(status_obj, key, value)
+        
+        await db.commit()
+        return {"message": "Status updated"}
+    
+    @staticmethod
+    async def delete_status(db: AsyncSession, status_id: UUID, company_id: UUID):
+        result = await db.execute(
+            select(ScheduleStatus).where(
+                ScheduleStatus.status_id == status_id,
+                ScheduleStatus.company_id == company_id
             )
-            if result == "UPDATE 0":
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Status not found")
-            return {"message": "Status deleted"}
+        )
+        status_obj = result.scalar_one_or_none()
+        
+        if not status_obj:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Status not found")
+        
+        if status_obj.is_default:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete default status")
+        
+        await db.delete(status_obj)
+        await db.commit()
+        return {"message": "Status deleted"}
