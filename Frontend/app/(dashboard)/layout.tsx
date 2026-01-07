@@ -95,7 +95,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="p-4 border-t border-slate-800">
-          {currentUser?.role !== 'user' && (
+          {/* {currentUser?.role !== 'user' && (
             <button
               onClick={() => setView('ai')}
               className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-2 rounded-lg flex items-center justify-center gap-2 hover:shadow-lg transition-all active:scale-95 mb-4 group"
@@ -103,7 +103,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
               <Sparkles size={18} />
               <span className="font-bold">AI提案</span>
             </button>
-          )}
+          )} */}
 
           <div className="flex items-center gap-3 px-2 mb-4 overflow-hidden">
             <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center shrink-0">
