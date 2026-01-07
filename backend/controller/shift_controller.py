@@ -4,6 +4,7 @@ from models.orm import Shift, WeeklyOffRule, User
 from fastapi import HTTPException, status
 from uuid import UUID, uuid4
 from datetime import datetime, date
+from utils.constants import normalize_shift_type
 import csv
 import io
 
@@ -11,7 +12,8 @@ class ShiftController:
     @staticmethod
     async def create_shift(db: AsyncSession, company_id: UUID, user_id: UUID, 
                           shift_date: str, shift_type: str):
-        # Check if shift already exists for this user/date
+        # Normalize shift type from frontend format to backend format
+        normalized_type = normalize_shift_type(shift_type)
         existing = await db.execute(
             select(Shift).where(
                 Shift.user_id == user_id,
@@ -21,7 +23,7 @@ class ShiftController:
         existing_shift = existing.scalar_one_or_none()
         
         if existing_shift:
-            existing_shift.shift_type = shift_type
+            existing_shift.shift_type = normalized_type
             await db.commit()
             return {"shift_id": str(existing_shift.shift_id), "message": "Shift updated"}
         
@@ -29,7 +31,7 @@ class ShiftController:
             company_id=company_id,
             user_id=user_id,
             shift_date=datetime.strptime(shift_date, "%Y-%m-%d").date(),
-            shift_type=shift_type
+            shift_type=normalized_type
         )
         db.add(shift)
         await db.commit()
@@ -69,6 +71,7 @@ class ShiftController:
     
     @staticmethod
     async def update_shift(db: AsyncSession, shift_id: UUID, company_id: UUID, shift_type: str):
+        normalized_type = normalize_shift_type(shift_type)
         result = await db.execute(
             select(Shift).where(Shift.shift_id == shift_id, Shift.company_id == company_id)
         )
@@ -77,7 +80,7 @@ class ShiftController:
         if not shift:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shift not found")
         
-        shift.shift_type = shift_type
+        shift.shift_type = normalized_type
         await db.commit()
         return {"message": "Shift updated"}
     

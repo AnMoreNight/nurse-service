@@ -46,6 +46,33 @@ async def get_db() -> AsyncSession:
         finally:
             await session.close()
 
+async def get_db_with_rls(company_id: str = None, user_role: str = None):
+    """
+    Get a database session with RLS context set.
+    This should be used for all tenant-scoped operations.
+    """
+    session_maker = get_session_maker()
+    async with session_maker() as session:
+        try:
+            # Set RLS context variables
+            if company_id:
+                await session.execute(f"SET app.company_id = '{company_id}'")
+            if user_role:
+                await session.execute(f"SET app.user_role = '{user_role}'")
+            yield session
+        finally:
+            await session.close()
+
+async def set_rls_context(session: AsyncSession, company_id: str = None, user_role: str = None):
+    """
+    Set RLS context on an existing session.
+    Call this at the start of each request after authentication.
+    """
+    if company_id:
+        await session.execute(f"SELECT set_config('app.company_id', '{company_id}', true)")
+    if user_role:
+        await session.execute(f"SELECT set_config('app.user_role', '{user_role}', true)")
+
 async def init_db():
     # For SQLAlchemy, we don't need to create tables here as we use Alembic
     pass
@@ -55,4 +82,3 @@ async def close_db():
     if _engine:
         await _engine.dispose()
         _engine = None
-
