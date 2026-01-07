@@ -14,7 +14,7 @@ import { ShiftManager } from '@/components/ShiftManager';
 import { VisitModal } from '@/components/VisitModal';
 import { ExportModal } from '@/components/ExportModal';
 import { StaffFormModal } from '@/components/StaffFormModal';
-import { Login } from '@/components/Login';
+import { LegacyLogin } from '@/components/LegacyLogin';
 import { SystemAdminDashboard } from '@/components/SystemAdminDashboard';
 import { UserManagement } from '@/components/UserManagement';
 import { ScheduleSuggestionModal } from '@/components/ScheduleSuggestionModal';
@@ -562,7 +562,7 @@ export default function NurseApp() {
 
     // Render logic
     if (!currentUser) {
-        return <Login onLogin={handleLogin} dbUsers={dbUsers} />;
+        return <LegacyLogin onLogin={handleLogin} dbUsers={dbUsers} />;
     }
 
     if (currentUser.role === 'system_admin') {
