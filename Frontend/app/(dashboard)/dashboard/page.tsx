@@ -10,15 +10,43 @@ import { ScheduleSuggestionModal } from '@/components/ScheduleSuggestionModal';
 import { SearchVisitsModal } from '@/components/SearchVisitsModal';
 import { ExportModal } from '@/components/ExportModal';
 import { Toast } from '@/components/Toast';
-import { useApp } from '@/lib/context';
-import { useSearchParams } from 'next/navigation';
-import { useState, useMemo, Suspense } from 'react';
+import { useApp, useRoleAccess } from '@/lib/context';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useState, useMemo, useEffect, Suspense } from 'react';
 import { toLocalISOString, checkVisitVisibility, formatDateForCSV, getEffectiveShiftType } from '@/lib/constants';
 import { VisitWithStaff, Staff, RecurrenceScope, Visit, ShiftType, ScheduleSuggestion, ShiftAssignment } from '@/lib/types';
-import { X } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
+import { scheduleService } from '@/services/scheduleService';
+import { shiftService } from '@/services/shiftService';
 
 function DashboardContent() {
-  const { currentUser, masterStaff, masterVisits, masterShifts, masterCompanies, dbUsers, setMasterVisits, setMasterStaff, setMasterShifts, setDbUsers, setMasterCompanies } = useApp();
+  const {
+    currentUser,
+    staff: staffList,
+    visits: companyVisits,
+    shifts: companyShifts,
+    companySettings,
+    isLoading,
+    error,
+    clearError,
+    toastMessage,
+    showToast,
+    refreshData,
+    addSchedule,
+    updateSchedule,
+    deleteSchedule,
+    updateShift,
+    reorderStaff,
+    addStaff,
+    updateStaff,
+    deleteStaff,
+    addStatus,
+    updateStatus,
+    deleteStatus,
+  } = useApp();
+
+  const { isReadOnly, canManageUsers, canManageSettings } = useRoleAccess();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const view = searchParams.get('view') || 'schedule';
 
@@ -26,48 +54,58 @@ function DashboardContent() {
   const [selectedVisit, setSelectedVisit] = useState<VisitWithStaff | null>(null);
   const [staffFormState, setStaffFormState] = useState<{ isOpen: boolean, initialStaff?: Staff }>({ isOpen: false });
   const [suggestionState, setSuggestionState] = useState<{ isOpen: boolean; initialValues?: any }>({ isOpen: false });
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [localToast, setLocalToast] = useState<string | null>(null);
 
   const companyId = currentUser?.companyId;
-  const isReadOnly = currentUser?.role === 'user';
 
-  const staffList = useMemo(() => {
-    if (!companyId) return [];
-    return masterStaff.filter(s => s.companyId === companyId && !s.leftDate);
-  }, [masterStaff, companyId]);
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!isLoading && !currentUser) {
+      router.push('/login');
+    }
+  }, [currentUser, isLoading, router]);
 
-  const companyVisits = useMemo(() => {
-    if (!companyId) return [];
-    return masterVisits.filter(v => v.companyId === companyId);
-  }, [masterVisits, companyId]);
+  // Redirect user role away from admin-only views
+  useEffect(() => {
+    if (currentUser?.role === 'user' && (view === 'users' || view === 'settings')) {
+      router.push('/dashboard?view=schedule');
+    }
+  }, [view, currentUser, router]);
 
-  const companyShifts = useMemo(() => {
-    if (!companyId) return [];
-    return masterShifts.filter(s => s.companyId === companyId);
-  }, [masterShifts, companyId]);
+  // Filter staff by company (for non-system admins)
+  const filteredStaff = useMemo(() => {
+    if (!companyId) return staffList;
+    return staffList.filter(s => s.companyId === companyId && !s.leftDate);
+  }, [staffList, companyId]);
 
-  const currentCompany = useMemo(() => {
-    return masterCompanies.find(c => c.id === companyId);
-  }, [masterCompanies, companyId]);
+  // Filter visits by company
+  const filteredVisits = useMemo(() => {
+    if (!companyId) return companyVisits;
+    return companyVisits.filter(v => v.companyId === companyId);
+  }, [companyVisits, companyId]);
 
-  const companySettings = currentCompany?.settings || masterCompanies[0].settings;
+  // Filter shifts by company
+  const filteredShifts = useMemo(() => {
+    if (!companyId) return companyShifts;
+    return companyShifts.filter(s => s.companyId === companyId);
+  }, [companyShifts, companyId]);
 
   const allVisits = useMemo(() => {
-    return companyVisits.map(v => ({
+    return filteredVisits.map(v => ({
       ...v,
-      staffMembers: staffList.filter(s => v.staffIds.includes(s.id))
+      staffMembers: filteredStaff.filter(s => v.staffIds.includes(s.id))
     }));
-  }, [companyVisits, staffList]);
+  }, [filteredVisits, filteredStaff]);
 
   const currentVisits = useMemo(() => {
-    return companyVisits
+    return filteredVisits
       .filter(v => checkVisitVisibility(v, currentDate))
       .map(v => ({
         ...v,
         date: currentDate,
-        staffMembers: staffList.filter(s => v.staffIds.includes(s.id))
+        staffMembers: filteredStaff.filter(s => v.staffIds.includes(s.id))
       }));
-  }, [companyVisits, currentDate, staffList]);
+  }, [filteredVisits, currentDate, filteredStaff]);
 
   const monthlyStats = useMemo(() => {
     const stats: Record<string, number> = {};
@@ -80,7 +118,7 @@ function DashboardContent() {
     for (let day = 1; day <= daysInMonth; day++) {
       const checkDate = new Date(year, month, day);
       const checkDateStr = toLocalISOString(checkDate);
-      companyVisits.forEach(visit => {
+      filteredVisits.forEach(visit => {
         if (checkVisitVisibility(visit, checkDateStr)) {
           visit.staffIds.forEach(staffId => {
             stats[staffId] = (stats[staffId] || 0) + 1;
@@ -89,58 +127,25 @@ function DashboardContent() {
       });
     }
     return stats;
-  }, [companyVisits, currentDate]);
+  }, [filteredVisits, currentDate]);
 
-  const handleExport = (type: 'visits' | 'shifts', start: string, end: string) => {
-    const BOM = '\uFEFF';
-    let csvContent = '';
-
-    if (type === 'visits') {
-      csvContent = "日付,開始時間,終了時間,患者名,担当者,ステータス,メモ\n";
-      const targetVisits = companyVisits.filter(v => v.date >= start && v.date <= end).sort((a, b) => {
-        const dateDiff = a.date.localeCompare(b.date);
-        if (dateDiff !== 0) return dateDiff;
-        return a.startTime.localeCompare(b.startTime);
-      });
-      targetVisits.forEach(v => {
-        const staffNames = staffList.filter(s => v.staffIds.includes(s.id)).map(s => s.name).join('/');
-        const dateStr = formatDateForCSV(v.date);
-        const statusLabel = companySettings.visitStatuses.find(s => s.key === v.status)?.label || v.status;
-        const notes = (v.notes || '').replace(/\n/g, ' ');
-        csvContent += `${dateStr},${v.startTime},${v.endTime},${v.patientName},${staffNames},${statusLabel},${notes}\n`;
-      });
-    } else {
-      csvContent = "日付,スタッフ,シフトタイプ\n";
-      const [sy, sm, sd] = start.split('-').map(Number);
-      const [ey, em, ed] = end.split('-').map(Number);
-      const curr = new Date(sy, sm - 1, sd);
-      const last = new Date(ey, em - 1, ed);
-      while (curr <= last) {
-        const dateStr = toLocalISOString(curr);
-        const dateFormatted = formatDateForCSV(dateStr);
-        staffList.forEach(staff => {
-          const effectiveType = getEffectiveShiftType(staff, dateStr, companyShifts);
-          let typeLabel = '';
-          switch (effectiveType) {
-            case 'night1': typeLabel = '夜間待機1'; break;
-            case 'night2': typeLabel = '夜間待機2'; break;
-            case 'night1_holiday': typeLabel = '夜間待機1(休)'; break;
-            case 'night2_holiday': typeLabel = '夜間待機2(休)'; break;
-            case 'holiday': typeLabel = '公休'; break;
-            case 'work': typeLabel = '出勤'; break;
-            case 'none': typeLabel = '出勤'; break;
-            default: typeLabel = effectiveType || '';
-          }
-          csvContent += `${dateFormatted},${staff.name},${typeLabel}\n`;
-        });
-        curr.setDate(curr.getDate() + 1);
+  const handleExport = async (type: 'visits' | 'shifts', start: string, end: string) => {
+    try {
+      let blob: Blob;
+      if (type === 'visits') {
+        blob = await scheduleService.exportCSV(start, end);
+      } else {
+        blob = await shiftService.exportCSV(start, end);
       }
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `export_${type}_${start}_${end}.csv`;
+      link.click();
+      showToast('エクスポートしました');
+    } catch (err: any) {
+      console.error('Export failed:', err);
+      setLocalToast('エクスポートに失敗しました');
     }
-    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `export_${type}_${start}_${end}.csv`;
-    link.click();
   };
 
   const handleAddVisitSlot = (staffId: string, startTime: string) => {
@@ -149,55 +154,56 @@ function DashboardContent() {
     const endTime = `${String(h + 1).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     setSelectedVisit({
       id: `new_${Date.now()}`, companyId: companyId!, staffIds: [staffId], patientName: '', date: currentDate,
-      startTime, endTime, status: 'REGULAR_NURSE', recurrence: 'none', notes: '',
-      staffMembers: staffList.filter(s => s.id === staffId)
+      startTime, endTime, status: companySettings.visitStatuses[0]?.key || 'REGULAR_NURSE', recurrence: 'none', notes: '',
+      staffMembers: filteredStaff.filter(s => s.id === staffId)
     });
   };
 
-  const handleUpdateVisit = (updated: VisitWithStaff, scope: RecurrenceScope = 'this') => {
-    setMasterVisits(prev => {
-      if (updated.id.startsWith('new_') || updated.id.startsWith('ai_') || updated.id.startsWith('dup_')) {
-        const { staffMembers, ...visitData } = updated;
-        return [...prev, { ...visitData, id: `v_${Date.now()}` }];
-      }
-      const original = prev.find(v => v.id === updated.id);
-      if (!original) return prev;
-      if (updated.recurrence === 'custom' && scope !== 'all') {
-        if (scope === 'this') {
-          const updatedOriginal = { ...original, excludeDates: [...(original.excludeDates || []), updated.date] };
-          const { staffMembers, ...visitData } = updated;
-          const exceptionVisit = { ...visitData, id: `exc_${Date.now()}`, recurrence: 'none' as const, recurrenceRule: undefined };
-          return prev.map(v => v.id === updated.id ? updatedOriginal : v).concat(exceptionVisit);
-        } else if (scope === 'following') {
-          const endDate = new Date(updated.date);
-          endDate.setDate(endDate.getDate() - 1);
-          const updatedOriginal = { ...original, recurrenceEndDate: toLocalISOString(endDate) };
-          const { staffMembers, ...visitData } = updated;
-          const newSeries = { ...visitData, id: `ser_${Date.now()}` };
-          return prev.map(v => v.id === updated.id ? updatedOriginal : v).concat(newSeries);
-        }
-      }
-      return prev.map(v => v.id === updated.id ? { ...updated, staffMembers: undefined } : v);
-    });
-    setToastMessage('保存しました');
-  };
-
-  const handleDeleteVisit = (visitId: string, scope: RecurrenceScope = 'this') => {
+  const handleUpdateVisit = async (updated: VisitWithStaff, scope: RecurrenceScope = 'this') => {
     if (isReadOnly) return;
-    setMasterVisits(prev => {
-      const target = prev.find(v => v.id === visitId);
-      if (!target) return prev;
-      if (target.recurrence === 'custom' && scope !== 'all') {
-        if (scope === 'this') return prev.map(v => v.id === visitId ? { ...v, excludeDates: [...(v.excludeDates || []), currentDate] } : v);
-        else if (scope === 'following') {
-          const endDate = new Date(currentDate);
-          endDate.setDate(endDate.getDate() - 1);
-          return prev.map(v => v.id === visitId ? { ...v, recurrenceEndDate: toLocalISOString(endDate) } : v);
-        }
+
+    try {
+      if (updated.id.startsWith('new_') || updated.id.startsWith('ai_') || updated.id.startsWith('dup_')) {
+        // Create new schedule
+        await addSchedule({
+          patientName: updated.patientName,
+          address: updated.address,
+          date: updated.date,
+          startTime: updated.startTime,
+          endTime: updated.endTime,
+          status: updated.status,
+          notes: updated.notes,
+          staffIds: updated.staffIds,
+          recurrenceRule: updated.recurrenceRule,
+        });
+      } else {
+        // Update existing schedule
+        await updateSchedule(updated.id, {
+          patientName: updated.patientName,
+          address: updated.address,
+          date: updated.date,
+          startTime: updated.startTime,
+          endTime: updated.endTime,
+          status: updated.status,
+          notes: updated.notes,
+          staffIds: updated.staffIds,
+        }, scope);
       }
-      return prev.filter(v => v.id !== visitId);
-    });
-    setToastMessage('スケジュールを削除しました');
+      setSelectedVisit(null);
+    } catch (err) {
+      console.error('Failed to update visit:', err);
+    }
+  };
+
+  const handleDeleteVisit = async (visitId: string, scope: RecurrenceScope = 'this') => {
+    if (isReadOnly) return;
+
+    try {
+      await deleteSchedule(visitId);
+      setSelectedVisit(null);
+    } catch (err) {
+      console.error('Failed to delete visit:', err);
+    }
   };
 
   const handleDuplicateVisit = (visit: VisitWithStaff) => {
@@ -206,103 +212,136 @@ function DashboardContent() {
       id: `dup_${Date.now()}`, companyId: visit.companyId, patientName: visit.patientName, address: visit.address,
       status: visit.status, notes: visit.notes, date: '', startTime: '', endTime: '', staffIds: [], staffMembers: [], recurrence: 'none',
     });
-    setToastMessage('複製しました');
+    showToast('複製しました');
   };
 
-  const handleMoveVisit = (visitId: string, sourceStaffId: string, targetStaffId: string, newStartTime: string, scope: RecurrenceScope = 'this') => {
+  const handleMoveVisit = async (visitId: string, sourceStaffId: string, targetStaffId: string, newStartTime: string, scope: RecurrenceScope = 'this') => {
     if (isReadOnly) return;
-    setMasterVisits(prev => {
-      const targetVisit = prev.find(v => v.id === visitId);
-      if (!targetVisit) return prev;
+
+    try {
+      const targetVisit = filteredVisits.find(v => v.id === visitId);
+      if (!targetVisit) return;
+
       const timeToMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
       const minutesToTime = (tm: number) => `${String(Math.floor(tm / 60)).padStart(2, '0')}:${String(tm % 60).padStart(2, '0')}`;
       const duration = timeToMinutes(targetVisit.endTime) - timeToMinutes(targetVisit.startTime);
       const newEndTime = minutesToTime(timeToMinutes(newStartTime) + duration);
-      const updatedFields = {
-        staffIds: targetVisit.staffIds.filter(id => id !== sourceStaffId).concat([targetStaffId]).filter((id, i, self) => self.indexOf(id) === i),
-        startTime: newStartTime, endTime: newEndTime
-      };
-      if (targetVisit.recurrence === 'custom' && scope !== 'all') {
-        if (scope === 'this') {
-          const updatedOriginal = { ...targetVisit, excludeDates: [...(targetVisit.excludeDates || []), currentDate] };
-          const exception: Visit = { ...targetVisit, id: `exc_${Date.now()}`, date: currentDate, recurrence: 'none', recurrenceRule: undefined, ...updatedFields };
-          return prev.map(v => v.id === visitId ? updatedOriginal : v).concat(exception);
-        } else if (scope === 'following') {
-          const endDate = new Date(currentDate);
-          endDate.setDate(endDate.getDate() - 1);
-          const updatedOriginal = { ...targetVisit, recurrenceEndDate: toLocalISOString(endDate) };
-          const newSeries: Visit = { ...targetVisit, id: `ser_${Date.now()}`, date: currentDate, ...updatedFields };
-          return prev.map(v => v.id === visitId ? updatedOriginal : v).concat(newSeries);
-        }
-      }
-      return prev.map(v => v.id === visitId ? { ...v, ...updatedFields } : v);
-    });
-    setToastMessage('スケジュールを移動しました');
-  };
 
-  const handleUpdateShift = (staffId: string, date: string, type: ShiftType) => {
-    if (isReadOnly) return;
-    setMasterShifts(prev => {
-      const night1Types = ['night1', 'night1_holiday'];
-      const night2Types = ['night2', 'night2_holiday'];
-      let conflictingTypes: string[] = [];
-      if (night1Types.includes(type || '')) conflictingTypes = night1Types;
-      else if (night2Types.includes(type || '')) conflictingTypes = night2Types;
-      const filtered = prev.filter(s => {
-        if (s.staffId === staffId && s.date === date) return false;
-        if (conflictingTypes.length > 0 && s.date === date && s.type && conflictingTypes.includes(s.type)) return false;
-        return true;
-      });
-      return [...filtered, { id: `sh_${Date.now()}`, companyId: companyId!, staffId, date, type }];
-    });
-  };
+      const newStaffIds = targetVisit.staffIds.filter(id => id !== sourceStaffId).concat([targetStaffId]).filter((id, i, self) => self.indexOf(id) === i);
 
-  const handleReorderStaff = (fromIndex: number, toIndex: number) => {
-    if (fromIndex === toIndex) return;
-    const newStaffList = [...staffList];
-    const [movedStaff] = newStaffList.splice(fromIndex, 1);
-    newStaffList.splice(toIndex, 0, movedStaff);
-    setMasterStaff(prev => {
-      const otherStaff = prev.filter(s => s.companyId !== companyId);
-      return [...otherStaff, ...newStaffList];
-    });
-  };
+      await updateSchedule(visitId, {
+        startTime: newStartTime,
+        endTime: newEndTime,
+        staffIds: newStaffIds,
+        date: currentDate,
+      }, scope);
 
-  const handleSaveStaff = (name: string, jobTitle: string, defaultHolidays: number[], joinedDate: string) => {
-    if (staffFormState.initialStaff) {
-      setMasterStaff(prev => prev.map(s => s.id === staffFormState.initialStaff!.id ? { ...s, name, jobTitle, defaultHolidayWeekDays: defaultHolidays, joinedDate } : s));
-    } else {
-      setMasterStaff(prev => [...prev, {
-        id: `s_${Date.now()}`, companyId: companyId!, name, jobTitle, color: 'blue',
-        avatar: name.slice(0, 2), joinedDate, defaultHolidayWeekDays: defaultHolidays
-      }]);
+      showToast('スケジュールを移動しました');
+    } catch (err) {
+      console.error('Failed to move visit:', err);
     }
-    setStaffFormState({ isOpen: false });
-    setToastMessage('スタッフを保存しました');
   };
 
-  const handleDeleteStaff = (staffId: string) => {
+  const handleUpdateShift = async (staffId: string, date: string, type: ShiftType) => {
+    if (isReadOnly) return;
+
+    try {
+      await updateShift(staffId, date, type);
+    } catch (err) {
+      console.error('Failed to update shift:', err);
+    }
+  };
+
+  const handleReorderStaff = async (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex || isReadOnly) return;
+
+    try {
+      const newStaffList = [...filteredStaff];
+      const [movedStaff] = newStaffList.splice(fromIndex, 1);
+      newStaffList.splice(toIndex, 0, movedStaff);
+
+      const sortOrders = newStaffList.map((s, idx) => ({ userId: s.id, sortOrder: idx }));
+      await reorderStaff(sortOrders);
+    } catch (err) {
+      console.error('Failed to reorder staff:', err);
+    }
+  };
+
+  const handleSaveStaff = async (name: string, jobTitle: string, defaultHolidays: number[], joinedDate: string) => {
+    try {
+      if (staffFormState.initialStaff) {
+        await updateStaff(staffFormState.initialStaff.id, { name, jobTitle, joinedDate });
+      } else {
+        await addStaff({
+          name,
+          jobTitle,
+          joinedDate,
+          companyId: companyId!,
+          color: 'blue',
+          avatar: name.slice(0, 2),
+          defaultHolidayWeekDays: defaultHolidays,
+        });
+      }
+      setStaffFormState({ isOpen: false });
+    } catch (err) {
+      console.error('Failed to save staff:', err);
+    }
+  };
+
+  const handleDeleteStaff = async (staffId: string) => {
     if (window.confirm('このスタッフを削除（退職処理）しますか？')) {
-      setMasterStaff(prev => prev.map(s => s.id === staffId ? { ...s, leftDate: toLocalISOString(new Date()) } : s));
-      setToastMessage('スタッフを削除しました');
+      try {
+        await deleteStaff(staffId);
+      } catch (err) {
+        console.error('Failed to delete staff:', err);
+      }
     }
   };
 
   const handleApplySuggestion = (suggestion: ScheduleSuggestion, pName: string, addr: string) => {
     setSelectedVisit({
       id: `ai_${Date.now()}`, companyId: companyId!, staffIds: [suggestion.staffId], patientName: pName, address: addr,
-      date: suggestion.date, startTime: suggestion.startTime, endTime: suggestion.endTime, status: 'REGULAR_NURSE',
-      recurrence: 'none', notes: 'AI提案により作成', staffMembers: staffList.filter(s => s.id === suggestion.staffId)
+      date: suggestion.date, startTime: suggestion.startTime, endTime: suggestion.endTime, status: companySettings.visitStatuses[0]?.key || 'REGULAR_NURSE',
+      recurrence: 'none', notes: 'AI提案により作成', staffMembers: filteredStaff.filter(s => s.id === suggestion.staffId)
     });
     setSuggestionState({ isOpen: false });
   };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 border-4 border-teal-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-500">データを読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center bg-red-50 p-8 rounded-2xl max-w-md">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={() => { clearError(); refreshData(); }}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            再試行
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
       <div className="flex-1 overflow-hidden p-2 md:p-4">
         {view === 'schedule' && (
           <Dashboard
-            visits={currentVisits} staffList={staffList} shifts={companyShifts} currentDate={currentDate}
+            visits={currentVisits} staffList={filteredStaff} shifts={filteredShifts} currentDate={currentDate}
             onSelectVisit={setSelectedVisit} onMoveVisit={handleMoveVisit} onAddVisitSlot={handleAddVisitSlot}
             onPrevDate={() => { const d = new Date(currentDate); d.setDate(d.getDate() - 1); setCurrentDate(toLocalISOString(d)); }}
             onNextDate={() => { const d = new Date(currentDate); d.setDate(d.getDate() + 1); setCurrentDate(toLocalISOString(d)); }}
@@ -314,27 +353,37 @@ function DashboardContent() {
 
         {view === 'shifts' && (
           <ShiftManager
-            staff={staffList} shifts={companyShifts} currentDate={currentDate}
+            staff={filteredStaff} shifts={filteredShifts} currentDate={currentDate}
             onUpdateShift={handleUpdateShift} onOpenStaffForm={(staff) => setStaffFormState({ isOpen: true, initialStaff: staff })}
             onDeleteStaff={handleDeleteStaff} isReadOnly={isReadOnly} companySettings={companySettings}
           />
         )}
 
-        {view === 'users' && currentUser?.role === 'admin' && (
+        {/* Users view - ADMIN ONLY */}
+        {view === 'users' && canManageUsers && (
           <UserManagement
-            companyId={companyId!} users={dbUsers}
-            onAddUser={(u) => setDbUsers([...dbUsers, u])}
-            onUpdateUser={(u) => setDbUsers(dbUsers.map(user => user.id === u.id ? u : user))}
-            onDeleteUser={(id) => setDbUsers(dbUsers.filter(u => u.id !== id))}
+            companyId={companyId!}
+            users={[]} // Will use context
+            onAddUser={() => { }}
+            onUpdateUser={() => { }}
+            onDeleteUser={() => { }}
           />
         )}
 
-        {view === 'settings' && currentUser?.role === 'admin' && (
+        {/* Settings view - ADMIN ONLY */}
+        {view === 'settings' && canManageSettings && (
           <CompanySettingsView
             settings={companySettings}
-            onSave={(newSettings) => {
-              setMasterCompanies(masterCompanies.map(c => c.id === companyId ? { ...c, settings: newSettings } : c));
-              setToastMessage('保存しました');
+            onSave={async (newSettings) => {
+              // Update statuses via API
+              for (const status of newSettings.visitStatuses) {
+                if (status.key.startsWith('new_')) {
+                  await addStatus({ name: status.label, color: status.color });
+                } else {
+                  await updateStatus(status.key, { name: status.label, color: status.color });
+                }
+              }
+              showToast('設定を保存しました');
             }}
             onDirtyChange={() => { }}
           />
@@ -353,7 +402,7 @@ function DashboardContent() {
             </div>
             <div className="overflow-auto max-h-[calc(90vh-88px)]">
               <SearchVisitsModal
-                onClose={() => window.history.back()} allVisits={allVisits} staffList={staffList}
+                onClose={() => window.history.back()} allVisits={allVisits} staffList={filteredStaff}
                 companySettings={companySettings} onSelectVisit={setSelectedVisit}
               />
             </div>
@@ -380,7 +429,7 @@ function DashboardContent() {
 
       {selectedVisit && (
         <VisitModal
-          visit={selectedVisit} staffList={staffList} companySettings={companySettings}
+          visit={selectedVisit} staffList={filteredStaff} companySettings={companySettings}
           onClose={() => setSelectedVisit(null)} onUpdate={handleUpdateVisit} onDelete={handleDeleteVisit}
           onDuplicate={handleDuplicateVisit} onAiQuery={!isReadOnly ? (data) => { setSelectedVisit(null); setSuggestionState({ isOpen: true, initialValues: data }); } : undefined}
           isReadOnly={isReadOnly}
@@ -396,12 +445,12 @@ function DashboardContent() {
 
       {suggestionState.isOpen && (
         <ScheduleSuggestionModal
-          onClose={() => setSuggestionState({ isOpen: false })} staffList={staffList}
+          onClose={() => setSuggestionState({ isOpen: false })} staffList={filteredStaff}
           allVisits={allVisits} onApply={handleApplySuggestion} initialValues={suggestionState.initialValues}
         />
       )}
 
-      {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage(null)} />}
+      {(toastMessage || localToast) && <Toast message={toastMessage || localToast!} onClose={() => setLocalToast(null)} />}
     </>
   );
 }

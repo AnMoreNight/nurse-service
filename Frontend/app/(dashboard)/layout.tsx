@@ -84,7 +84,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             <NavButton active={isActive('export')} onClick={() => setView('export')} icon={<Download size={20} />} label="データ出力" />
           </div>
 
-          {currentUser?.role === 'admin' && (
+          {/* Admin-only navigation items */}
+          {(currentUser?.role === 'admin' || currentUser?.role === 'system_admin') && (
             <>
               <div className="my-2 border-t border-slate-800 mx-4 opacity-50"></div>
               <NavButton active={isActive('users')} onClick={() => setView('users')} icon={<Users size={20} />} label="ユーザー管理" />

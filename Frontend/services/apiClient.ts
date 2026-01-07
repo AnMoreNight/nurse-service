@@ -19,6 +19,15 @@ class ApiClient {
     });
 
     if (!response.ok) {
+      // Handle 401 Unauthorized - auto logout
+      if (response.status === 401) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('token');
+          localStorage.removeItem('currentUser');
+          window.location.href = '/login';
+        }
+      }
+
       const error = await response.json().catch(() => ({ detail: 'Request failed' }));
       throw new Error(error.detail || `HTTP ${response.status}`);
     }

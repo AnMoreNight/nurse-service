@@ -1,40 +1,49 @@
 "use client";
 
-import { LoginConnected } from '@/components/LoginConnected';
+import { Login } from '@/components/Login';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/lib/context';
-import { UserRole } from '@/lib/types';
+import { AuthUser } from '@/lib/types';
+import { useEffect } from 'react';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { setCurrentUser } = useApp();
+  const { setCurrentUser, currentUser, isLoading } = useApp();
 
-  const handleLogin = (token: string, user: any) => {
-    // Map backend roles to frontend roles
-    const backendRole = user.role;
-    let role: UserRole = 'user';
-    if (backendRole === 'SUPER_ADMIN' || backendRole === 'SystemAdmin') {
-      role = 'system_admin';
-    } else if (backendRole === 'CompanyAdmin' || backendRole === 'COMPANY_ADMIN') {
-      role = 'admin';
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!isLoading && currentUser) {
+      if (currentUser.role === 'system_admin') {
+        router.push('/admin');
+      } else {
+        router.push('/dashboard');
+      }
     }
-    const authUser = {
-      id: user.user_id,
-      username: user.email,
-      name: user.name,
-      role,
-      companyId: user.company_id,
-      companyName: user.company_name || '',
-    };
+  }, [currentUser, isLoading, router]);
 
-    setCurrentUser(authUser);
+  const handleLogin = (user: AuthUser) => {
+    setCurrentUser(user);
 
-    if (authUser.role === 'system_admin') {
+    if (user.role === 'system_admin') {
       router.push('/admin');
     } else {
       router.push('/dashboard');
     }
   };
 
-  return <LoginConnected onLogin={handleLogin} />;
+  // Show loading while checking auth state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-100">
+        <div className="w-12 h-12 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  // Don't show login if already authenticated
+  if (currentUser) {
+    return null;
+  }
+
+  return <Login onLogin={handleLogin} />;
 }
