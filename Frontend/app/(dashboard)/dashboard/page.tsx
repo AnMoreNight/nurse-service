@@ -390,22 +390,27 @@ function DashboardContent() {
           <CompanySettingsView
             settings={companySettings}
             onSave={async (newSettings) => {
-              // Update statuses via API
-              for (const status of newSettings.visitStatuses) {
-                // Only process statuses that need to be created/updated
-                // Skip default fallback keys (length < 30) and only create/update real ones
-                if (status.key.startsWith('CUSTOM_') || status.key.startsWith('new_')) {
-                  // Create new status
-                  await addStatus({ name: status.label, color: status.color });
-                } else if (status.key.length > 30) {
-                  // Update existing status (has valid UUID)
-                  await updateStatus(status.key, { name: status.label, color: status.color });
+              try {
+                // Create/Update statuses via API
+                for (const status of newSettings.visitStatuses) {
+                  // Check if this is a UUID (existing status) or a string key (new/default)
+                  const isUUID = status.key.length > 30 && status.key.includes('-');
+
+                  if (isUUID) {
+                    // Update existing status
+                    await updateStatus(status.key, { name: status.label, color: status.color });
+                  } else {
+                    // Create new status (for both CUSTOM_ and default keys like REGULAR_NURSE)
+                    await addStatus({ name: status.label, color: status.color });
+                  }
                 }
-                // Skip default string keys like 'REGULAR_NURSE', 'EMERGENCY', etc.
+
+                showToast('設定を保存しました');
+                // Refresh data to get actual UUIDs from backend
+                await refreshData();
+              } catch (error: any) {
+                showToast(`保存に失敗しました: ${error.message || '不明なエラー'}`);
               }
-              showToast('設定を保存しました');
-              // Refresh data to get actual UUIDs from backend
-              await refreshData();
             }}
             onDirtyChange={() => { }}
           />

@@ -61,10 +61,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         <div className="bg-teal-600 p-8 text-center relative overflow-hidden">
           <div className="relative z-10">
             <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm shadow-lg border border-white/10 p-2">
-              <Image 
-                src="/image.png" 
-                alt="NurseAssist Pro Logo" 
-                width={80} 
+              <Image
+                src="/image.png"
+                alt="NurseAssist Pro Logo"
+                width={80}
                 height={80}
                 className="object-contain"
               />
@@ -146,6 +146,15 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 </>
               )}
             </button>
+
+            <div className="text-center mt-4">
+              <a
+                href="/forgot-password"
+                className="text-sm text-teal-600 hover:text-teal-700 font-medium hover:underline"
+              >
+                パスワードをお忘れですか？
+              </a>
+            </div>
           </form>
         </div>
       </div>
