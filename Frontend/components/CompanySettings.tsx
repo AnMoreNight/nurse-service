@@ -2,18 +2,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { CompanySettings } from '@/lib/types';
-import { Settings, Plus, Trash2, Save } from 'lucide-react';
+import { Settings, Plus, Trash2, Save, Loader2 } from 'lucide-react';
 
 interface CompanySettingsProps {
   settings: CompanySettings;
+  isLoading?: boolean;
   onSave: (settings: CompanySettings) => void;
   onDirtyChange?: (isDirty: boolean) => void;
 }
 
-export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, onSave, onDirtyChange }) => {
+export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, isLoading = false, onSave, onDirtyChange }) => {
   const [visitStatuses, setVisitStatuses] = useState(settings.visitStatuses);
   const [jobTitles, setJobTitles] = useState(settings.jobTitles);
-  
+
   // New Status Form State
   const [newStatusLabel, setNewStatusLabel] = useState('');
   const [newStatusColor, setNewStatusColor] = useState('blue');
@@ -40,21 +41,21 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
   };
 
   const handleAddStatus = () => {
-      if (!newStatusLabel.trim()) return;
-      const newKey = `CUSTOM_${Date.now()}`;
-      setVisitStatuses([...visitStatuses, { key: newKey, label: newStatusLabel, color: newStatusColor }]);
-      setNewStatusLabel('');
-      setNewStatusColor('blue');
+    if (!newStatusLabel.trim()) return;
+    const newKey = `CUSTOM_${Date.now()}`;
+    setVisitStatuses([...visitStatuses, { key: newKey, label: newStatusLabel, color: newStatusColor }]);
+    setNewStatusLabel('');
+    setNewStatusColor('blue');
   };
 
   const handleDeleteStatus = (key: string) => {
-      if (DEFAULT_KEYS.includes(key)) {
-          alert('システムデフォルトのステータスは削除できません。');
-          return;
-      }
-      if (window.confirm('このステータスを削除しますか？')) {
-          setVisitStatuses(visitStatuses.filter(s => s.key !== key));
-      }
+    if (DEFAULT_KEYS.includes(key)) {
+      alert('システムデフォルトのステータスは削除できません。');
+      return;
+    }
+    if (window.confirm('このステータスを削除しますか？')) {
+      setVisitStatuses(visitStatuses.filter(s => s.key !== key));
+    }
   };
 
   const handleAddJobTitle = () => {
@@ -97,17 +98,27 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
           <Settings className="w-6 h-6 text-slate-600" />
           詳細設定
         </h2>
-        <button 
+        <button
           onClick={handleSave}
-          className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 transition-colors font-bold shadow-md active:scale-95"
+          disabled={isLoading}
+          className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors font-bold shadow-md active:scale-95"
         >
-          <Save className="w-4 h-4" />
-          設定を保存
+          {isLoading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              保存中...
+            </>
+          ) : (
+            <>
+              <Save className="w-4 h-4" />
+              設定を保存
+            </>
+          )}
         </button>
       </div>
 
       <div className="p-8 max-w-4xl mx-auto w-full space-y-10">
-        
+
         {/* Visit Status Settings */}
         <section>
           <h3 className="text-lg font-bold text-gray-700 mb-4 border-l-4 border-blue-500 pl-3">
@@ -130,15 +141,15 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
                 {visitStatuses.map((status, index) => (
                   <tr key={status.key} className="hover:bg-white">
                     <td className="px-6 py-4">
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
                         value={status.label}
                         onChange={(e) => handleStatusChange(index, 'label', e.target.value)}
                       />
                     </td>
                     <td className="px-6 py-4">
-                      <select 
+                      <select
                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white cursor-pointer"
                         value={status.color}
                         onChange={(e) => handleStatusChange(index, 'color', e.target.value)}
@@ -154,54 +165,54 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                        {!DEFAULT_KEYS.includes(status.key) && (
-                            <button 
-                                onClick={() => handleDeleteStatus(status.key)}
-                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                            >
-                                <Trash2 className="w-4 h-4" />
-                            </button>
-                        )}
+                      {!DEFAULT_KEYS.includes(status.key) && (
+                        <button
+                          onClick={() => handleDeleteStatus(status.key)}
+                          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
                 {/* Add New Status Row */}
                 <tr className="bg-blue-50/50">
-                    <td className="px-6 py-4">
-                        <input 
-                            type="text" 
-                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                            placeholder="新しいステータス名"
-                            value={newStatusLabel}
-                            onChange={(e) => setNewStatusLabel(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleAddStatus()}
-                        />
-                    </td>
-                    <td className="px-6 py-4">
-                        <select 
-                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white cursor-pointer"
-                            value={newStatusColor}
-                            onChange={(e) => setNewStatusColor(e.target.value)}
-                        >
-                            {colorOptions.map(c => (
-                                <option key={c.val} value={c.val}>{c.label}</option>
-                            ))}
-                        </select>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                        <span className={`inline-block px-3 py-1 rounded text-xs font-bold border bg-${newStatusColor}-100 text-${newStatusColor}-700 border-${newStatusColor}-300 opacity-70`}>
-                            {newStatusLabel || 'プレビュー'}
-                        </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                        <button 
-                            onClick={handleAddStatus}
-                            disabled={!newStatusLabel.trim()}
-                            className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                        >
-                            <Plus className="w-4 h-4" />
-                        </button>
-                    </td>
+                  <td className="px-6 py-4">
+                    <input
+                      type="text"
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                      placeholder="新しいステータス名"
+                      value={newStatusLabel}
+                      onChange={(e) => setNewStatusLabel(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddStatus()}
+                    />
+                  </td>
+                  <td className="px-6 py-4">
+                    <select
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white cursor-pointer"
+                      value={newStatusColor}
+                      onChange={(e) => setNewStatusColor(e.target.value)}
+                    >
+                      {colorOptions.map(c => (
+                        <option key={c.val} value={c.val}>{c.label}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <span className={`inline-block px-3 py-1 rounded text-xs font-bold border bg-${newStatusColor}-100 text-${newStatusColor}-700 border-${newStatusColor}-300 opacity-70`}>
+                      {newStatusLabel || 'プレビュー'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <button
+                      onClick={handleAddStatus}
+                      disabled={!newStatusLabel.trim()}
+                      className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -216,12 +227,12 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
           <p className="text-sm text-gray-500 mb-4">
             スタッフ登録時に選択できる職種を管理します。
           </p>
-          
+
           <div className="flex flex-wrap gap-3 mb-4">
             {jobTitles.map(title => (
               <div key={title} className="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm text-slate-700 text-sm font-medium group hover:border-red-300 transition-colors">
                 {title}
-                <button 
+                <button
                   onClick={() => handleDeleteJobTitle(title)}
                   className="p-1 text-slate-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors"
                 >
@@ -232,15 +243,15 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
           </div>
 
           <div className="flex gap-2 max-w-md">
-            <input 
-              type="text" 
+            <input
+              type="text"
               className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
               placeholder="新しい職種名 (例: 作業療法士)"
               value={newJobTitle}
               onChange={(e) => setNewJobTitle(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddJobTitle()}
             />
-            <button 
+            <button
               onClick={handleAddJobTitle}
               disabled={!newJobTitle.trim()}
               className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 font-bold disabled:opacity-50"
