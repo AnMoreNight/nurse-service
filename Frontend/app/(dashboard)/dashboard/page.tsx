@@ -2,7 +2,7 @@
 
 import { Dashboard } from '@/components/Dashboard';
 import { ShiftManager } from '@/components/ShiftManager';
-import { UserManagement } from '@/components/UserManagement';
+import { UserManagementConnected } from '@/components/UserManagementConnected';
 import { CompanySettingsView } from '@/components/CompanySettings';
 import { VisitModal } from '@/components/VisitModal';
 import { StaffFormModal } from '@/components/StaffFormModal';
@@ -75,7 +75,14 @@ function DashboardContent() {
   // Filter staff by company (for non-system admins)
   const filteredStaff = useMemo(() => {
     if (!companyId) return staffList;
-    return staffList.filter(s => s.companyId === companyId && !s.leftDate);
+    const filtered = staffList.filter(s => s.companyId === companyId && !s.leftDate);
+    console.log('[Dashboard] Staff filtering:', {
+      companyId,
+      totalStaff: staffList.length,
+      filtered: filtered.length,
+      staffList: staffList.map(s => ({ id: s.id, name: s.name, companyId: s.companyId, leftDate: s.leftDate }))
+    });
+    return filtered;
   }, [staffList, companyId]);
 
   // Filter visits by company
@@ -150,11 +157,19 @@ function DashboardContent() {
 
   const handleAddVisitSlot = (staffId: string, startTime: string) => {
     if (isReadOnly) return;
+
+    // Validate status - must be a UUID, not a fallback string
+    const firstStatus = companySettings.visitStatuses[0];
+    if (!firstStatus || firstStatus.key.length < 30) {
+      showToast('設定画面でスケジュールステータスを追加してください');
+      return;
+    }
+
     const [h, m] = startTime.split(':').map(Number);
     const endTime = `${String(h + 1).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     setSelectedVisit({
       id: `new_${Date.now()}`, companyId: companyId!, staffIds: [staffId], patientName: '', date: currentDate,
-      startTime, endTime, status: companySettings.visitStatuses[0]?.key || 'REGULAR_NURSE', recurrence: 'none', notes: '',
+      startTime, endTime, status: firstStatus.key, recurrence: 'none', notes: '',
       staffMembers: filteredStaff.filter(s => s.id === staffId)
     });
   };
@@ -299,9 +314,15 @@ function DashboardContent() {
   };
 
   const handleApplySuggestion = (suggestion: ScheduleSuggestion, pName: string, addr: string) => {
+    const firstStatus = companySettings.visitStatuses[0];
+    if (!firstStatus || firstStatus.key.length < 30) {
+      showToast('設定画面でスケジュールステータスを追加してください');
+      return;
+    }
+
     setSelectedVisit({
       id: `ai_${Date.now()}`, companyId: companyId!, staffIds: [suggestion.staffId], patientName: pName, address: addr,
-      date: suggestion.date, startTime: suggestion.startTime, endTime: suggestion.endTime, status: companySettings.visitStatuses[0]?.key || 'REGULAR_NURSE',
+      date: suggestion.date, startTime: suggestion.startTime, endTime: suggestion.endTime, status: firstStatus.key,
       recurrence: 'none', notes: 'AI提案により作成', staffMembers: filteredStaff.filter(s => s.id === suggestion.staffId)
     });
     setSuggestionState({ isOpen: false });
@@ -312,7 +333,7 @@ function DashboardContent() {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 border-4 border-teal-600 animate-spin mx-auto mb-4" />
+          <Loader2 className="w-12 h-12 text-teal-600 animate-spin mx-auto mb-4" />
           <p className="text-gray-500">データを読み込み中...</p>
         </div>
       </div>
@@ -361,13 +382,7 @@ function DashboardContent() {
 
         {/* Users view - ADMIN ONLY */}
         {view === 'users' && canManageUsers && (
-          <UserManagement
-            companyId={companyId!}
-            users={[]} // Will use context
-            onAddUser={() => { }}
-            onUpdateUser={() => { }}
-            onDeleteUser={() => { }}
-          />
+          <UserManagementConnected companyId={companyId!} />
         )}
 
         {/* Settings view - ADMIN ONLY */}
@@ -377,13 +392,20 @@ function DashboardContent() {
             onSave={async (newSettings) => {
               // Update statuses via API
               for (const status of newSettings.visitStatuses) {
-                if (status.key.startsWith('new_')) {
+                // Only process statuses that need to be created/updated
+                // Skip default fallback keys (length < 30) and only create/update real ones
+                if (status.key.startsWith('CUSTOM_') || status.key.startsWith('new_')) {
+                  // Create new status
                   await addStatus({ name: status.label, color: status.color });
-                } else {
+                } else if (status.key.length > 30) {
+                  // Update existing status (has valid UUID)
                   await updateStatus(status.key, { name: status.label, color: status.color });
                 }
+                // Skip default string keys like 'REGULAR_NURSE', 'EMERGENCY', etc.
               }
               showToast('設定を保存しました');
+              // Refresh data to get actual UUIDs from backend
+              await refreshData();
             }}
             onDirtyChange={() => { }}
           />

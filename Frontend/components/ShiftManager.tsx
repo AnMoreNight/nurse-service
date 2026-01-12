@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Staff, ShiftAssignment, ShiftType, CompanySettings } from '@/lib/types';
-import { ChevronLeft, ChevronRight, Moon, Sun, Palmtree, Plus, Edit, Trash2, Copy, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Moon, Sun, Palmtree, Plus, Edit, Trash2, Copy, Check, Users } from 'lucide-react';
 import { getEffectiveShiftType, toLocalISOString } from '@/lib/constants';
 
 interface ShiftManagerProps {
@@ -19,6 +19,8 @@ interface ShiftManagerProps {
 export const ShiftManager: React.FC<ShiftManagerProps> = ({ 
   staff, shifts, currentDate, companySettings, onUpdateShift, onOpenStaffForm, onDeleteStaff, isReadOnly = false 
 }) => {
+  console.log('[ShiftManager] Received props:', { staffCount: staff.length, shiftsCount: shifts.length, staff });
+
   const [viewDate, setViewDate] = useState(() => {
     const [y, m] = currentDate.split('-').map(Number);
     return new Date(y, m - 1, 1);
@@ -119,6 +121,32 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
     setShowCopyConfirm(true);
     setTimeout(() => setShowCopyConfirm(false), 2000);
   };
+
+  // Show empty state if no staff
+  if (staff.length === 0) {
+    return (
+      <div className="h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col items-center justify-center p-8">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Users className="w-8 h-8 text-gray-400" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-800 mb-2">スタッフが登録されていません</h3>
+          <p className="text-gray-500 mb-6">
+            シフトを管理するには、まずスタッフを追加してください。
+          </p>
+          {!isReadOnly && (
+            <button 
+              onClick={() => onOpenStaffForm()}
+              className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-full hover:bg-blue-700 transition-colors font-bold shadow-sm mx-auto"
+            >
+              <Plus className="w-5 h-5" />
+              スタッフを追加
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">

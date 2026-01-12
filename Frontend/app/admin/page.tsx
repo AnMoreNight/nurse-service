@@ -39,16 +39,23 @@ export default function AdminPage() {
 
       // Map API companies to frontend format
       if (companiesRes.status === 'fulfilled') {
-        const mappedCompanies: Company[] = companiesRes.value.map(c => ({
-          id: c.company_id,
-          name: c.name,
-          status: 'active' as const,
-          contactPerson: '',
-          email: '',
-          userCount: 0,
-          createdAt: c.created_at,
-          settings: DEFAULT_SETTINGS,
-        }));
+        const users = usersRes.status === 'fulfilled' ? usersRes.value : [];
+
+        const mappedCompanies: Company[] = companiesRes.value.map(c => {
+          // Count users for this company
+          const userCount = users.filter(u => u.company_id === c.company_id).length;
+
+          return {
+            id: c.company_id,
+            name: c.name,
+            status: 'active' as const,
+            contactPerson: '',
+            email: '',
+            userCount,
+            createdAt: c.created_at,
+            settings: DEFAULT_SETTINGS,
+          };
+        });
         setCompanies(mappedCompanies);
       }
 
@@ -90,9 +97,13 @@ export default function AdminPage() {
     }
   };
 
-  const handleUpdateCompany = (company: Company) => {
-    // Update locally (API update would go here if available)
-    setCompanies(companies.map(c => c.id === company.id ? company : c));
+  const handleUpdateCompany = async (company: Company) => {
+    try {
+      await companyService.update(company.id, { name: company.name });
+      setCompanies(companies.map(c => c.id === company.id ? company : c));
+    } catch (err) {
+      console.error('Failed to update company:', err);
+    }
   };
 
   const handleDeleteCompany = async (id: string) => {

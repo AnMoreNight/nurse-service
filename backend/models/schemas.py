@@ -1,12 +1,32 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, field_validator
 from typing import Optional
 from datetime import datetime
 from uuid import UUID
+import re
+
+# Custom email validation that allows .local domains
+def validate_email(email: str) -> str:
+    """Validate email format, allowing .local and other internal domains"""
+    if not email or '@' not in email:
+        raise ValueError('Invalid email format')
+    
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    local_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.local$'
+    
+    if not (re.match(pattern, email) or re.match(local_pattern, email)):
+        raise ValueError('Invalid email format')
+    
+    return email.lower()
 
 # Auth Models
 class LoginRequest(BaseModel):
-    email: EmailStr
+    email: str
     password: str
+    
+    @field_validator('email')
+    @classmethod
+    def validate_email_field(cls, v):
+        return validate_email(v)
 
 class LoginResponse(BaseModel):
     access_token: str
@@ -14,7 +34,12 @@ class LoginResponse(BaseModel):
     user: dict
 
 class PasswordResetRequest(BaseModel):
-    email: EmailStr
+    email: str
+    
+    @field_validator('email')
+    @classmethod
+    def validate_email_field(cls, v):
+        return validate_email(v)
 
 class PasswordResetConfirm(BaseModel):
     token: str
@@ -36,7 +61,7 @@ class CompanyResponse(BaseModel):
 
 # User Models
 class UserCreate(BaseModel):
-    email: EmailStr
+    email: str
     password: str
     role: str
     name: str
@@ -44,11 +69,19 @@ class UserCreate(BaseModel):
     job_title: Optional[str] = None
     display_color: Optional[str] = None
     join_date: Optional[str] = None  # YYYY-MM-DD
-    left_date: Optional[str] = None  # YYYY-MM-DD
-
+    left_date: Optional[str] = None  # YYYY-MM-DD    
+    @field_validator('email')
+    @classmethod
+    def validate_email_field(cls, v):
+        return validate_email(v)
 class UserInvite(BaseModel):
-    email: EmailStr
+    email: str
     role: str
+    
+    @field_validator('email')
+    @classmethod
+    def validate_email_field(cls, v):
+        return validate_email(v)
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None

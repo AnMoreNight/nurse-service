@@ -26,41 +26,41 @@ interface AppContextType {
   setCurrentUser: React.Dispatch<React.SetStateAction<AuthUser | null>>;
   isAuthenticated: boolean;
   isLoading: boolean;
-  
+
   // Data state
   staff: Staff[];
   visits: Visit[];
   shifts: ShiftAssignment[];
   statuses: ScheduleStatus[];
   companySettings: CompanySettings;
-  
+
   // Data loading
   refreshData: () => Promise<void>;
-  
+
   // Staff operations
   addStaff: (data: Partial<Staff>) => Promise<void>;
   updateStaff: (id: string, data: Partial<Staff>) => Promise<void>;
   deleteStaff: (id: string) => Promise<void>;
   reorderStaff: (sortOrders: { userId: string; sortOrder: number }[]) => Promise<void>;
-  
+
   // Schedule operations
   addSchedule: (data: any) => Promise<void>;
   updateSchedule: (id: string, data: any, scope?: string) => Promise<void>;
   deleteSchedule: (id: string) => Promise<void>;
-  
+
   // Shift operations
   updateShift: (staffId: string, date: string, type: string | null) => Promise<void>;
   applyWeeklyRules: (startDate: string, endDate: string) => Promise<void>;
-  
+
   // Status operations (for admin)
   addStatus: (data: { name: string; color: string }) => Promise<void>;
   updateStatus: (id: string, data: Partial<ScheduleStatus>) => Promise<void>;
   deleteStatus: (id: string) => Promise<void>;
-  
+
   // Error handling
   error: string | null;
   clearError: () => void;
-  
+
   // Toast
   showToast: (message: string) => void;
   toastMessage: string | null;
@@ -111,7 +111,7 @@ function shiftToAssignment(shift: Shift): ShiftAssignment {
     'NightDuty1DayOff': 'night1_holiday',
     'NightDuty2DayOff': 'night2_holiday',
   };
-  
+
   return {
     id: shift.shift_id,
     companyId: shift.company_id,
@@ -125,25 +125,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Auth state
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Data state
   const [staff, setStaff] = useState<Staff[]>([]);
   const [visits, setVisits] = useState<Visit[]>([]);
   const [shifts, setShifts] = useState<ShiftAssignment[]>([]);
   const [statuses, setStatuses] = useState<ScheduleStatus[]>([]);
   const [companySettings, setCompanySettings] = useState<CompanySettings>(DEFAULT_SETTINGS);
-  
+
   // Error & toast state
   const [error, setError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  
+
   const showToast = useCallback((message: string) => {
     setToastMessage(message);
     setTimeout(() => setToastMessage(null), 3000);
   }, []);
-  
+
   const clearError = useCallback(() => setError(null), []);
-  
+
   // Load user from localStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem('currentUser');
@@ -159,7 +159,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     setIsLoading(false);
   }, []);
-  
+
   // Persist user to localStorage
   useEffect(() => {
     if (currentUser) {
@@ -170,20 +170,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       document.cookie = 'currentUser=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     }
   }, [currentUser]);
-  
+
   // Fetch data when user is authenticated
   const refreshData = useCallback(async () => {
+    console.log('[Context] refreshData called, currentUser:', currentUser, 'token:', localStorage.getItem('token') ? 'exists' : 'missing');
+
     if (!currentUser || !localStorage.getItem('token')) {
+      console.log('[Context] No user or token, clearing data');
       setStaff([]);
       setVisits([]);
       setShifts([]);
       setStatuses([]);
       return;
     }
-    
+
     try {
       setIsLoading(true);
-      
+      console.log('[Context] Fetching data from API...');
+
       // Fetch all data in parallel
       const [usersRes, schedulesRes, shiftsRes, statusesRes] = await Promise.allSettled([
         userService.getAll(),
@@ -191,34 +195,51 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         shiftService.getAll(),
         statusService.getAll(),
       ]);
-      
+
+      console.log('[Context] API Results:', {
+        users: usersRes.status === 'fulfilled' ? usersRes.value : usersRes.reason,
+        schedules: schedulesRes.status === 'fulfilled' ? schedulesRes.value : schedulesRes.reason,
+        shifts: shiftsRes.status === 'fulfilled' ? shiftsRes.value : shiftsRes.reason,
+        statuses: statusesRes.status === 'fulfilled' ? statusesRes.value : statusesRes.reason,
+      });
+
       // Process users -> staff (filter by role for normal users)
       if (usersRes.status === 'fulfilled') {
         const users = usersRes.value;
+        console.log('[Context] Raw users:', users);
         const staffMembers = users
           .filter(u => u.is_active && u.role !== 'SUPER_ADMIN')
           .map(userToStaff)
           .sort((a, b) => ((a as any).sortOrder || 0) - ((b as any).sortOrder || 0));
+        console.log('[Context] Processed staff:', staffMembers);
         setStaff(staffMembers);
+      } else {
+        console.error('[Context] Users fetch failed:', usersRes.reason);
       }
-      
+
       // Process schedules -> visits
       if (schedulesRes.status === 'fulfilled') {
         const schedules = schedulesRes.value;
+        console.log('[Context] Raw schedules:', schedules);
         setVisits(schedules.map(scheduleToVisit));
+      } else {
+        console.error('[Context] Schedules fetch failed:', schedulesRes.reason);
       }
-      
+
       // Process shifts
       if (shiftsRes.status === 'fulfilled') {
         const shiftsData = shiftsRes.value;
+        console.log('[Context] Raw shifts:', shiftsData);
         setShifts(shiftsData.map(shiftToAssignment));
+      } else {
+        console.error('[Context] Shifts fetch failed:', shiftsRes.reason);
       }
-      
+
       // Process statuses -> company settings
       if (statusesRes.status === 'fulfilled') {
         const statusList = statusesRes.value;
         setStatuses(statusList);
-        
+
         // Convert to company settings format
         if (statusList.length > 0) {
           setCompanySettings({
@@ -231,7 +252,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           });
         }
       }
-      
+
     } catch (err: any) {
       console.error('Failed to fetch data:', err);
       setError(err.message || 'Failed to load data');
@@ -239,14 +260,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     }
   }, [currentUser]);
-  
+
   // Refresh data when user changes
   useEffect(() => {
     if (currentUser) {
       refreshData();
     }
   }, [currentUser, refreshData]);
-  
+
   // Staff operations
   const addStaff = useCallback(async (data: Partial<Staff>) => {
     try {
@@ -266,7 +287,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       throw err;
     }
   }, [refreshData, showToast]);
-  
+
   const updateStaff = useCallback(async (id: string, data: Partial<Staff>) => {
     try {
       await userService.update(id, {
@@ -283,7 +304,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       throw err;
     }
   }, [refreshData, showToast]);
-  
+
   const deleteStaff = useCallback(async (id: string) => {
     try {
       // Soft delete by setting left_date
@@ -298,7 +319,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       throw err;
     }
   }, [refreshData, showToast]);
-  
+
   const reorderStaff = useCallback(async (sortOrders: { userId: string; sortOrder: number }[]) => {
     try {
       await userService.updateSortOrders(
@@ -310,7 +331,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       throw err;
     }
   }, [refreshData]);
-  
+
   // Schedule operations
   const addSchedule = useCallback(async (data: any) => {
     try {
@@ -323,7 +344,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         'night1_holiday': 'NightDuty1DayOff',
         'night2_holiday': 'NightDuty2DayOff',
       };
-      
+
       await scheduleService.create({
         patient_name: data.patientName,
         visit_address: data.address,
@@ -347,7 +368,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       throw err;
     }
   }, [refreshData, showToast]);
-  
+
   const updateSchedule = useCallback(async (id: string, data: any, scope?: string) => {
     try {
       await scheduleService.update(id, {
@@ -367,7 +388,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       throw err;
     }
   }, [refreshData, showToast]);
-  
+
   const deleteSchedule = useCallback(async (id: string) => {
     try {
       await scheduleService.delete(id);
@@ -378,7 +399,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       throw err;
     }
   }, [refreshData, showToast]);
-  
+
   // Shift operations
   const updateShift = useCallback(async (staffId: string, date: string, type: string | null) => {
     try {
@@ -391,10 +412,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         'night1_holiday': 'NightDuty1DayOff',
         'night2_holiday': 'NightDuty2DayOff',
       };
-      
+
       // Check if shift exists
       const existingShift = shifts.find(s => s.staffId === staffId && s.date === date);
-      
+
       if (type && type !== 'none') {
         if (existingShift) {
           await shiftService.update(existingShift.id, { shift_type: typeMap[type] || type });
@@ -408,14 +429,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } else if (existingShift) {
         await shiftService.delete(existingShift.id);
       }
-      
+
       await refreshData();
     } catch (err: any) {
       setError(err.message);
       throw err;
     }
   }, [shifts, refreshData]);
-  
+
   const applyWeeklyRules = useCallback(async (startDate: string, endDate: string) => {
     try {
       await shiftService.applyWeeklyRules(startDate, endDate);
@@ -426,7 +447,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       throw err;
     }
   }, [refreshData, showToast]);
-  
+
   // Status operations (admin only)
   const addStatus = useCallback(async (data: { name: string; color: string }) => {
     if (currentUser?.role !== 'admin' && currentUser?.role !== 'system_admin') {
@@ -442,7 +463,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       throw err;
     }
   }, [currentUser, refreshData, showToast]);
-  
+
   const updateStatus = useCallback(async (id: string, data: Partial<ScheduleStatus>) => {
     if (currentUser?.role !== 'admin' && currentUser?.role !== 'system_admin') {
       setError('Permission denied');
@@ -457,7 +478,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       throw err;
     }
   }, [currentUser, refreshData, showToast]);
-  
+
   const deleteStatus = useCallback(async (id: string) => {
     if (currentUser?.role !== 'admin' && currentUser?.role !== 'system_admin') {
       setError('Permission denied');
@@ -472,9 +493,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       throw err;
     }
   }, [currentUser, refreshData, showToast]);
-  
+
   const isAuthenticated = currentUser !== null && localStorage.getItem('token') !== null;
-  
+
   return (
     <AppContext.Provider value={{
       currentUser,
@@ -520,7 +541,7 @@ export function useApp() {
 // Role-based access helpers
 export function useRoleAccess() {
   const { currentUser } = useApp();
-  
+
   return {
     isSystemAdmin: currentUser?.role === 'system_admin',
     isCompanyAdmin: currentUser?.role === 'admin',

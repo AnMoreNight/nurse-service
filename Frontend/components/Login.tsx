@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { AuthUser } from '@/lib/types';
 import { authService } from '@/services/authService';
 import { Lock, Mail, LogIn, Loader2 } from 'lucide-react';
@@ -59,8 +60,14 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         {/* Header */}
         <div className="bg-teal-600 p-8 text-center relative overflow-hidden">
           <div className="relative z-10">
-            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm shadow-inner border border-white/10">
-              <span className="text-3xl font-bold text-white">N</span>
+            <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm shadow-lg border border-white/10 p-2">
+              <Image 
+                src="/image.png" 
+                alt="NurseAssist Pro Logo" 
+                width={80} 
+                height={80}
+                className="object-contain"
+              />
             </div>
             <h1 className="text-2xl font-bold text-white mb-2">
               NurseAssist Pro

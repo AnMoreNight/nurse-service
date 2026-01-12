@@ -29,7 +29,20 @@ class ApiClient {
       }
 
       const error = await response.json().catch(() => ({ detail: 'Request failed' }));
-      throw new Error(error.detail || `HTTP ${response.status}`);
+      
+      // Handle error detail properly - it might be a string or an object
+      let errorMessage: string;
+      if (typeof error.detail === 'string') {
+        errorMessage = error.detail;
+      } else if (typeof error.detail === 'object' && error.detail !== null) {
+        errorMessage = JSON.stringify(error.detail);
+      } else if (error.message) {
+        errorMessage = error.message;
+      } else {
+        errorMessage = `HTTP ${response.status}`;
+      }
+      
+      throw new Error(errorMessage);
     }
 
     return response.json();
@@ -48,7 +61,7 @@ class ApiClient {
 
   async patch<T>(endpoint: string, data: any): Promise<T> {
     return this.request<T>(endpoint, {
-      method: 'PATCH',
+      method: 'PUT',  // Backend uses PUT, not PATCH
       body: JSON.stringify(data),
     });
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { Company, UserAccount } from '@/lib/types';
 import { DEFAULT_SETTINGS } from '@/lib/constants';
 import { Building2, Plus, Search, Edit, Trash2, Users, Calendar, CheckCircle, XCircle, LogIn } from 'lucide-react';
@@ -115,8 +116,8 @@ export const SystemAdminDashboard: React.FC<SystemAdminDashboardProps> = ({
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-slate-800 flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg">
-              <Building2 className="w-5 h-5" />
+            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden border border-slate-200">
+              <Image src="/image.png" alt="Logo" width={40} height={40} className="object-contain" />
             </div>
             企業管理コンソール
           </h1>

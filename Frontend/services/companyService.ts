@@ -10,12 +10,18 @@ export interface CompanyCreate {
   name: string;
 }
 
+export interface CompanyUpdate {
+  name?: string;
+}
+
 export const companyService = {
   getAll: () => apiClient.get<Company[]>('/companies'),
-  
+
   getById: (id: string) => apiClient.get<Company>(`/companies/${id}`),
-  
+
   create: (data: CompanyCreate) => apiClient.post<Company>('/companies', data),
-  
+
+  update: (id: string, data: CompanyUpdate) => apiClient.patch<Company>(`/companies/${id}`, data),
+
   delete: (id: string) => apiClient.delete(`/companies/${id}`),
 };
