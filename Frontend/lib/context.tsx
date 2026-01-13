@@ -7,6 +7,7 @@ import { userService, User } from '@/services/userService';
 import { scheduleService, Schedule } from '@/services/scheduleService';
 import { shiftService, Shift } from '@/services/shiftService';
 import { statusService, ScheduleStatus } from '@/services/statusService';
+import { createDateTime } from '@/lib/timeUtils';
 
 // Default settings for fallback
 const DEFAULT_SETTINGS: CompanySettings = {
@@ -26,6 +27,10 @@ interface AppContextType {
   setCurrentUser: React.Dispatch<React.SetStateAction<AuthUser | null>>;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isImpersonating: boolean;
+  originalUser: AuthUser | null;
+  originalToken: string | null;
+  setImpersonating: (user: AuthUser | null, isImpersonating: boolean) => void;
 
   // Data state
   staff: Staff[];
@@ -125,6 +130,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Auth state
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isImpersonating, setIsImpersonatingState] = useState(false);
+  const [originalUser, setOriginalUser] = useState<AuthUser | null>(null);
+  const [originalToken, setOriginalToken] = useState<string | null>(null);
 
   // Data state
   const [staff, setStaff] = useState<Staff[]>([]);
@@ -144,6 +152,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const clearError = useCallback(() => setError(null), []);
 
+  // Handle impersonation mode
+  const setImpersonating = useCallback((user: AuthUser | null, isImpersonating: boolean) => {
+    if (isImpersonating && user) {
+      // Save original user before impersonating
+      // Keep the token - system admin can access all companies
+      setOriginalUser(currentUser);
+      setOriginalToken(localStorage.getItem('token'));
+      setCurrentUser(user);
+      setIsImpersonatingState(true);
+    } else {
+      // Restore original user
+      if (originalUser) {
+        setCurrentUser(originalUser);
+      } else {
+        setCurrentUser(null);
+      }
+      setIsImpersonatingState(false);
+      setOriginalUser(null);
+      setOriginalToken(null);
+    }
+  }, [currentUser, originalUser, originalToken]);
+
   // Load user from localStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem('currentUser');
@@ -160,20 +190,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  // Persist user to localStorage
+  // Persist user to localStorage (only if not impersonating)
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser && !isImpersonating) {
       localStorage.setItem('currentUser', JSON.stringify(currentUser));
       document.cookie = `currentUser=${JSON.stringify(currentUser)}; path=/`;
-    } else {
+    } else if (!currentUser) {
       localStorage.removeItem('currentUser');
       document.cookie = 'currentUser=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     }
-  }, [currentUser]);
+  }, [currentUser, isImpersonating]);
 
   // Fetch data when user is authenticated
   const refreshData = useCallback(async () => {
-    console.log('[Context] refreshData called, currentUser:', currentUser, 'token:', localStorage.getItem('token') ? 'exists' : 'missing');
+    console.log('[Context] refreshData called, currentUser:', currentUser, 'token:', localStorage.getItem('token') ? 'exists' : 'missing', 'isImpersonating:', isImpersonating);
 
     if (!currentUser || !localStorage.getItem('token')) {
       console.log('[Context] No user or token, clearing data');
@@ -190,10 +220,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       // Fetch all data in parallel
       const [usersRes, schedulesRes, shiftsRes, statusesRes] = await Promise.allSettled([
-        userService.getAll(),
-        scheduleService.getAll(),
-        shiftService.getAll(),
-        statusService.getAll(),
+        userService.getAll(currentUser?.companyId),
+        scheduleService.getAll(undefined, undefined, undefined, currentUser?.companyId),
+        shiftService.getAll(undefined, undefined, undefined, currentUser?.companyId),
+        statusService.getAll(currentUser?.companyId),
       ]);
 
       console.log('[Context] API Results:', {
@@ -259,7 +289,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser]);
+  }, [currentUser, isImpersonating]);
 
   // Refresh data when user changes
   useEffect(() => {
@@ -346,10 +376,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       };
 
       await scheduleService.create({
+        company_id: currentUser?.companyId,
         patient_name: data.patientName,
         visit_address: data.address,
-        start_time: `${data.date}T${data.startTime}:00`,
-        end_time: `${data.date}T${data.endTime}:00`,
+        start_time: createDateTime(data.date, data.startTime),
+        end_time: createDateTime(data.date, data.endTime),
         status_id: data.status,
         memo: data.notes,
         assigned_user_ids: data.staffIds,
@@ -367,15 +398,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setError(err.message);
       throw err;
     }
-  }, [refreshData, showToast]);
+  }, [currentUser, refreshData, showToast]);
 
   const updateSchedule = useCallback(async (id: string, data: any, scope?: string) => {
     try {
       await scheduleService.update(id, {
+        company_id: currentUser?.companyId,
         patient_name: data.patientName,
         visit_address: data.address,
-        start_time: data.date && data.startTime ? `${data.date}T${data.startTime}:00` : undefined,
-        end_time: data.date && data.endTime ? `${data.date}T${data.endTime}:00` : undefined,
+        start_time: data.date && data.startTime ? createDateTime(data.date, data.startTime) : undefined,
+        end_time: data.date && data.endTime ? createDateTime(data.date, data.endTime) : undefined,
         status_id: data.status,
         memo: data.notes,
         assigned_user_ids: data.staffIds,
@@ -387,7 +419,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setError(err.message);
       throw err;
     }
-  }, [refreshData, showToast]);
+  }, [currentUser, refreshData, showToast]);
 
   const deleteSchedule = useCallback(async (id: string) => {
     try {
@@ -494,7 +526,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentUser, refreshData, showToast]);
 
-  const isAuthenticated = currentUser !== null && localStorage.getItem('token') !== null;
+  const isAuthenticated = currentUser !== null && (localStorage.getItem('token') !== null || isImpersonating);
 
   return (
     <AppContext.Provider value={{
@@ -502,6 +534,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setCurrentUser,
       isAuthenticated,
       isLoading,
+      isImpersonating,
+      originalUser,
+      originalToken,
+      setImpersonating,
       staff,
       visits,
       shifts,

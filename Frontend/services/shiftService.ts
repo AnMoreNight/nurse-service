@@ -38,11 +38,12 @@ export interface WeeklyOffRuleCreate {
 }
 
 export const shiftService = {
-  getAll: (userId?: string, startDate?: string, endDate?: string) => {
+  getAll: (userId?: string, startDate?: string, endDate?: string, companyId?: string) => {
     const params = new URLSearchParams();
     if (userId) params.append('user_id', userId);
     if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);
+    if (companyId) params.append('company_id', companyId);
     const query = params.toString();
     return apiClient.get<Shift[]>(`/shifts${query ? `?${query}` : ''}`);
   },

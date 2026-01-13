@@ -12,9 +12,11 @@ router = APIRouter(prefix="/schedules", tags=["Schedules"])
 @router.post("")
 async def create_schedule(req: ScheduleCreate, request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_current_user(request, db)
+    # SUPER_ADMIN can specify company_id for impersonation, others use their own
+    company_id = req.company_id if (user["role"] == "SUPER_ADMIN" and req.company_id) else user["company_id"]
     recurring_rule = req.recurring_rule.model_dump() if req.recurring_rule else None
     return await ScheduleController.create_schedule(
-        db, user["company_id"], req.patient_id, req.patient_name, req.visit_address,
+        db, company_id, req.patient_id, req.patient_name, req.visit_address,
         req.start_time, req.end_time, req.status_id, req.memo, req.assigned_user_ids, recurring_rule
     )
 
@@ -24,17 +26,23 @@ async def get_schedules(
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
     patient_name: Optional[str] = Query(None),
+    company_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db)
 ):
     user = await get_current_user(request, db)
-    return await ScheduleController.get_schedules(db, user["company_id"], start_date, end_date, patient_name)
+    # SUPER_ADMIN can specify company_id for impersonation, others use their own
+    effective_company_id = company_id if (user["role"] == "SUPER_ADMIN" and company_id) else user["company_id"]
+    return await ScheduleController.get_schedules(db, effective_company_id, start_date, end_date, patient_name)
 
 @router.put("/{schedule_id}")
 async def update_schedule(schedule_id: UUID, req: ScheduleUpdate, request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_current_user(request, db)
     update_data = req.model_dump(exclude_unset=True)
     update_scope = update_data.pop('update_scope', 'this')
-    return await ScheduleController.update_schedule(db, schedule_id, user["company_id"], update_scope, **update_data)
+    # SUPER_ADMIN can specify company_id for impersonation, others use their own
+    company_id = update_data.pop('company_id', None)
+    effective_company_id = company_id if (user["role"] == "SUPER_ADMIN" and company_id) else user["company_id"]
+    return await ScheduleController.update_schedule(db, schedule_id, effective_company_id, update_scope, **update_data)
 
 @router.delete("/{schedule_id}")
 async def delete_schedule(schedule_id: UUID, request: Request, db: AsyncSession = Depends(get_db)):

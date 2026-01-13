@@ -30,6 +30,7 @@ export interface Schedule {
 }
 
 export interface ScheduleCreate {
+  company_id?: string;
   patient_id?: string;
   patient_name: string;
   visit_address?: string;
@@ -42,6 +43,7 @@ export interface ScheduleCreate {
 }
 
 export interface ScheduleUpdate {
+  company_id?: string;
   patient_name?: string;
   visit_address?: string;
   start_time?: string;
@@ -53,11 +55,12 @@ export interface ScheduleUpdate {
 }
 
 export const scheduleService = {
-  getAll: (startDate?: string, endDate?: string, patientName?: string) => {
+  getAll: (startDate?: string, endDate?: string, patientName?: string, companyId?: string) => {
     const params = new URLSearchParams();
     if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);
     if (patientName) params.append('patient_name', patientName);
+    if (companyId) params.append('company_id', companyId);
     const query = params.toString();
     return apiClient.get<Schedule[]>(`/schedules${query ? `?${query}` : ''}`);
   },

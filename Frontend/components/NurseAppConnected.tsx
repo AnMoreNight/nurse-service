@@ -5,6 +5,7 @@ import {
   authService, userService, scheduleService, shiftService, statusService, patientService,
   User, Schedule, Shift, ScheduleStatus
 } from '@/services';
+import { createDateTime } from '@/lib/timeUtils';
 import { LoginConnected } from './LoginConnected';
 import { Dashboard } from './Dashboard';
 import { ShiftManager } from './ShiftManager';
@@ -155,14 +156,11 @@ export default function NurseAppConnected() {
 
   const handleAddVisit = async (visitData: any) => {
     try {
-      const startDateTime = `${visitData.date}T${visitData.startTime}:00`;
-      const endDateTime = `${visitData.date}T${visitData.endTime}:00`;
-
       await scheduleService.create({
         patient_name: visitData.patientName,
         visit_address: visitData.address,
-        start_time: startDateTime,
-        end_time: endDateTime,
+        start_time: createDateTime(visitData.date, visitData.startTime),
+        end_time: createDateTime(visitData.date, visitData.endTime),
         status_id: visitData.status,
         memo: visitData.notes,
         assigned_user_ids: visitData.staffIds,
@@ -189,8 +187,8 @@ export default function NurseAppConnected() {
         const date = updates.date || visit?.date;
         const startTime = updates.startTime || visit?.startTime;
         const endTime = updates.endTime || visit?.endTime;
-        updateData.start_time = `${date}T${startTime}:00`;
-        updateData.end_time = `${date}T${endTime}:00`;
+        updateData.start_time = createDateTime(date, startTime);
+        updateData.end_time = createDateTime(date, endTime);
       }
 
       await scheduleService.update(visitId, updateData);
@@ -223,7 +221,7 @@ export default function NurseAppConnected() {
 
       await scheduleService.update(visitId, {
         assigned_user_ids: newStaffIds,
-        start_time: `${visit.date}T${newStartTime}:00`,
+        start_time: createDateTime(visit.date, newStartTime),
         update_scope: scope || 'this',
       });
 

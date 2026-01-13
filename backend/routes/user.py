@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.schemas import UserCreate, UserInvite, UserUpdate, UserSortOrder
 from controller.user_controller import UserController
 from db.database import get_db
 from middleware.auth import get_current_user
 from uuid import UUID
+from typing import Optional
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -22,9 +23,11 @@ async def invite_user(req: UserInvite, request: Request, db: AsyncSession = Depe
     return await UserController.invite_user(db, user["company_id"], req.email, req.role)
 
 @router.get("")
-async def get_users(request: Request, db: AsyncSession = Depends(get_db)):
+async def get_users(request: Request, company_id: Optional[UUID] = Query(None), db: AsyncSession = Depends(get_db)):
     user = await get_current_user(request, db)
-    return await UserController.get_users(db, user["company_id"])
+    # SUPER_ADMIN can specify company_id for impersonation, others use their own
+    effective_company_id = company_id if (user["role"] == "SUPER_ADMIN" and company_id) else user["company_id"]
+    return await UserController.get_users(db, effective_company_id)
 
 @router.get("/{user_id}")
 async def get_user(user_id: UUID, request: Request, db: AsyncSession = Depends(get_db)):

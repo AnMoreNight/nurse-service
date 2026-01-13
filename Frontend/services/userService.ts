@@ -52,7 +52,10 @@ export interface UserSortOrder {
 }
 
 export const userService = {
-  getAll: () => apiClient.get<User[]>('/users'),
+  getAll: (companyId?: string) => {
+    const params = companyId ? `?company_id=${companyId}` : '';
+    return apiClient.get<User[]>(`/users${params}`);
+  },
 
   getById: (id: string) => apiClient.get<User>(`/users/${id}`),
 

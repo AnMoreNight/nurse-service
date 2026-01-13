@@ -6,12 +6,12 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import { companyService, Company as ApiCompany } from '@/services/companyService';
 import { userService, User as ApiUser } from '@/services/userService';
-import { Company, UserAccount } from '@/lib/types';
+import { Company, UserAccount, AuthUser } from '@/lib/types';
 import { DEFAULT_SETTINGS } from '@/lib/constants';
 import { Loader2 } from 'lucide-react';
 
 export default function AdminPage() {
-  const { currentUser, setCurrentUser, isLoading: authLoading } = useApp();
+  const { currentUser, setCurrentUser, setImpersonating, isLoading: authLoading } = useApp();
   const router = useRouter();
 
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -116,14 +116,15 @@ export default function AdminPage() {
   };
 
   const handleImpersonate = (company: Company) => {
-    setCurrentUser({
+    const impersonatedUser: AuthUser = {
       id: 'impersonated_admin',
       username: 'admin',
       name: '管理者(代理)',
       role: 'admin',
       companyId: company.id,
       companyName: company.name
-    });
+    };
+    setImpersonating(impersonatedUser, true);
     router.push('/dashboard');
   };
 

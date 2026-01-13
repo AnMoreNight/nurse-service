@@ -20,10 +20,13 @@ async def get_shifts(
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
     user_id: Optional[UUID] = Query(None),
+    company_id: Optional[UUID] = Query(None),
     db: AsyncSession = Depends(get_db)
 ):
     user = await get_current_user(request, db)
-    return await ShiftController.get_shifts(db, user["company_id"], start_date, end_date, user_id)
+    # SUPER_ADMIN can specify company_id for impersonation, others use their own
+    effective_company_id = company_id if (user["role"] == "SUPER_ADMIN" and company_id) else user["company_id"]
+    return await ShiftController.get_shifts(db, effective_company_id, start_date, end_date, user_id)
 
 @router.put("/{shift_id}")
 async def update_shift(shift_id: UUID, req: ShiftUpdate, request: Request, db: AsyncSession = Depends(get_db)):

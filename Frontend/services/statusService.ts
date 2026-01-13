@@ -24,7 +24,10 @@ export interface ScheduleStatusUpdate {
 }
 
 export const statusService = {
-  getAll: () => apiClient.get<ScheduleStatus[]>('/statuses'),
+  getAll: (companyId?: string) => {
+    const params = companyId ? `?company_id=${companyId}` : '';
+    return apiClient.get<ScheduleStatus[]>(`/statuses${params}`);
+  },
   
   create: (data: ScheduleStatusCreate) => apiClient.post<ScheduleStatus>('/statuses', data),
   

@@ -18,7 +18,7 @@ const NavButton = ({ active, onClick, icon, label }: any) => (
 );
 
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
-  const { currentUser, setCurrentUser } = useApp();
+  const { currentUser, setCurrentUser, isImpersonating, setImpersonating } = useApp();
   const router = useRouter();
   const searchParams = useSearchParams();
   const view = searchParams.get('view') || 'schedule';
@@ -27,6 +27,11 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const handleLogout = () => {
     setCurrentUser(null);
     router.push('/login');
+  };
+
+  const handleBackToAdmin = () => {
+    setImpersonating(null, false);
+    router.push('/admin');
   };
 
   const setView = (newView: string) => {
@@ -99,7 +104,16 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           )}
         </nav>
 
-        <div className="p-4 border-t border-slate-800">
+        <div className="p-4 border-t border-slate-800">          {/* Show "Back to Admin" button when impersonating */}
+          {isImpersonating && (
+            <button
+              onClick={handleBackToAdmin}
+              className="w-full mb-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-3 rounded-lg flex items-center justify-center gap-2 hover:shadow-lg transition-all active:scale-95 font-bold"
+            >
+              <LogOut size={18} className="rotate-180" />
+              <span>管理画面に戻る</span>
+            </button>
+          )}
           {/* {currentUser?.role !== 'user' && (
             <button
               onClick={() => setView('ai')}

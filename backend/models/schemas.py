@@ -171,6 +171,7 @@ class RecurringRuleCreate(BaseModel):
     end_date: Optional[str] = None
 
 class ScheduleCreate(BaseModel):
+    company_id: Optional[UUID] = None  # Only used by SUPER_ADMIN for impersonation
     patient_id: Optional[UUID] = None
     patient_name: str
     visit_address: Optional[str] = None
@@ -182,6 +183,7 @@ class ScheduleCreate(BaseModel):
     recurring_rule: Optional[RecurringRuleCreate] = None
 
 class ScheduleUpdate(BaseModel):
+    company_id: Optional[UUID] = None  # Only used by SUPER_ADMIN for impersonation
     patient_name: Optional[str] = None
     visit_address: Optional[str] = None
     start_time: Optional[datetime] = None
