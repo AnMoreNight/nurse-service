@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from db.database import init_db, close_db
-from routes import auth, company, user, patient, schedule, shift, status, bootstrap
+from routes import auth, company, user, patient, schedule, shift, status, bootstrap, health
 
 load_dotenv()
 
@@ -23,6 +23,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(health.router)
 app.include_router(bootstrap.router)
 app.include_router(auth.router)
 app.include_router(company.router)
@@ -34,8 +35,4 @@ app.include_router(status.router)
 
 @app.get("/")
 async def root():
-    return {"message": "Nurse Service API", "version": "1.0.0"}
-
-@app.get("/health")
-async def health():
-    return {"status": "healthy"}
+    return {"message": "Nurse Service API", "version": "1.0.0", "docs": "/docs"}

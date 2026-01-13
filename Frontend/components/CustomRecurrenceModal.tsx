@@ -63,12 +63,17 @@ export const CustomRecurrenceModal: React.FC<CustomRecurrenceModalProps> = ({ in
         // Basic validation
         let finalWeekDays = weekDays;
         let finalWeekNos = weekNos;
+        let finalDayOfMonth: number | undefined = undefined;
 
         if (frequency === 'monthly') {
             if (monthlyMode === 'date') {
+                // Monthly by date mode: extract day from startDate
+                const startDay = new Date(startDate).getDate();
+                finalDayOfMonth = startDay;
                 finalWeekDays = [];
                 finalWeekNos = [];
             } else {
+                // Monthly by weekday mode: validate selections
                 if (finalWeekDays.length === 0) {
                     alert('曜日を選択してください');
                     return;
@@ -77,11 +82,13 @@ export const CustomRecurrenceModal: React.FC<CustomRecurrenceModalProps> = ({ in
                     alert('週（第1〜5）を選択してください');
                     return;
                 }
+                finalDayOfMonth = undefined;
             }
         } else {
             // Yearly or others (if any)
             finalWeekDays = [];
             finalWeekNos = [];
+            finalDayOfMonth = undefined;
         }
 
         onSave({
@@ -89,6 +96,7 @@ export const CustomRecurrenceModal: React.FC<CustomRecurrenceModalProps> = ({ in
             interval: 1, // Fixed to 1
             weekDays: finalWeekDays,
             weekNos: finalWeekNos,
+            dayOfMonth: finalDayOfMonth,
             endType: 'never',
         });
         onClose();
@@ -157,8 +165,8 @@ export const CustomRecurrenceModal: React.FC<CustomRecurrenceModalProps> = ({ in
                                                         key={item.val}
                                                         onClick={() => toggleWeekNo(item.val)}
                                                         className={`px-3 py-1 rounded text-xs font-bold border transition-colors ${isSelected
-                                                                ? 'bg-blue-600 text-white border-blue-600'
-                                                                : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-100'
+                                                            ? 'bg-blue-600 text-white border-blue-600'
+                                                            : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-100'
                                                             }`}
                                                     >
                                                         {item.label}
@@ -179,8 +187,8 @@ export const CustomRecurrenceModal: React.FC<CustomRecurrenceModalProps> = ({ in
                                                         key={idx}
                                                         onClick={() => toggleWeekDay(idx)}
                                                         className={`w-7 h-7 rounded-full text-[10px] font-bold flex items-center justify-center transition-all ${isSelected
-                                                                ? 'bg-blue-600 text-white shadow-md'
-                                                                : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-100'
+                                                            ? 'bg-blue-600 text-white shadow-md'
+                                                            : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-100'
                                                             }`}
                                                     >
                                                         {label}

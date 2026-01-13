@@ -33,7 +33,8 @@ export interface RecurrenceRule {
   frequency: RecurrenceFrequency;
   interval: number;
   weekDays: number[]; // 0=Sun, 1=Mon, ... 6=Sat
-  weekNos?: number[]; // 1=1st, 2=2nd, ... 5=5th/Last (Used when frequency is monthly)
+  weekNos?: number[]; // 1=1st, 2=2nd, ... 5=5th/Last (Used when frequency is monthly by weekday)
+  dayOfMonth?: number; // 1-31 (Used when frequency is monthly by date)
   endType: 'never' | 'date' | 'count';
   endDate?: string; // ISO Date
   endCount?: number;

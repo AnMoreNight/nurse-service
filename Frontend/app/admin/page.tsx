@@ -137,8 +137,15 @@ export default function AdminPage() {
         name: user.name,
       });
       setDbUsers([...dbUsers, user]);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to add user:', err);
+      // Show user-friendly error message
+      const errorMsg = err.message || 'Failed to add user';
+      if (errorMsg.includes('email')) {
+        alert('メールアドレスの形式が正しくありません。有効なメールアドレスを入力してください。\n(Email format is invalid. Please enter a valid email address.)');
+      } else {
+        alert(`ユーザーの追加に失敗しました: ${errorMsg}`);
+      }
     }
   };
 

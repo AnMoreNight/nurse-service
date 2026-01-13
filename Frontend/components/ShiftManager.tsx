@@ -16,8 +16,8 @@ interface ShiftManagerProps {
   isReadOnly?: boolean;
 }
 
-export const ShiftManager: React.FC<ShiftManagerProps> = ({ 
-  staff, shifts, currentDate, companySettings, onUpdateShift, onOpenStaffForm, onDeleteStaff, isReadOnly = false 
+export const ShiftManager: React.FC<ShiftManagerProps> = ({
+  staff, shifts, currentDate, companySettings, onUpdateShift, onOpenStaffForm, onDeleteStaff, isReadOnly = false
 }) => {
   console.log('[ShiftManager] Received props:', { staffCount: staff.length, shiftsCount: shifts.length, staff });
 
@@ -104,7 +104,11 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
       return sy === lastMonthYear && sm === lastMonthMonth + 1;
     });
 
-    // For each day in current month, copy the shift if it exists on same day-of-month in last month
+    // Night shift types to copy
+    const nightShiftTypes: ShiftType[] = ['night1', 'night2', 'night1_holiday', 'night2_holiday'];
+    let copiedCount = 0;
+
+    // For each day in current month, copy night shifts if they exist on same day-of-month in last month
     for (let day = 1; day <= daysInMonth; day++) {
       if (day > daysInLastMonth) break;
 
@@ -112,14 +116,19 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
 
       staff.forEach(s => {
         const lastMonthShift = lastMonthShifts.find(sh => sh.staffId === s.id && sh.date.endsWith(`-${String(day).padStart(2, '0')}`));
-        if (lastMonthShift && lastMonthShift.type) {
+        // Only copy if it's a night shift type
+        if (lastMonthShift && lastMonthShift.type && nightShiftTypes.includes(lastMonthShift.type)) {
           onUpdateShift(s.id, currentDateStr, lastMonthShift.type);
+          copiedCount++;
         }
       });
     }
 
     setShowCopyConfirm(true);
     setTimeout(() => setShowCopyConfirm(false), 2000);
+
+    // Optional: could add a console log for debugging
+    console.log(`Copied ${copiedCount} night shifts from last month`);
   };
 
   // Show empty state if no staff
@@ -135,7 +144,7 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
             シフトを管理するには、まずスタッフを追加してください。
           </p>
           {!isReadOnly && (
-            <button 
+            <button
               onClick={() => onOpenStaffForm()}
               className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-full hover:bg-blue-700 transition-colors font-bold shadow-sm mx-auto"
             >
@@ -166,14 +175,14 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
         <div className="flex items-center gap-3 flex-wrap">
           {!isReadOnly && (
             <>
-              <button 
+              <button
                 onClick={handleCopyLastMonth}
                 className="flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-full hover:bg-gray-700 transition-colors text-sm font-bold shadow-sm"
               >
                 <Copy className="w-4 h-4" />
                 前月からコピー
               </button>
-              <button 
+              <button
                 onClick={() => onOpenStaffForm()}
                 className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition-colors text-sm font-bold shadow-sm"
               >
@@ -188,19 +197,19 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
       {/* Legend */}
       <div className="px-4 py-2 border-b bg-slate-50 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600">
         <div className="flex items-center gap-1">
-          <div className="w-4 h-4 rounded-full bg-slate-700 flex items-center justify-center"><Moon className="w-2.5 h-2.5 text-white"/></div>
+          <div className="w-4 h-4 rounded-full bg-slate-700 flex items-center justify-center"><Moon className="w-2.5 h-2.5 text-white" /></div>
           <span>夜間待機1</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-4 h-4 rounded-full bg-slate-500 flex items-center justify-center"><Moon className="w-2.5 h-2.5 text-white"/></div>
+          <div className="w-4 h-4 rounded-full bg-slate-500 flex items-center justify-center"><Moon className="w-2.5 h-2.5 text-white" /></div>
           <span>夜間待機2</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-4 h-4 rounded-full bg-pink-100 flex items-center justify-center"><Palmtree className="w-2.5 h-2.5 text-pink-600"/></div>
+          <div className="w-4 h-4 rounded-full bg-pink-100 flex items-center justify-center"><Palmtree className="w-2.5 h-2.5 text-pink-600" /></div>
           <span>公休</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center"><Sun className="w-2.5 h-2.5 text-emerald-600"/></div>
+          <div className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center"><Sun className="w-2.5 h-2.5 text-emerald-600" /></div>
           <span>出勤(公休解除)</span>
         </div>
         <span className="text-gray-400">|</span>
@@ -220,8 +229,8 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
                 const dayOfWeek = new Date(year, month, day).getDay();
                 const isToday = dateStr === toLocalISOString(new Date());
                 return (
-                  <th 
-                    key={day} 
+                  <th
+                    key={day}
                     className={`py-3 px-1 text-center font-medium w-10 border-r border-gray-100 ${isToday ? 'bg-blue-50' : ''} ${dayOfWeek === 0 ? 'text-red-500' : dayOfWeek === 6 ? 'text-blue-500' : 'text-gray-600'}`}
                   >
                     <div className="text-xs text-gray-400">{weekDayLabels[dayOfWeek]}</div>
@@ -261,8 +270,8 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
                   const isToday = dateStr === toLocalISOString(new Date());
 
                   return (
-                    <td 
-                      key={day} 
+                    <td
+                      key={day}
                       onClick={() => cycleShiftType(member, day)}
                       className={`p-1 text-center border-r border-b border-gray-100 cursor-pointer hover:bg-gray-100 ${isToday ? 'bg-blue-50/50' : ''}`}
                     >

@@ -4,10 +4,11 @@ from sqlalchemy.orm import selectinload
 from models.orm import Schedule, ScheduleAssignment, RecurringRule, User
 from fastapi import HTTPException, status
 from uuid import UUID, uuid4
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import Optional
 import csv
 import io
+from utils.recurrence import expand_recurring_schedule
 
 class ScheduleController:
     @staticmethod
@@ -73,31 +74,48 @@ class ScheduleController:
     async def get_schedules(db: AsyncSession, company_id: UUID, start_date: str = None, 
                            end_date: str = None, patient_name: str = None):
         query = select(Schedule).options(
-            selectinload(Schedule.assignments).selectinload(ScheduleAssignment.user)
+            selectinload(Schedule.assignments).selectinload(ScheduleAssignment.user),
+            selectinload(Schedule.recurring_rule)
         ).where(Schedule.company_id == company_id)
         
-        if start_date and end_date:
-            query = query.where(
-                Schedule.start_time >= start_date,
-                Schedule.end_time <= end_date
-            )
-        
+        # Apply patient name filter to base schedules
         if patient_name:
             query = query.where(Schedule.patient_name.ilike(f"%{patient_name}%"))
         
+        # For recurring schedules, we need to query ALL base schedules
+        # and expand them, not filter by date at query level
         query = query.order_by(Schedule.start_time)
         result = await db.execute(query)
-        schedules = result.scalars().all()
+        base_schedules = result.scalars().all()
         
-        return [
-            {
+        # Parse date range for expansion
+        if start_date and end_date:
+            try:
+                query_start = datetime.strptime(start_date, "%Y-%m-%d").date()
+                query_end = datetime.strptime(end_date, "%Y-%m-%d").date()
+            except ValueError:
+                # If parsing fails, default to reasonable range
+                query_start = date.today() - timedelta(days=30)
+                query_end = date.today() + timedelta(days=365)
+        else:
+            # Default: 1 month before to 1 year ahead
+            query_start = date.today() - timedelta(days=30)
+            query_end = date.today() + timedelta(days=365)
+        
+        # Safety limit: cap at 1 year expansion
+        if (query_end - query_start).days > 365:
+            query_end = query_start + timedelta(days=365)
+        
+        expanded_schedules = []
+        
+        for s in base_schedules:
+            # Build base schedule dict
+            schedule_dict = {
                 "schedule_id": str(s.schedule_id),
                 "company_id": str(s.company_id),
                 "patient_id": str(s.patient_id) if s.patient_id else None,
                 "patient_name": s.patient_name,
                 "visit_address": s.visit_address,
-                "start_time": s.start_time.isoformat() if s.start_time else None,
-                "end_time": s.end_time.isoformat() if s.end_time else None,
                 "status_id": str(s.status_id) if s.status_id else None,
                 "memo": s.memo,
                 "recurring_series_id": str(s.recurring_series_id) if s.recurring_series_id else None,
@@ -116,8 +134,68 @@ class ScheduleController:
                     for a in s.assignments if a.user
                 ]
             }
-            for s in schedules
-        ]
+            
+            # Check if this is a recurring schedule
+            if s.recurring_rule_id and s.recurring_rule:
+                rule = s.recurring_rule
+                
+                # Build rule dict for expansion
+                rule_dict = {
+                    'frequency': rule.frequency,
+                    'day_of_week': rule.day_of_week,
+                    'week_of_month': rule.week_of_month,
+                    'day_of_week_monthly': rule.day_of_week_monthly,
+                    'month_of_year': rule.month_of_year,
+                    'day_of_month': rule.day_of_month,
+                    'interval': rule.interval,
+                    'start_date': rule.start_date.isoformat() if rule.start_date else None,
+                    'end_date': rule.end_date.isoformat() if rule.end_date else None
+                }
+                
+                # Expand recurring schedule into instances
+                try:
+                    instances = expand_recurring_schedule(
+                        base_date=s.start_time.date() if isinstance(s.start_time, datetime) else s.start_time,
+                        start_time=s.start_time,
+                        end_time=s.end_time,
+                        rule=rule_dict,
+                        query_start=query_start,
+                        query_end=query_end,
+                        excluded_dates=[]  # TODO: Add excluded_dates support when schema is updated
+                    )
+                    
+                    # Add each instance as a separate schedule
+                    for instance in instances:
+                        instance_dict = schedule_dict.copy()
+                        instance_dict['start_time'] = instance['start_time'].isoformat()
+                        instance_dict['end_time'] = instance['end_time'].isoformat()
+                        instance_dict['date'] = instance['date'].isoformat()
+                        expanded_schedules.append(instance_dict)
+                
+                except Exception as e:
+                    # If expansion fails, log and include base schedule
+                    print(f"Recurrence expansion error for schedule {s.schedule_id}: {e}")
+                    # Fall back to base schedule
+                    schedule_dict['start_time'] = s.start_time.isoformat() if s.start_time else None
+                    schedule_dict['end_time'] = s.end_time.isoformat() if s.end_time else None
+                    expanded_schedules.append(schedule_dict)
+            else:
+                # Non-recurring schedule - add as-is if within date range
+                schedule_dict['start_time'] = s.start_time.isoformat() if s.start_time else None
+                schedule_dict['end_time'] = s.end_time.isoformat() if s.end_time else None
+                
+                # Filter by date range if specified
+                if start_date and end_date:
+                    schedule_date = s.start_time.date() if isinstance(s.start_time, datetime) else s.start_time
+                    if query_start <= schedule_date <= query_end:
+                        expanded_schedules.append(schedule_dict)
+                else:
+                    expanded_schedules.append(schedule_dict)
+        
+        # Sort by start time
+        expanded_schedules.sort(key=lambda x: x['start_time'] if x['start_time'] else '')
+        
+        return expanded_schedules
     
     @staticmethod
     async def update_schedule(db: AsyncSession, schedule_id: UUID, company_id: UUID, 
@@ -149,8 +227,66 @@ class ScheduleController:
                 for user_id in assigned_user_ids:
                     db.add(ScheduleAssignment(schedule_id=schedule_id, user_id=user_id))
         
-        elif update_scope == "future" and schedule.recurring_series_id:
-            schedule.is_exception = True
+        elif update_scope == "future" and schedule.recurring_series_id and schedule.recurring_rule_id:
+            # Split the recurring series: end the old one and create a new one from this point forward
+            
+            # Get the original recurring rule
+            rule_result = await db.execute(
+                select(RecurringRule).where(RecurringRule.rule_id == schedule.recurring_rule_id)
+            )
+            original_rule = rule_result.scalar_one_or_none()
+            
+            if original_rule:
+                # Step 1: Update the original rule to end before this occurrence
+                # Set end_date to one day before the current schedule's start date
+                occurrence_date = schedule.start_time.date() if isinstance(schedule.start_time, datetime) else schedule.start_time
+                day_before = occurrence_date - timedelta(days=1)
+                original_rule.end_date = day_before
+                
+                # Step 2: Create a new recurring rule starting from this occurrence
+                new_rule = RecurringRule(
+                    frequency=original_rule.frequency,
+                    day_of_week=updates.pop('day_of_week', original_rule.day_of_week),
+                    week_of_month=updates.pop('week_of_month', original_rule.week_of_month),
+                    day_of_week_monthly=updates.pop('day_of_week_monthly', original_rule.day_of_week_monthly),
+                    month_of_year=updates.pop('month_of_year', original_rule.month_of_year),
+                    day_of_month=updates.pop('day_of_month', original_rule.day_of_month),
+                    interval=updates.pop('interval', original_rule.interval),
+                    start_date=occurrence_date,
+                    end_date=original_rule.end_date  # Keep the same overall end date
+                )
+                db.add(new_rule)
+                await db.flush()
+                
+                # Step 3: Create a new base schedule for the new series
+                new_series_id = uuid4()
+                new_schedule = Schedule(
+                    company_id=schedule.company_id,
+                    patient_id=schedule.patient_id,
+                    patient_name=updates.get('patient_name', schedule.patient_name),
+                    visit_address=updates.get('visit_address', schedule.visit_address),
+                    start_time=updates.get('start_time', schedule.start_time),
+                    end_time=updates.get('end_time', schedule.end_time),
+                    status_id=updates.get('status_id', schedule.status_id),
+                    memo=updates.get('memo', schedule.memo),
+                    recurring_rule_id=new_rule.rule_id,
+                    recurring_series_id=new_series_id,
+                    recurrence_index=0,
+                    is_exception=False
+                )
+                db.add(new_schedule)
+                await db.flush()
+                
+                # Step 4: Copy staff assignments to new schedule
+                if assigned_user_ids is not None:
+                    user_ids_to_assign = assigned_user_ids
+                else:
+                    # Copy from original schedule
+                    user_ids_to_assign = [a.user_id for a in schedule.assignments]
+                
+                for user_id in user_ids_to_assign:
+                    db.add(ScheduleAssignment(schedule_id=new_schedule.schedule_id, user_id=user_id))
+
         
         elif update_scope == "all" and schedule.recurring_series_id:
             # Update all occurrences in the series
@@ -229,3 +365,4 @@ class ScheduleController:
             ])
         
         return output.getvalue()
+

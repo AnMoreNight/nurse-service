@@ -2,183 +2,225 @@ import { Visit, Staff, ShiftAssignment, ShiftType, Company, UserAccount, Company
 
 // Helper for dates to ensure Local Time usage
 export const toLocalISOString = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
 export const formatDateForCSV = (isoDateStr: string) => {
-    if (!isoDateStr) return '';
-    const [y, m, d] = isoDateStr.split('-').map(Number);
-    const dateObj = new Date(y, m - 1, d);
-    const weekLabels = ['日', '月', '火', '水', '木', '金', '土'];
-    const w = weekLabels[dateObj.getDay()];
-    return `${y}/${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')} (${w})`;
+  if (!isoDateStr) return '';
+  const [y, m, d] = isoDateStr.split('-').map(Number);
+  const dateObj = new Date(y, m - 1, d);
+  const weekLabels = ['日', '月', '火', '水', '木', '金', '土'];
+  const w = weekLabels[dateObj.getDay()];
+  return `${y}/${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')} (${w})`;
 };
 
 // Calculates the effective shift type considering defaults and overrides
 // Returns 'none' if it's a regular working day (implied), otherwise the specific ShiftType
 export const getEffectiveShiftType = (staff: Staff, dateStr: string, shifts: ShiftAssignment[]): ShiftType | 'none' => {
-    const shift = shifts.find(s => s.staffId === staff.id && s.date === dateStr);
-    
-    // Explicit override exists (including 'work', 'holiday', 'night1_holiday' etc.)
-    if (shift) {
-        return shift.type || 'none';
-    }
+  const shift = shifts.find(s => s.staffId === staff.id && s.date === dateStr);
 
-    // Check Default Holidays
-    if (staff.defaultHolidayWeekDays) {
-        const [y, m, d] = dateStr.split('-').map(Number);
-        const dayOfWeek = new Date(y, m - 1, d).getDay();
-        
-        if (staff.defaultHolidayWeekDays.includes(dayOfWeek)) {
-            return 'holiday';
-        }
-    }
+  // Explicit override exists (including 'work', 'holiday', 'night1_holiday' etc.)
+  if (shift) {
+    return shift.type || 'none';
+  }
 
-    // Default is working ('none')
-    return 'none'; 
+  // Check Default Holidays
+  if (staff.defaultHolidayWeekDays) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const dayOfWeek = new Date(y, m - 1, d).getDay();
+
+    if (staff.defaultHolidayWeekDays.includes(dayOfWeek)) {
+      return 'holiday';
+    }
+  }
+
+  // Default is working ('none')
+  return 'none';
 };
+
+// Visibility check cache - dramatically improves performance
+// With 100 visits × 30 days = 3,000 checks per month view
+const visibilityCache = new Map<string, boolean>();
+const MAX_CACHE_SIZE = 5000;
+
+// Clear cache when it grows too large (simple LRU-like behavior)
+function clearCacheIfNeeded() {
+  if (visibilityCache.size > MAX_CACHE_SIZE) {
+    // Keep newest 50% of entries by clearing oldest
+    const entries = Array.from(visibilityCache.entries());
+    visibilityCache.clear();
+    // Re-add second half (newest entries)
+    entries.slice(Math.floor(entries.length / 2)).forEach(([k, v]) => {
+      visibilityCache.set(k, v);
+    });
+  }
+}
 
 // Common logic to check if a visit occurs on a specific date (handles recurrence)
 export const checkVisitVisibility = (visit: Visit, targetDate: string): boolean => {
-    // 1. Check exclusions (specific dates removed from series)
-    if (visit.excludeDates && visit.excludeDates.includes(targetDate)) return false;
+  // Check cache first
+  const cacheKey = `${visit.id}-${targetDate}`;
+  if (visibilityCache.has(cacheKey)) {
+    return visibilityCache.get(cacheKey)!;
+  }
 
-    // 2. Check recurrence end date (if series was terminated)
-    if (visit.recurrenceEndDate && targetDate > visit.recurrenceEndDate) return false;
+  // Calculate visibility
+  const result = calculateVisibility(visit, targetDate);
 
-    // 3. Simple date match for non-recurring or base date match
-    if (visit.date === targetDate) return true;
+  // Cache the result
+  visibilityCache.set(cacheKey, result);
+  clearCacheIfNeeded();
 
-    // 4. Recurrence rules check
-    if (visit.recurrence === 'custom' && visit.recurrenceRule) {
-        // Ensure strictly comparable dates (YYYY-MM-DD)
-        if (targetDate < visit.date) return false;
-
-        const start = new Date(visit.date);
-        const current = new Date(targetDate);
-        start.setHours(0,0,0,0);
-        current.setHours(0,0,0,0);
-
-        const rule = visit.recurrenceRule;
-        if (rule.endType === 'date' && rule.endDate && targetDate > rule.endDate) return false;
-        
-        if (rule.frequency === 'daily') {
-            const diffTime = Math.abs(current.getTime() - start.getTime());
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            return diffDays % rule.interval === 0;
-        }
-        if (rule.frequency === 'weekly') {
-            if (!rule.weekDays.includes(current.getDay())) return false;
-            const startWeekStart = new Date(start);
-            startWeekStart.setDate(start.getDate() - start.getDay());
-            const currentWeekStart = new Date(current);
-            currentWeekStart.setDate(current.getDate() - current.getDay());
-            const weeksDiff = Math.round((currentWeekStart.getTime() - startWeekStart.getTime()) / (1000 * 60 * 60 * 24 * 7));
-            return weeksDiff >= 0 && weeksDiff % rule.interval === 0;
-        }
-        if (rule.frequency === 'monthly') {
-            const monthsDiff = (current.getFullYear() - start.getFullYear()) * 12 + (current.getMonth() - start.getMonth());
-            if (monthsDiff < 0 || monthsDiff % rule.interval !== 0) return false;
-            if (rule.weekNos && rule.weekNos.length > 0) {
-                if (!rule.weekDays.includes(current.getDay())) return false;
-                const day = current.getDate();
-                const nth = Math.floor((day - 1) / 7) + 1; 
-                return rule.weekNos.includes(nth);
-            } else {
-                return current.getDate() === start.getDate();
-            }
-        }
-        if (rule.frequency === 'yearly') {
-            const yearDiff = current.getFullYear() - start.getFullYear();
-            if (yearDiff < 0 || yearDiff % rule.interval !== 0) return false;
-            // Check if same month and date
-            return current.getMonth() === start.getMonth() && current.getDate() === start.getDate();
-        }
-    }
-    return false;
+  return result;
 };
+
+// Internal function that does the actual visibility calculation
+function calculateVisibility(visit: Visit, targetDate: string): boolean {
+  // 1. Check exclusions (specific dates removed from series)
+  if (visit.excludeDates && visit.excludeDates.includes(targetDate)) return false;
+
+  // 2. Check recurrence end date (if series was terminated)
+  if (visit.recurrenceEndDate && targetDate > visit.recurrenceEndDate) return false;
+
+  // 3. Simple date match for non-recurring or base date match
+  if (visit.date === targetDate) return true;
+
+  // 4. Recurrence rules check
+  if (visit.recurrence === 'custom' && visit.recurrenceRule) {
+    // Ensure strictly comparable dates (YYYY-MM-DD)
+    if (targetDate < visit.date) return false;
+
+    const start = new Date(visit.date);
+    const current = new Date(targetDate);
+    start.setHours(0, 0, 0, 0);
+    current.setHours(0, 0, 0, 0);
+
+    const rule = visit.recurrenceRule;
+    if (rule.endType === 'date' && rule.endDate && targetDate > rule.endDate) return false;
+
+    if (rule.frequency === 'daily') {
+      const diffTime = Math.abs(current.getTime() - start.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays % rule.interval === 0;
+    }
+    if (rule.frequency === 'weekly') {
+      if (!rule.weekDays.includes(current.getDay())) return false;
+      const startWeekStart = new Date(start);
+      startWeekStart.setDate(start.getDate() - start.getDay());
+      const currentWeekStart = new Date(current);
+      currentWeekStart.setDate(current.getDate() - current.getDay());
+      const weeksDiff = Math.round((currentWeekStart.getTime() - startWeekStart.getTime()) / (1000 * 60 * 60 * 24 * 7));
+      return weeksDiff >= 0 && weeksDiff % rule.interval === 0;
+    }
+    if (rule.frequency === 'monthly') {
+      const monthsDiff = (current.getFullYear() - start.getFullYear()) * 12 + (current.getMonth() - start.getMonth());
+      if (monthsDiff < 0 || monthsDiff % rule.interval !== 0) return false;
+
+      // Monthly by weekday mode (第○曜日)
+      if (rule.weekNos && rule.weekNos.length > 0) {
+        if (!rule.weekDays.includes(current.getDay())) return false;
+        const day = current.getDate();
+        const nth = Math.floor((day - 1) / 7) + 1;
+        return rule.weekNos.includes(nth);
+      }
+      // Monthly by date mode (毎月同日)
+      else {
+        // Use dayOfMonth if specified, otherwise fall back to start date
+        const expectedDay = rule.dayOfMonth !== undefined ? rule.dayOfMonth : start.getDate();
+        return current.getDate() === expectedDay;
+      }
+    }
+    if (rule.frequency === 'yearly') {
+      const yearDiff = current.getFullYear() - start.getFullYear();
+      if (yearDiff < 0 || yearDiff % rule.interval !== 0) return false;
+      // Check if same month and date
+      return current.getMonth() === start.getMonth() && current.getDate() === start.getDate();
+    }
+  }
+  return false;
+}
 
 const getToday = () => toLocalISOString(new Date());
 const getTomorrow = () => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    return toLocalISOString(d);
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return toLocalISOString(d);
 };
 
 // Default Settings
 export const DEFAULT_SETTINGS: CompanySettings = {
-    visitStatuses: [
-        { key: 'REGULAR_NURSE', label: '通常訪問(看護)', color: 'blue' },
-        { key: 'REGULAR_REHAB', label: '通常訪問(リハ)', color: 'emerald' },
-        { key: 'EMERGENCY', label: '緊急訪問', color: 'red' },
-        { key: 'OTHER', label: 'その他', color: 'orange' },
-        { key: 'CANCELLED', label: 'キャンセル', color: 'gray' },
-    ],
-    jobTitles: ['看護師', '理学療法士(PT)', '作業療法士(OT)', '言語聴覚士(ST)', '事務']
+  visitStatuses: [
+    { key: 'REGULAR_NURSE', label: '通常訪問(看護)', color: 'blue' },
+    { key: 'REGULAR_REHAB', label: '通常訪問(リハ)', color: 'emerald' },
+    { key: 'EMERGENCY', label: '緊急訪問', color: 'red' },
+    { key: 'OTHER', label: 'その他', color: 'orange' },
+    { key: 'CANCELLED', label: 'キャンセル', color: 'gray' },
+  ],
+  jobTitles: ['看護師', '理学療法士(PT)', '作業療法士(OT)', '言語聴覚士(ST)', '事務']
 };
 
 // --- MOCK SAAS DATA ---
 export const MOCK_COMPANIES: Company[] = [
-    {
-        id: 'c1',
-        name: 'さくら訪問看護ステーション',
-        status: 'active',
-        contactPerson: '田中 太郎',
-        email: 'contact@sakura-nurse.jp',
-        userCount: 2, 
-        createdAt: '2024-01-15',
-        settings: JSON.parse(JSON.stringify(DEFAULT_SETTINGS))
-    },
-    {
-        id: 'c2',
-        name: 'ひまわりケアサービス',
-        status: 'active',
-        contactPerson: '鈴木 花子',
-        email: 'info@himawari-care.com',
-        userCount: 1,
-        createdAt: '2024-03-10',
-        settings: {
-            ...DEFAULT_SETTINGS,
-            visitStatuses: [
-                { key: 'REGULAR_NURSE', label: '定期巡回(看)', color: 'emerald' },
-                { key: 'REGULAR_REHAB', label: '定期巡回(リ)', color: 'teal' },
-                { key: 'EMERGENCY', label: '緊急対応', color: 'rose' },
-                { key: 'OTHER', label: '自費サービス', color: 'purple' },
-                { key: 'CANCELLED', label: '中止', color: 'slate' },
-            ]
-        }
-    },
-    {
-        id: 'c3',
-        name: 'メディカルサポート東京',
-        status: 'active',
-        contactPerson: '佐藤 健',
-        email: 'admin@med-support-tokyo.co.jp',
-        userCount: 1, 
-        createdAt: '2023-11-20',
-        settings: JSON.parse(JSON.stringify(DEFAULT_SETTINGS))
+  {
+    id: 'c1',
+    name: 'さくら訪問看護ステーション',
+    status: 'active',
+    contactPerson: '田中 太郎',
+    email: 'contact@sakura-nurse.jp',
+    userCount: 2,
+    createdAt: '2024-01-15',
+    settings: JSON.parse(JSON.stringify(DEFAULT_SETTINGS))
+  },
+  {
+    id: 'c2',
+    name: 'ひまわりケアサービス',
+    status: 'active',
+    contactPerson: '鈴木 花子',
+    email: 'info@himawari-care.com',
+    userCount: 1,
+    createdAt: '2024-03-10',
+    settings: {
+      ...DEFAULT_SETTINGS,
+      visitStatuses: [
+        { key: 'REGULAR_NURSE', label: '定期巡回(看)', color: 'emerald' },
+        { key: 'REGULAR_REHAB', label: '定期巡回(リ)', color: 'teal' },
+        { key: 'EMERGENCY', label: '緊急対応', color: 'rose' },
+        { key: 'OTHER', label: '自費サービス', color: 'purple' },
+        { key: 'CANCELLED', label: '中止', color: 'slate' },
+      ]
     }
+  },
+  {
+    id: 'c3',
+    name: 'メディカルサポート東京',
+    status: 'active',
+    contactPerson: '佐藤 健',
+    email: 'admin@med-support-tokyo.co.jp',
+    userCount: 1,
+    createdAt: '2023-11-20',
+    settings: JSON.parse(JSON.stringify(DEFAULT_SETTINGS))
+  }
 ];
 
 export const MOCK_DB_USERS: UserAccount[] = [
-    { id: 'sys', username: 'manager', password: 'empawa', name: 'System Manager', role: 'system_admin' },
-    { id: 'u1', username: 'admin', password: 'empawa', name: '田中 太郎', role: 'admin', companyId: 'c1', companyName: 'さくら訪問看護ステーション' },
-    { id: 'u2', username: 'user', password: 'empawa', name: '山田 花子', role: 'user', companyId: 'c1', companyName: 'さくら訪問看護ステーション' },
-    { id: 'u3', username: 'admin2', password: 'admin2', name: '鈴木 花子', role: 'admin', companyId: 'c2', companyName: 'ひまわりケアサービス' },
-    { id: 'u4', username: 'admin3', password: 'admin3', name: '佐藤 健', role: 'admin', companyId: 'c3', companyName: 'メディカルサポート東京' },
+  { id: 'sys', username: 'manager', password: 'empawa', name: 'System Manager', role: 'system_admin' },
+  { id: 'u1', username: 'admin', password: 'empawa', name: '田中 太郎', role: 'admin', companyId: 'c1', companyName: 'さくら訪問看護ステーション' },
+  { id: 'u2', username: 'user', password: 'empawa', name: '山田 花子', role: 'user', companyId: 'c1', companyName: 'さくら訪問看護ステーション' },
+  { id: 'u3', username: 'admin2', password: 'admin2', name: '鈴木 花子', role: 'admin', companyId: 'c2', companyName: 'ひまわりケアサービス' },
+  { id: 'u4', username: 'admin3', password: 'admin3', name: '佐藤 健', role: 'admin', companyId: 'c3', companyName: 'メディカルサポート東京' },
 ];
 
 export const MOCK_STAFF: Staff[] = [
-  { id: 's1', companyId: 'c1', name: '看護師A (長谷川)', jobTitle: '看護師', color: 'blue', avatar: 'HA', joinedDate: '2020-01-01', defaultHolidayWeekDays: [0, 6] }, 
-  { id: 's2', companyId: 'c1', name: '看護師B (西村)', jobTitle: '看護師', color: 'emerald', avatar: 'NI', joinedDate: '2020-01-01', defaultHolidayWeekDays: [0, 3] }, 
+  { id: 's1', companyId: 'c1', name: '看護師A (長谷川)', jobTitle: '看護師', color: 'blue', avatar: 'HA', joinedDate: '2020-01-01', defaultHolidayWeekDays: [0, 6] },
+  { id: 's2', companyId: 'c1', name: '看護師B (西村)', jobTitle: '看護師', color: 'emerald', avatar: 'NI', joinedDate: '2020-01-01', defaultHolidayWeekDays: [0, 3] },
   { id: 's3', companyId: 'c1', name: '理学療法士C (佐藤)', jobTitle: '理学療法士(PT)', color: 'amber', avatar: 'SA', joinedDate: '2020-01-01', defaultHolidayWeekDays: [] },
 ];
 
 // Base date for recurring visits (ensure it's in the past so it shows up)
-const BASE_DATE = '2024-01-01'; 
+const BASE_DATE = '2024-01-01';
 
 export const MOCK_VISITS: Visit[] = [
   // --- Monday (1) ---
@@ -302,8 +344,8 @@ export const MOCK_VISITS: Visit[] = [
 ];
 
 export const MOCK_SHIFTS: ShiftAssignment[] = [
-    { id: 'sh1', companyId: 'c1', staffId: 's1', date: getToday(), type: 'night1' },
-    { id: 'sh2', companyId: 'c1', staffId: 's2', date: getToday(), type: 'night2' },
-    { id: 'sh3', companyId: 'c1', staffId: 's2', date: getTomorrow(), type: 'night1' },
-    { id: 'sh4', companyId: 'c1', staffId: 's1', date: getTomorrow(), type: 'night2' },
+  { id: 'sh1', companyId: 'c1', staffId: 's1', date: getToday(), type: 'night1' },
+  { id: 'sh2', companyId: 'c1', staffId: 's2', date: getToday(), type: 'night2' },
+  { id: 'sh3', companyId: 'c1', staffId: 's2', date: getTomorrow(), type: 'night1' },
+  { id: 'sh4', companyId: 'c1', staffId: 's1', date: getTomorrow(), type: 'night2' },
 ];

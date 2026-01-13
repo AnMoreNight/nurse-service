@@ -384,12 +384,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                                             return (
                                                 <div
-                                                    className={`absolute rounded-sm md:rounded-md border-l-2 md:border-l-4 p-0.5 md:p-1.5 text-xs overflow-hidden z-50 pointer-events-none shadow-lg ${bgClass} ${opacity}`}
-                                                    style={{ top: dropPreview.top, height: `${Math.max(height, 20)}px`, left: '2px', width: 'calc(100% - 4px)' }}
+                                                    className={`absolute rounded-sm md:rounded-md border-l-3 md:border-l-4 p-1.5 md:p-2.5 text-xs overflow-hidden z-50 pointer-events-none shadow-lg ${bgClass} ${opacity}`}
+                                                    style={{ top: dropPreview.top, height: `${Math.max(height, 30)}px`, left: '2px', width: 'calc(100% - 4px)' }}
                                                 >
-                                                    <div className="flex justify-between items-start gap-0.5">
-                                                        <span className="font-bold truncate text-[9px] md:text-[11px] leading-tight">{dropPreview.time} - {endTimeStr} {visit.patientName}</span>
-                                                        {visit.recurrence === 'custom' && <Repeat className="w-2.5 h-2.5 md:w-3 md:h-3 flex-shrink-0 text-gray-600" />}
+                                                    <div className="flex justify-between items-start gap-1">
+                                                        <span className="font-bold truncate text-[11px] md:text-[13px] leading-tight">{dropPreview.time} - {endTimeStr} {visit.patientName}</span>
+                                                        {visit.recurrence === 'custom' && <Repeat className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0 text-gray-600" />}
                                                     </div>
                                                 </div>
                                             );
@@ -422,21 +422,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                                 onDragOver={(e) => handleDragOverWithTime(e, staff.id)}
                                                 onDrop={(e) => handleContainerDrop(e, staff.id)}
                                                 onClick={(e) => { e.stopPropagation(); onSelectVisit(visit); }}
-                                                className={`absolute rounded-sm md:rounded-md border-l-2 md:border-l-4 p-0.5 md:p-1.5 text-xs transition-all select-none overflow-hidden z-10 ${bgClass} ${opacity} ${isBeingDragged ? 'opacity-0' : ''} ${isReadOnly ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'}`}
-                                                style={{ top: `${top}px`, height: `${Math.max(height, 20)}px`, left: layout.left, width: `calc(${layout.width} - 2px)`, marginLeft: '1px' }}
+                                                className={`absolute rounded-sm md:rounded-md border-l-3 md:border-l-4 p-1.5 md:p-2.5 text-xs transition-all select-none overflow-hidden z-10 ${bgClass} ${opacity} ${isBeingDragged ? 'opacity-0' : ''} ${isReadOnly ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'}`}
+                                                style={{ top: `${top}px`, height: `${Math.max(height, 30)}px`, left: layout.left, width: `calc(${layout.width} - 2px)`, marginLeft: '1px' }}
                                             >
-                                                <div className="flex justify-between items-start gap-0.5 pointer-events-none">
-                                                    <span className="font-bold truncate text-[9px] md:text-[11px] leading-tight">{visit.startTime} {visit.patientName}</span>
-                                                    {visit.recurrence === 'custom' && <Repeat className="w-3 h-3 flex-shrink-0 text-gray-600" />}
+                                                <div className="flex justify-between items-start gap-1 pointer-events-none">
+                                                    <span className="font-bold truncate text-[11px] md:text-[13px] leading-snug">{visit.startTime} {visit.patientName}</span>
+                                                    {visit.recurrence === 'custom' && <Repeat className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0 text-gray-600" />}
                                                 </div>
                                                 {visit.staffMembers && visit.staffMembers.length > 1 && (
-                                                    <div className="flex -space-x-1 mt-0.5 pointer-events-none">
+                                                    <div className="flex -space-x-1 mt-1 pointer-events-none">
                                                         {visit.staffMembers.map(s => (
-                                                            <div key={s.id} className={`w-3 h-3 md:w-4 md:h-4 rounded-full border border-white text-[6px] md:text-[8px] flex items-center justify-center text-white bg-${s.color}-500`}>{s.avatar}</div>
+                                                            <div key={s.id} className={`w-4 h-4 md:w-5 md:h-5 rounded-full border border-white text-[8px] md:text-[9px] flex items-center justify-center text-white bg-${s.color}-500`}>{s.avatar}</div>
                                                         ))}
                                                     </div>
                                                 )}
-                                                {height > 35 && visit.notes && <div className="mt-0.5 text-[8px] md:text-[10px] opacity-80 truncate pointer-events-none">{visit.notes}</div>}
+                                                {height > 35 && visit.notes && <div className="mt-1 text-[10px] md:text-[11px] opacity-80 truncate pointer-events-none">{visit.notes}</div>}
                                             </div>
                                         );
                                     })}
