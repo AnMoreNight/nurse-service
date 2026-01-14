@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Request, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from models.schemas import ScheduleStatusCreate, ScheduleStatusUpdate
+from models.schemas import ScheduleStatusCreate, ScheduleStatusUpdate, StatusBulkUpdate
 from controller.status_controller import StatusController
 from db.database import get_db
 from middleware.auth import get_current_user
@@ -28,6 +28,11 @@ async def update_status(status_id: UUID, req: ScheduleStatusUpdate, request: Req
         db, status_id, user["company_id"],
         name=req.name, color=req.color, is_active=req.is_active, sort_order=req.sort_order
     )
+
+@router.put("/bulk/update")
+async def bulk_update_statuses(req: StatusBulkUpdate, request: Request, db: AsyncSession = Depends(get_db)):
+    user = await get_current_user(request, db)
+    return await StatusController.bulk_update_statuses(db, user["company_id"], req.statuses)
 
 @router.delete("/{status_id}")
 async def delete_status(status_id: UUID, request: Request, db: AsyncSession = Depends(get_db)):

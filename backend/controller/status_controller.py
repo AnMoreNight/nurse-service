@@ -88,3 +88,76 @@ class StatusController:
         await db.delete(status_obj)
         await db.commit()
         return {"message": "Status deleted"}
+    
+    @staticmethod
+    async def bulk_update_statuses(db: AsyncSession, company_id: UUID, status_items: list):
+        """
+        Bulk update statuses - creates new, updates existing, and deletes removed ones.
+        All operations are done in a single transaction.
+        """
+        # Get all existing statuses for this company
+        result = await db.execute(
+            select(ScheduleStatus).where(ScheduleStatus.company_id == company_id)
+        )
+        existing_statuses = {str(s.status_id): s for s in result.scalars().all()}
+        
+        # Track which statuses are in the update
+        updated_status_ids = set()
+        created_statuses = []
+        
+        # Process each status item
+        for idx, item in enumerate(status_items):
+            status_id = str(item.status_id) if item.status_id else None
+            
+            if status_id and status_id in existing_statuses:
+                # Update existing status
+                status_obj = existing_statuses[status_id]
+                status_obj.name = item.name
+                status_obj.color = item.color
+                if item.sort_order is not None:
+                    status_obj.sort_order = item.sort_order
+                else:
+                    status_obj.sort_order = idx
+                updated_status_ids.add(status_id)
+            else:
+                # Create new status
+                new_status = ScheduleStatus(
+                    company_id=company_id,
+                    name=item.name,
+                    color=item.color,
+                    sort_order=item.sort_order if item.sort_order is not None else idx
+                )
+                db.add(new_status)
+                created_statuses.append(new_status)
+        
+        # Delete statuses that are not in the update (except default ones)
+        for status_id, status_obj in existing_statuses.items():
+            if status_id not in updated_status_ids and not status_obj.is_default:
+                await db.delete(status_obj)
+        
+        await db.commit()
+        
+        # Refresh created statuses to get their IDs
+        for status in created_statuses:
+            await db.refresh(status)
+        
+        # Return all current statuses
+        result = await db.execute(
+            select(ScheduleStatus)
+            .where(ScheduleStatus.company_id == company_id)
+            .order_by(ScheduleStatus.sort_order, ScheduleStatus.name)
+        )
+        all_statuses = result.scalars().all()
+        
+        return [
+            {
+                "status_id": str(s.status_id),
+                "company_id": str(s.company_id),
+                "name": s.name,
+                "color": s.color,
+                "is_active": s.is_active,
+                "is_default": s.is_default,
+                "sort_order": s.sort_order
+            }
+            for s in all_statuses
+        ]

@@ -23,16 +23,30 @@ export interface ScheduleStatusUpdate {
   sort_order?: number;
 }
 
+export interface StatusItem {
+  status_id?: string;  // undefined for new statuses
+  name: string;
+  color: string;
+  sort_order?: number;
+}
+
+export interface StatusBulkUpdate {
+  statuses: StatusItem[];
+}
+
 export const statusService = {
   getAll: (companyId?: string) => {
     const params = companyId ? `?company_id=${companyId}` : '';
     return apiClient.get<ScheduleStatus[]>(`/statuses${params}`);
   },
-  
+
   create: (data: ScheduleStatusCreate) => apiClient.post<ScheduleStatus>('/statuses', data),
-  
-  update: (id: string, data: ScheduleStatusUpdate) => 
+
+  update: (id: string, data: ScheduleStatusUpdate) =>
     apiClient.patch(`/statuses/${id}`, data),
-  
+
   delete: (id: string) => apiClient.delete(`/statuses/${id}`),
+
+  bulkUpdate: (data: StatusBulkUpdate) =>
+    apiClient.patch<ScheduleStatus[]>('/statuses/bulk/update', data),
 };

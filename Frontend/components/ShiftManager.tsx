@@ -248,12 +248,12 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
                     <div className={`w-8 h-8 rounded-full bg-${member.color}-100 flex items-center justify-center text-${member.color}-700 font-bold text-xs shrink-0`}>
                       {member.avatar}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="truncate">{member.name}</div>
-                      {member.jobTitle && <div className="text-[10px] text-gray-400 truncate">{member.jobTitle}</div>}
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <div className="truncate font-medium whitespace-nowrap" title={member.name}>{member.name.substring(0, 2)}</div>
+                      {member.jobTitle && <div className="text-[10px] text-gray-400 truncate whitespace-nowrap max-w-full" title={member.jobTitle}>{member.jobTitle}</div>}
                     </div>
                     {!isReadOnly && (
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                         <button onClick={() => onOpenStaffForm(member)} className="p-1 hover:bg-gray-200 rounded text-gray-400 hover:text-gray-600">
                           <Edit className="w-3 h-3" />
                         </button>
@@ -280,20 +280,23 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
                       </div>
                     </td>
                   );
-                })}
-              </tr>
+                })
+                }
+              </tr >
             ))}
-          </tbody>
-        </table>
-      </div>
+          </tbody >
+        </table >
+      </div >
 
       {/* Copy Confirmation Toast */}
-      {showCopyConfirm && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-5 py-3 rounded-full shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4">
-          <Check className="w-5 h-5 text-emerald-400" />
-          前月のシフトをコピーしました
-        </div>
-      )}
-    </div>
+      {
+        showCopyConfirm && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-5 py-3 rounded-full shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4">
+            <Check className="w-5 h-5 text-emerald-400" />
+            前月のシフトをコピーしました
+          </div>
+        )
+      }
+    </div >
   );
 };

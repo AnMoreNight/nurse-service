@@ -158,6 +158,17 @@ class ScheduleStatusResponse(BaseModel):
     is_default: bool
     sort_order: Optional[int]
 
+class StatusItem(BaseModel):
+    """Individual status item for bulk operations"""
+    status_id: Optional[UUID] = None  # None for new statuses
+    name: str
+    color: str
+    sort_order: Optional[int] = None
+
+class StatusBulkUpdate(BaseModel):
+    """Bulk update request containing all statuses"""
+    statuses: list[StatusItem]
+
 # Schedule Models
 class RecurringRuleCreate(BaseModel):
     frequency: str  # Weekly, Monthly, Yearly

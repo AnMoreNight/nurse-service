@@ -413,10 +413,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                         const layout = layoutMap.get(visit.id) || { left: '0%', width: '100%' };
                                         const { bgClass, opacity } = getVisitStyles(visit, isHoliday);
                                         const isBeingDragged = dragState?.id === visit.id;
+                                        // Create unique key for recurring instances: visit.id-date-staffId
+                                        const uniqueKey = `${visit.id}-${currentDate}-${staff.id}`;
 
                                         return (
                                             <div
-                                                key={visit.id}
+                                                key={uniqueKey}
                                                 draggable={!isReadOnly}
                                                 onDragStart={(e) => handleDragStart(e, visit, staff.id)}
                                                 onDragOver={(e) => handleDragOverWithTime(e, staff.id)}

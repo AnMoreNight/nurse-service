@@ -391,22 +391,27 @@ function DashboardContent() {
             settings={companySettings}
             onSave={async (newSettings) => {
               try {
-                // Create/Update statuses via API
-                for (const status of newSettings.visitStatuses) {
+                // Import the statusService for bulk update
+                const { statusService } = await import('@/services/statusService');
+
+                // Prepare all statuses for bulk update
+                const statusItems = newSettings.visitStatuses.map((status, index) => {
                   // Check if this is a UUID (existing status) or a string key (new/default)
                   const isUUID = status.key.length > 30 && status.key.includes('-');
 
-                  if (isUUID) {
-                    // Update existing status
-                    await updateStatus(status.key, { name: status.label, color: status.color });
-                  } else {
-                    // Create new status (for both CUSTOM_ and default keys like REGULAR_NURSE)
-                    await addStatus({ name: status.label, color: status.color });
-                  }
-                }
+                  return {
+                    status_id: isUUID ? status.key : undefined,
+                    name: status.label,
+                    color: status.color,
+                    sort_order: index,
+                  };
+                });
+
+                // Single bulk update API call - replaces the entire for loop!
+                await statusService.bulkUpdate({ statuses: statusItems });
 
                 showToast('設定を保存しました');
-                // Refresh data to get actual UUIDs from backend
+                // Refresh data to get updated statuses
                 await refreshData();
               } catch (error: any) {
                 showToast(`保存に失敗しました: ${error.message || '不明なエラー'}`);
