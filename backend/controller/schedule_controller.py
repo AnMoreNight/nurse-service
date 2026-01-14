@@ -72,21 +72,27 @@ class ScheduleController:
     
     @staticmethod
     async def get_schedules(db: AsyncSession, company_id: UUID, start_date: str = None, 
-                           end_date: str = None, patient_name: str = None):
+                           end_date: str = None, patient_name: str = None, filter_by_user: UUID = None):
+        from sqlalchemy.orm import joinedload
+        
         query = select(Schedule).options(
-            selectinload(Schedule.assignments).selectinload(ScheduleAssignment.user),
-            selectinload(Schedule.recurring_rule)
+            joinedload(Schedule.assignments).joinedload(ScheduleAssignment.user),
+            joinedload(Schedule.recurring_rule)
         ).where(Schedule.company_id == company_id)
         
         # Apply patient name filter to base schedules
         if patient_name:
             query = query.where(Schedule.patient_name.ilike(f"%{patient_name}%"))
         
+        # For NORMAL_USER, only show schedules they're assigned to
+        if filter_by_user:
+            query = query.join(Schedule.assignments).where(ScheduleAssignment.user_id == filter_by_user)
+        
         # For recurring schedules, we need to query ALL base schedules
         # and expand them, not filter by date at query level
         query = query.order_by(Schedule.start_time)
         result = await db.execute(query)
-        base_schedules = result.scalars().all()
+        base_schedules = result.unique().scalars().all()
         
         # Parse date range for expansion
         if start_date and end_date:

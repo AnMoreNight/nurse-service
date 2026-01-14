@@ -54,6 +54,10 @@ class InvitationAccept(BaseModel):
 class CompanyCreate(BaseModel):
     name: str
 
+class CompanyUpdate(BaseModel):
+    name: Optional[str] = None
+    is_active: Optional[bool] = None
+
 class CompanyResponse(BaseModel):
     company_id: UUID
     name: str

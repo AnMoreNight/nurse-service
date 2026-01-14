@@ -220,10 +220,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       // Fetch all data in parallel
       const [usersRes, schedulesRes, shiftsRes, statusesRes] = await Promise.allSettled([
-        userService.getAll(currentUser?.companyId),
-        scheduleService.getAll(undefined, undefined, undefined, currentUser?.companyId),
-        shiftService.getAll(undefined, undefined, undefined, currentUser?.companyId),
-        statusService.getAll(currentUser?.companyId),
+        userService.getAll(currentUser?.company_id),
+        scheduleService.getAll(undefined, undefined, undefined, currentUser?.company_id),
+        shiftService.getAll(undefined, undefined, undefined, currentUser?.company_id),
+        statusService.getAll(currentUser?.company_id),
       ]);
 
       console.log('[Context] API Results:', {
@@ -376,7 +376,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       };
 
       await scheduleService.create({
-        company_id: currentUser?.companyId,
+        company_id: currentUser?.company_id,
         patient_name: data.patientName,
         visit_address: data.address,
         start_time: createDateTime(data.date, data.startTime),
@@ -403,7 +403,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updateSchedule = useCallback(async (id: string, data: any, scope?: string) => {
     try {
       await scheduleService.update(id, {
-        company_id: currentUser?.companyId,
+        company_id: currentUser?.company_id,
         patient_name: data.patientName,
         visit_address: data.address,
         start_time: data.date && data.startTime ? createDateTime(data.date, data.startTime) : undefined,
@@ -482,7 +482,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Status operations (admin only)
   const addStatus = useCallback(async (data: { name: string; color: string }) => {
-    if (currentUser?.role !== 'admin' && currentUser?.role !== 'system_admin') {
+    if (currentUser?.role !== 'COMPANY_ADMIN' && currentUser?.role !== 'SUPER_ADMIN') {
       setError('Permission denied');
       return;
     }
@@ -497,7 +497,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [currentUser, refreshData, showToast]);
 
   const updateStatus = useCallback(async (id: string, data: Partial<ScheduleStatus>) => {
-    if (currentUser?.role !== 'admin' && currentUser?.role !== 'system_admin') {
+    if (currentUser?.role !== 'COMPANY_ADMIN' && currentUser?.role !== 'SUPER_ADMIN') {
       setError('Permission denied');
       return;
     }
@@ -512,7 +512,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [currentUser, refreshData, showToast]);
 
   const deleteStatus = useCallback(async (id: string) => {
-    if (currentUser?.role !== 'admin' && currentUser?.role !== 'system_admin') {
+    if (currentUser?.role !== 'COMPANY_ADMIN' && currentUser?.role !== 'SUPER_ADMIN') {
       setError('Permission denied');
       return;
     }
@@ -579,13 +579,15 @@ export function useRoleAccess() {
   const { currentUser } = useApp();
 
   return {
-    isSystemAdmin: currentUser?.role === 'system_admin',
-    isCompanyAdmin: currentUser?.role === 'admin',
-    isUser: currentUser?.role === 'user',
-    canManageUsers: currentUser?.role === 'admin' || currentUser?.role === 'system_admin',
-    canManageSettings: currentUser?.role === 'admin' || currentUser?.role === 'system_admin',
-    canEditSchedules: currentUser?.role !== 'user',
-    canEditShifts: currentUser?.role !== 'user',
-    isReadOnly: currentUser?.role === 'user',
+    isSystemAdmin: currentUser?.role === 'SUPER_ADMIN',
+    isCompanyAdmin: currentUser?.role === 'COMPANY_ADMIN',
+    isNormalUser: currentUser?.role === 'NORMAL_USER',
+
+    // Permission checks
+    canManageUsers: currentUser?.role === 'COMPANY_ADMIN' || currentUser?.role === 'SUPER_ADMIN',
+    canManageSettings: currentUser?.role === 'COMPANY_ADMIN' || currentUser?.role === 'SUPER_ADMIN',
+    canEditSchedules: currentUser?.role === 'COMPANY_ADMIN' || currentUser?.role === 'SUPER_ADMIN',
+    canEditShifts: currentUser?.role === 'COMPANY_ADMIN' || currentUser?.role === 'SUPER_ADMIN',
+    isReadOnly: currentUser?.role === 'NORMAL_USER',
   };
 }

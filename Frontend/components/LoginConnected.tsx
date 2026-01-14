@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { authService, LoginRequest } from '@/services';
+import { authService } from '@/services';
 import { Lock, User, LogIn } from 'lucide-react';
 
 interface LoginProps {
@@ -33,27 +33,27 @@ export const LoginConnected: React.FC<LoginProps> = ({ onLogin }) => {
   return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 font-sans">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-300">
-        
+
         <div className="bg-teal-600 p-8 text-center relative overflow-hidden">
           <div className="relative z-10">
             <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm shadow-inner border border-white/10">
               <span className="text-3xl font-bold text-white">N</span>
             </div>
             <h1 className="text-2xl font-bold text-white mb-2">
-                NurseAssist Pro
+              NurseAssist Pro
             </h1>
             <p className="text-teal-100 text-sm">
-                訪問看護スケジュール管理プラットフォーム
+              訪問看護スケジュール管理プラットフォーム
             </p>
           </div>
-          
+
           <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-              <svg width="100%" height="100%">
-                  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1" />
-                  </pattern>
-                  <rect width="100%" height="100%" fill="url(#grid)" />
-              </svg>
+            <svg width="100%" height="100%">
+              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="1" />
+              </pattern>
+              <rect width="100%" height="100%" fill="url(#grid)" />
+            </svg>
           </div>
         </div>
 

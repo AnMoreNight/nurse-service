@@ -1,197 +1,754 @@
 "use client";
 
-import { SystemAdminDashboard } from '@/components/SystemAdminDashboard';
-import { useApp } from '@/lib/context';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useCallback } from 'react';
-import { companyService, Company as ApiCompany } from '@/services/companyService';
-import { userService, User as ApiUser } from '@/services/userService';
-import { Company, UserAccount, AuthUser } from '@/lib/types';
-import { DEFAULT_SETTINGS } from '@/lib/constants';
-import { Loader2 } from 'lucide-react';
+import { useApp } from '@/lib/context';
+import { companyService, userService, Company, User, UserCreate, UserUpdate } from '@/services';
+import {
+  Building2, Users, Plus, Pencil, Trash2, X, Save,
+  Mail, Phone, MapPin, UserPlus, Shield, LogOut, Key, Eye, EyeOff
+} from 'lucide-react';
 
 export default function AdminPage() {
-  const { currentUser, setCurrentUser, setImpersonating, isLoading: authLoading } = useApp();
   const router = useRouter();
-
+  const { currentUser, isLoading } = useApp();
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [dbUsers, setDbUsers] = useState<UserAccount[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'companies' | 'users'>('companies');
 
-  // Redirect non-system admins
+  // Company modal state
+  const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
+  const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+  const [companyForm, setCompanyForm] = useState({
+    name: '',
+    create_admin: false,
+    admin_email: '',
+    admin_password: '',
+    admin_name: ''
+  });
+
+  // User modal state
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [userForm, setUserForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'COMPANY_ADMIN' as 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'NORMAL_USER',
+    company_id: '',
+    profession: '',
+    job_title: ''
+  });
+
+  // Redirect non-super-admins
   useEffect(() => {
-    if (!authLoading && currentUser?.role !== 'system_admin') {
-      router.push('/dashboard');
-    }
-  }, [currentUser, authLoading, router]);
-
-  // Load companies and users
-  const loadData = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const [companiesRes, usersRes] = await Promise.allSettled([
-        companyService.getAll(),
-        userService.getAll(),
-      ]);
-
-      // Map API companies to frontend format
-      if (companiesRes.status === 'fulfilled') {
-        const users = usersRes.status === 'fulfilled' ? usersRes.value : [];
-
-        const mappedCompanies: Company[] = companiesRes.value.map(c => {
-          // Count users for this company
-          const userCount = users.filter(u => u.company_id === c.company_id).length;
-
-          return {
-            id: c.company_id,
-            name: c.name,
-            status: 'active' as const,
-            contactPerson: '',
-            email: '',
-            userCount,
-            createdAt: c.created_at,
-            settings: DEFAULT_SETTINGS,
-          };
-        });
-        setCompanies(mappedCompanies);
+    if (!isLoading && currentUser) {
+      if (currentUser.role !== 'SUPER_ADMIN') {
+        router.push('/dashboard');
       }
-
-      // Map API users to frontend format
-      if (usersRes.status === 'fulfilled') {
-        const mappedUsers: UserAccount[] = usersRes.value.map(u => ({
-          id: u.user_id,
-          username: u.email,
-          name: u.name,
-          role: u.role === 'SUPER_ADMIN' ? 'system_admin' : u.role === 'COMPANY_ADMIN' ? 'admin' : 'user',
-          companyId: u.company_id,
-          companyName: '',
-        }));
-        setDbUsers(mappedUsers);
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to load data');
-    } finally {
-      setIsLoading(false);
+    } else if (!isLoading && !currentUser) {
+      router.push('/login');
     }
-  }, []);
+  }, [currentUser, isLoading, router]);
 
   useEffect(() => {
-    if (currentUser?.role === 'system_admin') {
-      loadData();
-    }
-  }, [currentUser, loadData]);
-
-  const handleAddCompany = async (company: Company) => {
-    try {
-      const created = await companyService.create({ name: company.name });
-      setCompanies([...companies, {
-        ...company,
-        id: created.company_id,
-        createdAt: created.created_at,
-      }]);
-    } catch (err) {
-      console.error('Failed to add company:', err);
-    }
-  };
-
-  const handleUpdateCompany = async (company: Company) => {
-    try {
-      await companyService.update(company.id, { name: company.name });
-      setCompanies(companies.map(c => c.id === company.id ? company : c));
-    } catch (err) {
-      console.error('Failed to update company:', err);
-    }
-  };
-
-  const handleDeleteCompany = async (id: string) => {
-    try {
-      await companyService.delete(id);
-      setCompanies(companies.filter(c => c.id !== id));
-    } catch (err) {
-      console.error('Failed to delete company:', err);
-    }
-  };
-
-  const handleImpersonate = (company: Company) => {
-    const impersonatedUser: AuthUser = {
-      id: 'impersonated_admin',
-      username: 'admin',
-      name: '管理者(代理)',
-      role: 'admin',
-      companyId: company.id,
-      companyName: company.name
-    };
-    setImpersonating(impersonatedUser, true);
-    router.push('/dashboard');
-  };
-
-  const handleAddDbUser = async (user: UserAccount) => {
-    try {
-      await userService.create({
-        email: user.username,
-        password: 'temppass123',
-        role: user.role === 'system_admin' ? 'SUPER_ADMIN' : user.role === 'admin' ? 'COMPANY_ADMIN' : 'NORMAL_USER',
-        name: user.name,
-      });
-      setDbUsers([...dbUsers, user]);
-    } catch (err: any) {
-      console.error('Failed to add user:', err);
-      // Show user-friendly error message
-      const errorMsg = err.message || 'Failed to add user';
-      if (errorMsg.includes('email')) {
-        alert('メールアドレスの形式が正しくありません。有効なメールアドレスを入力してください。\n(Email format is invalid. Please enter a valid email address.)');
+    if (currentUser?.role === 'SUPER_ADMIN') {
+      // Load data based on active tab (lazy loading)
+      if (activeTab === 'companies') {
+        loadCompanies();
       } else {
-        alert(`ユーザーの追加に失敗しました: ${errorMsg}`);
+        loadUsers();
       }
+    }
+  }, [currentUser, activeTab]);
+
+  const loadCompanies = async () => {
+    if (companies.length > 0) return; // Already loaded
+    try {
+      setLoading(true);
+      const companiesData = await companyService.getAll();
+      setCompanies(companiesData);
+    } catch (error) {
+      console.error('Failed to load companies:', error);
+      alert('会社データの読み込みに失敗しました');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Loading state
-  if (authLoading || isLoading) {
+  const loadUsers = async () => {
+    if (users.length > 0) return; // Already loaded
+    try {
+      setLoading(true);
+      const usersData = await userService.getAll();
+      setUsers(usersData);
+    } catch (error) {
+      console.error('Failed to load users:', error);
+      alert('ユーザーデータの読み込みに失敗しました');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [companiesData, usersData] = await Promise.all([
+        companyService.getAll(),
+        userService.getAll()
+      ]);
+      setCompanies(companiesData);
+      setUsers(usersData);
+    } catch (error) {
+      console.error('Failed to load data:', error);
+      alert('データの読み込みに失敗しました');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Company handlers
+  const openCompanyModal = (company?: Company) => {
+    if (company) {
+      setEditingCompany(company);
+      setCompanyForm({
+        name: company.name,
+        create_admin: false,
+        admin_email: '',
+        admin_password: '',
+        admin_name: ''
+      });
+    } else {
+      setEditingCompany(null);
+      setCompanyForm({
+        name: '',
+        create_admin: false,
+        admin_email: '',
+        admin_password: '',
+        admin_name: ''
+      });
+    }
+    setIsCompanyModalOpen(true);
+  };
+
+  const handleSaveCompany = async () => {
+    try {
+      if (!companyForm.name.trim()) {
+        alert('会社名は必須です');
+        return;
+      }
+
+      if (editingCompany) {
+        await companyService.update(editingCompany.company_id, {
+          name: companyForm.name,
+        });
+      } else {
+        // Create company
+        const newCompany = await companyService.create({
+          name: companyForm.name,
+        });
+
+        // Create admin user for this company if requested
+        if (companyForm.create_admin) {
+          if (!companyForm.admin_email || !companyForm.admin_password || !companyForm.admin_name) {
+            alert('管理者を作成する場合は、名前、メール、パスワードが必要です');
+            return;
+          }
+
+          await userService.create({
+            email: companyForm.admin_email,
+            password: companyForm.admin_password,
+            name: companyForm.admin_name,
+            role: 'COMPANY_ADMIN',
+          });
+        }
+      }
+
+      await loadData();
+      setIsCompanyModalOpen(false);
+      alert(editingCompany ? '会社を更新しました' : '会社を作成しました');
+    } catch (error: any) {
+      console.error('Failed to save company:', error);
+      alert(error.message || '保存に失敗しました');
+    }
+  };
+
+  const handleDeleteCompany = async (companyId: string) => {
+    if (!confirm('本当にこの会社を削除しますか？関連するすべてのデータが削除されます。')) {
+      return;
+    }
+
+    try {
+      await companyService.delete(companyId);
+      await loadData();
+      alert('会社を削除しました');
+    } catch (error: any) {
+      console.error('Failed to delete company:', error);
+      alert(error.message || '削除に失敗しました');
+    }
+  };
+
+  // User handlers
+  const openUserModal = (user?: User) => {
+    if (user) {
+      setEditingUser(user);
+      setUserForm({
+        name: user.name,
+        email: user.email,
+        password: '',
+        role: user.role as any,
+        company_id: user.company_id || '',
+        profession: user.profession || '',
+        job_title: user.job_title || ''
+      });
+    } else {
+      setEditingUser(null);
+      setUserForm({
+        name: '',
+        email: '',
+        password: '',
+        role: 'COMPANY_ADMIN',
+        company_id: companies[0]?.company_id || '',
+        profession: '',
+        job_title: ''
+      });
+    }
+    setShowPassword(false);
+    setIsUserModalOpen(true);
+  };
+
+  const handleSaveUser = async () => {
+    try {
+      if (!userForm.name.trim() || !userForm.email.trim()) {
+        alert('名前とメールアドレスは必須です');
+        return;
+      }
+
+      // Validate company for non-SUPER_ADMIN users
+      if (!editingUser && userForm.role !== 'SUPER_ADMIN' && !userForm.company_id) {
+        alert('会社を選択してください');
+        return;
+      }
+
+      if (editingUser) {
+        // Update existing user
+        const updateData: UserUpdate = {
+          name: userForm.name,
+          role: userForm.role,
+          profession: userForm.profession || undefined,
+          job_title: userForm.job_title || undefined,
+        };
+        await userService.update(editingUser.user_id, updateData);
+        alert('ユーザーを更新しました');
+      } else {
+        // Create new user
+        if (!userForm.password) {
+          alert('新規ユーザーにはパスワードが必要です');
+          return;
+        }
+        const createData: UserCreate = {
+          email: userForm.email,
+          password: userForm.password,
+          name: userForm.name,
+          role: userForm.role,
+          profession: userForm.profession || undefined,
+          job_title: userForm.job_title || undefined,
+        };
+        await userService.create(createData);
+        alert('ユーザーを作成しました');
+      }
+
+      await loadData();
+      setIsUserModalOpen(false);
+    } catch (error: any) {
+      console.error('Failed to save user:', error);
+      alert(error.message || '保存に失敗しました');
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm('本当にこのユーザーを削除しますか？')) {
+      return;
+    }
+
+    try {
+      await userService.delete(userId);
+      await loadData();
+      alert('ユーザーを削除しました');
+    } catch (error: any) {
+      console.error('Failed to delete user:', error);
+      alert(error.message || '削除に失敗しました');
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    router.push('/login');
+  };
+
+  if (isLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-100">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-teal-600 mx-auto mb-4" />
-          <p className="text-gray-500">読み込み中...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="w-12 h-12 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
-  // Not authorized
-  if (currentUser?.role !== 'system_admin') {
+  if (!currentUser || currentUser.role !== 'SUPER_ADMIN') {
     return null;
   }
 
-  // Error state
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-100">
-        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md text-center">
-          <p className="text-red-600 mb-4">{error}</p>
-          <button
-            onClick={loadData}
-            className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
-          >
-            再試行
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const getCompanyName = (companyId?: string) => {
+    if (!companyId) return 'N/A';
+    return companies.find(c => c.company_id === companyId)?.name || 'Unknown';
+  };
 
   return (
-    <SystemAdminDashboard
-      companies={companies}
-      onAddCompany={handleAddCompany}
-      onUpdateCompany={handleUpdateCompany}
-      onDeleteCompany={handleDeleteCompany}
-      onImpersonate={handleImpersonate}
-      dbUsers={dbUsers}
-      onAddDbUser={handleAddDbUser}
-    />
+    <div className="min-h-screen bg-slate-50">
+      {/* Header */}
+      <div className="border-b border-gray-200 bg-white sticky top-0 z-40 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                <Shield className="w-7 h-7 text-purple-600" />
+                システム管理
+              </h1>
+              <p className="text-gray-600 text-sm mt-1">会社とユーザーの管理</p>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-2 shadow-sm"
+            >
+              <LogOut size={18} />
+              ログアウト
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="border-b border-gray-200 bg-white">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex gap-1">
+            <button
+              onClick={() => setActiveTab('companies')}
+              className={`px-6 py-3 font-semibold transition-colors relative ${activeTab === 'companies'
+                ? 'text-teal-600'
+                : 'text-gray-500 hover:text-gray-700'
+                }`}
+            >
+              <div className="flex items-center gap-2">
+                <Building2 size={20} />
+                会社 ({companies.length})
+              </div>
+              {activeTab === 'companies' && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-teal-600"></div>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`px-6 py-3 font-semibold transition-colors relative ${activeTab === 'users'
+                ? 'text-teal-600'
+                : 'text-gray-500 hover:text-gray-700'
+                }`}
+            >
+              <div className="flex items-center gap-2">
+                <Users size={20} />
+                ユーザー ({users.length})
+              </div>
+              {activeTab === 'users' && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-teal-600"></div>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {activeTab === 'companies' ? (
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-900">会社一覧</h2>
+              <button
+                onClick={() => openCompanyModal()}
+                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors flex items-center gap-2 shadow-sm"
+              >
+                <Plus size={20} />
+                会社を追加
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {companies.map((company) => (
+                <div
+                  key={company.company_id}
+                  className="bg-white rounded-lg p-6 hover:shadow-md transition-shadow border border-gray-200"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center">
+                        <Building2 className="w-6 h-6 text-teal-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-lg text-gray-900">{company.name}</h3>
+                        <p className="text-xs text-gray-500">
+                          {users.filter(u => u.company_id === company.company_id).length} ユーザー
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 mt-4 pt-4 border-t border-gray-200">
+                    <button
+                      onClick={() => openCompanyModal(company)}
+                      className="flex-1 px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2 text-sm"
+                    >
+                      <Pencil size={16} />
+                      編集
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCompany(company.company_id)}
+                      className="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2 text-sm"
+                    >
+                      <Trash2 size={16} />
+                      削除
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-900">全ユーザー</h2>
+              <button
+                onClick={() => openUserModal()}
+                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors flex items-center gap-2 shadow-sm"
+              >
+                <UserPlus size={20} />
+                ユーザーを追加
+              </button>
+            </div>
+
+            <div className="bg-white rounded-lg overflow-hidden shadow-sm border border-gray-200">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">名前</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">メール</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">権限</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">会社</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">職種</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">状態</th>
+                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">操作</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {users.map((user) => (
+                    <tr key={user.user_id} className="hover:bg-gray-50">
+                      <td className="py-3 px-4 text-gray-900">{user.name}</td>
+                      <td className="py-3 px-4 text-gray-600">{user.email}</td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${user.role === 'SUPER_ADMIN' ? 'bg-purple-100 text-purple-700' :
+                          user.role === 'COMPANY_ADMIN' ? 'bg-teal-100 text-teal-700' :
+                            'bg-green-100 text-green-700'
+                          }`}>
+                          {user.role === 'SUPER_ADMIN' ? 'システム管理者' :
+                            user.role === 'COMPANY_ADMIN' ? '会社管理者' : '一般ユーザー'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-gray-600">{getCompanyName(user.company_id)}</td>
+                      <td className="py-3 px-4 text-gray-600">{user.profession || '-'}</td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${user.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                          }`}>
+                          {user.is_active ? '有効' : '無効'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => openUserModal(user)}
+                            className="p-2 text-teal-600 hover:text-teal-700 hover:bg-teal-50 rounded transition-colors"
+                          >
+                            <Pencil size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteUser(user.user_id)}
+                            className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Company Modal */}
+      {isCompanyModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-gray-200 flex-shrink-0">
+              <h3 className="text-xl font-bold text-gray-900">
+                {editingCompany ? '会社を編集' : '新しい会社を追加'}
+              </h3>
+            </div>
+
+            <div className="p-6 space-y-4 overflow-y-auto flex-1">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  会社名 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={companyForm.name}
+                  onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+                  placeholder="例: さくら訪問看護ステーション"
+                />
+              </div>
+
+              {!editingCompany && (
+                <>
+                  <div className="border-t border-gray-200 pt-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={companyForm.create_admin}
+                        onChange={(e) => setCompanyForm({ ...companyForm, create_admin: e.target.checked })}
+                        className="w-4 h-4 text-teal-600 rounded focus:ring-teal-500"
+                      />
+                      <span className="text-sm font-semibold text-gray-700">管理者ユーザーも作成する</span>
+                    </label>
+                  </div>
+
+                  {companyForm.create_admin && (
+                    <div className="pl-6 space-y-4 bg-gray-50 p-4 rounded-lg">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          管理者名 <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={companyForm.admin_name}
+                          onChange={(e) => setCompanyForm({ ...companyForm, admin_name: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none bg-white"
+                          placeholder="例: 山田 太郎"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          管理者メール <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="email"
+                          value={companyForm.admin_email}
+                          onChange={(e) => setCompanyForm({ ...companyForm, admin_email: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none bg-white"
+                          placeholder="例: admin@example.com"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          パスワード <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="password"
+                          value={companyForm.admin_password}
+                          onChange={(e) => setCompanyForm({ ...companyForm, admin_password: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none bg-white"
+                          placeholder="パスワードを入力"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex gap-3 flex-shrink-0">
+              <button
+                onClick={() => setIsCompanyModalOpen(false)}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <X size={18} />
+                キャンセル
+              </button>
+              <button
+                onClick={handleSaveCompany}
+                className="flex-1 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <Save size={18} />
+                保存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* User Modal */}
+      {isUserModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-gray-200 flex-shrink-0">
+              <h3 className="text-xl font-bold text-gray-900">
+                {editingUser ? 'ユーザーを編集' : '新しいユーザーを追加'}
+              </h3>
+            </div>
+
+            <div className="p-6 space-y-4 overflow-y-auto flex-1">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  名前 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={userForm.name}
+                  onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+                  placeholder="例: 山田 太郎"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  メールアドレス <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={userForm.email}
+                  onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+                  placeholder="例: yamada@example.com"
+                  disabled={!!editingUser}
+                />
+                {editingUser && (
+                  <p className="text-xs text-gray-500 mt-1">※ メールアドレスは変更できません</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  パスワード {!editingUser && <span className="text-red-500">*</span>}
+                  {editingUser && <span className="text-gray-500 text-xs">(変更する場合のみ)</span>}
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={userForm.password}
+                    onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+                    placeholder={editingUser ? "変更しない場合は空欄" : "パスワードを入力"}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">権限</label>
+                <select
+                  value={userForm.role}
+                  onChange={(e) => setUserForm({ ...userForm, role: e.target.value as any })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+                  disabled={!!editingUser && editingUser.role === 'SUPER_ADMIN'}
+                >
+                  <option value="NORMAL_USER">一般ユーザー</option>
+                  <option value="COMPANY_ADMIN">会社管理者</option>
+                  {editingUser && editingUser.role === 'SUPER_ADMIN' && (
+                    <option value="SUPER_ADMIN">システム管理者</option>
+                  )}
+                </select>
+                {!editingUser && (
+                  <p className="text-xs text-gray-500 mt-1">※ システム管理者は作成できません</p>
+                )}
+                {editingUser && editingUser.role === 'SUPER_ADMIN' && (
+                  <p className="text-xs text-gray-500 mt-1">※ システム管理者の権限は変更できません</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  会社 <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={userForm.company_id}
+                  onChange={(e) => setUserForm({ ...userForm, company_id: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+                  disabled={editingUser?.role === 'SUPER_ADMIN'}
+                >
+                  <option value="">会社を選択</option>
+                  {companies.map((company) => (
+                    <option key={company.company_id} value={company.company_id}>
+                      {company.name}
+                    </option>
+                  ))}
+                </select>
+                {editingUser?.role === 'SUPER_ADMIN' && (
+                  <p className="text-xs text-gray-500 mt-1">※ システム管理者は会社に所属しません</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">職種</label>
+                <input
+                  type="text"
+                  value={userForm.profession}
+                  onChange={(e) => setUserForm({ ...userForm, profession: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+                  placeholder="例: 看護師"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">役職</label>
+                <input
+                  type="text"
+                  value={userForm.job_title}
+                  onChange={(e) => setUserForm({ ...userForm, job_title: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+                  placeholder="例: 主任"
+                />
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex gap-3 flex-shrink-0">
+              <button
+                onClick={() => setIsUserModalOpen(false)}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <X size={18} />
+                キャンセル
+              </button>
+              <button
+                onClick={handleSaveUser}
+                className="flex-1 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <Save size={18} />
+                保存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

@@ -59,10 +59,14 @@ class UserController:
         return {"message": "Invitation sent", "token": token}
     
     @staticmethod
-    async def get_users(db: AsyncSession, company_id: UUID):
-        result = await db.execute(
-            select(User).where(User.company_id == company_id).order_by(User.sort_order, User.name)
-        )
+    async def get_users(db: AsyncSession, company_id: UUID, filter_by_user: UUID = None):
+        query = select(User).where(User.company_id == company_id)
+        
+        # NORMAL_USER can only see themselves
+        if filter_by_user:
+            query = query.where(User.user_id == filter_by_user)
+        
+        result = await db.execute(query.order_by(User.sort_order, User.name))
         users = result.scalars().all()
         
         return [
@@ -135,13 +139,21 @@ class UserController:
     
     @staticmethod
     async def update_sort_orders(db: AsyncSession, company_id: UUID, sort_orders: list):
-        for item in sort_orders:
-            await db.execute(
-                update(User).where(
-                    User.user_id == UUID(item['user_id']),
-                    User.company_id == company_id
-                ).values(sort_order=item['sort_order'])
+        # Bulk update using case statement for better performance
+        
+        # Create case mapping for sort_order
+        when_clauses = {UUID(item['user_id']): item['sort_order'] for item in sort_orders}
+        
+        # Single UPDATE query with CASE statement
+        await db.execute(
+            update(User)
+            .where(
+                User.user_id.in_([UUID(item['user_id']) for item in sort_orders]),
+                User.company_id == company_id
             )
+            .values(sort_order=case(when_clauses, value=User.user_id))
+        )
+        
         await db.commit()
         return {"message": "Sort orders updated"}
     

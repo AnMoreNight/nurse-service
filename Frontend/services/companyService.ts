@@ -3,6 +3,7 @@ import { apiClient } from './apiClient';
 export interface Company {
   company_id: string;
   name: string;
+  is_active: boolean;
   created_at: string;
 }
 
@@ -12,6 +13,7 @@ export interface CompanyCreate {
 
 export interface CompanyUpdate {
   name?: string;
+  is_active?: boolean;
 }
 
 export const companyService = {

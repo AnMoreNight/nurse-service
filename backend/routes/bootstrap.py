@@ -15,7 +15,7 @@ class BootstrapAdmin(BaseModel):
     email: EmailStr
     password: str
     name: str
-    company_name: str
+    company_name: str | None = None  # Optional - for creating company + admin together
 
 @router.post("/create-admin")
 async def create_first_admin(
@@ -24,7 +24,9 @@ async def create_first_admin(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Create the first SuperAdmin user. Requires BOOTSTRAP_SECRET header.
+    Create the first admin user. Requires BOOTSTRAP_SECRET header.
+    - If company_name is provided: Creates company + COMPANY_ADMIN
+    - If company_name is not provided: Creates pure SUPER_ADMIN (no company)
     This route can only be used when no users exist in the system.
     """
     bootstrap_secret = os.getenv("BOOTSTRAP_SECRET")
@@ -39,29 +41,46 @@ async def create_first_admin(
     if existing_users > 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Admin already exists")
     
-    # Create company
-    company = Company(name=data.company_name)
-    db.add(company)
-    await db.flush()
-    
-    # Create super admin user
+    # Hash password
     hashed_password = hash_password(data.password)
-    user = User(
-        company_id=company.company_id,
-        email=data.email,
-        password_hash=hashed_password,
-        role="SUPER_ADMIN",
-        name=data.name,
-        is_active=True
-    )
+    
+    # Determine role and company based on company_name
+    if data.company_name:
+        # Create company
+        company = Company(name=data.company_name)
+        db.add(company)
+        await db.flush()
+        
+        # Create COMPANY_ADMIN for this company
+        user = User(
+            company_id=company.company_id,
+            email=data.email,
+            password_hash=hashed_password,
+            role="COMPANY_ADMIN",
+            name=data.name,
+            is_active=True
+        )
+        company_id = str(company.company_id)
+    else:
+        # Create pure SUPER_ADMIN with no company
+        user = User(
+            company_id=None,  # System admin has no company
+            email=data.email,
+            password_hash=hashed_password,
+            role="SUPER_ADMIN",
+            name=data.name,
+            is_active=True
+        )
+        company_id = None
+    
     db.add(user)
     await db.commit()
     await db.refresh(user)
     
     return {
-        "message": "SuperAdmin created successfully",
+        "message": f"{user.role} created successfully",
         "user_id": str(user.user_id),
-        "company_id": str(company.company_id),
+        "company_id": company_id,
         "email": user.email,
         "role": user.role
     }

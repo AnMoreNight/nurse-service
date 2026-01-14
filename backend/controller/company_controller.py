@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete
+from sqlalchemy import select
 from models.orm import Company
 from fastapi import HTTPException, status
 from uuid import UUID
@@ -8,47 +8,26 @@ from datetime import datetime
 class CompanyController:
     @staticmethod
     async def create_company(db: AsyncSession, name: str):
-        company = Company(name=name)
+        company = Company(name=name, is_active=True)
         db.add(company)
         await db.commit()
         await db.refresh(company)
-        
-        return {
-            "company_id": str(company.company_id),
-            "name": company.name,
-            "created_at": company.created_at.isoformat()
-        }
-    
+        return company
+
     @staticmethod
     async def get_companies(db: AsyncSession):
         result = await db.execute(select(Company).order_by(Company.name))
         companies = result.scalars().all()
-        
-        return [
-            {
-                "company_id": str(c.company_id),
-                "name": c.name,
-                "is_active": c.is_active,
-                "created_at": c.created_at.isoformat() if c.created_at else None
-            }
-            for c in companies
-        ]
-    
+        return companies
+
     @staticmethod
     async def get_company(db: AsyncSession, company_id: UUID):
         result = await db.execute(select(Company).where(Company.company_id == company_id))
         company = result.scalar_one_or_none()
-        
         if not company:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
-        
-        return {
-            "company_id": str(company.company_id),
-            "name": company.name,
-            "is_active": company.is_active,
-            "created_at": company.created_at.isoformat() if company.created_at else None
-        }
-    
+        return company
+
     @staticmethod
     async def update_company(db: AsyncSession, company_id: UUID, name: str = None, is_active: bool = None):
         result = await db.execute(select(Company).where(Company.company_id == company_id))
@@ -64,8 +43,9 @@ class CompanyController:
         company.updated_at = datetime.utcnow()
         
         await db.commit()
-        return {"message": "Company updated"}
-    
+        await db.refresh(company)
+        return company
+
     @staticmethod
     async def delete_company(db: AsyncSession, company_id: UUID):
         result = await db.execute(select(Company).where(Company.company_id == company_id))

@@ -45,7 +45,8 @@ function DashboardContent() {
     deleteStatus,
   } = useApp();
 
-  const { isReadOnly, canManageUsers, canManageSettings } = useRoleAccess();
+  const { canManageUsers, canManageSettings } = useRoleAccess();
+  const isReadOnly = currentUser?.role === 'NORMAL_USER';
   const router = useRouter();
   const searchParams = useSearchParams();
   const view = searchParams.get('view') || 'schedule';
@@ -56,7 +57,7 @@ function DashboardContent() {
   const [suggestionState, setSuggestionState] = useState<{ isOpen: boolean; initialValues?: any }>({ isOpen: false });
   const [localToast, setLocalToast] = useState<string | null>(null);
 
-  const companyId = currentUser?.companyId;
+  const companyId = currentUser?.company_id;
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -67,7 +68,7 @@ function DashboardContent() {
 
   // Redirect user role away from admin-only views
   useEffect(() => {
-    if (currentUser?.role === 'user' && (view === 'users' || view === 'settings')) {
+    if (currentUser?.role === 'NORMAL_USER' && (view === 'users' || view === 'settings')) {
       router.push('/dashboard?view=schedule');
     }
   }, [view, currentUser, router]);

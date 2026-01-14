@@ -24,6 +24,12 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const view = searchParams.get('view') || 'schedule';
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Redirect SUPER_ADMIN to admin page
+  if (currentUser?.role === 'SUPER_ADMIN') {
+    router.push('/admin');
+    return null;
+  }
+
   const handleLogout = () => {
     setCurrentUser(null);
     router.push('/login');
@@ -95,7 +101,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Admin-only navigation items */}
-          {(currentUser?.role === 'admin' || currentUser?.role === 'system_admin') && (
+          {(currentUser?.role === 'COMPANY_ADMIN') && (
             <>
               <div className="my-2 border-t border-slate-800 mx-4 opacity-50"></div>
               <NavButton active={isActive('users')} onClick={() => setView('users')} icon={<Users size={20} />} label="ユーザー管理" />

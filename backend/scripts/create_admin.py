@@ -9,8 +9,7 @@ headers = {"X-Bootstrap-Secret": os.getenv("BOOTSTRAP_SECRET")}
 data = {
     "email": "admin@nurseservice.com",
     "password": "Admin@123",
-    "name": "Super Admin",
-    "company_name": "NurseService HQ"
+    "name": "Super Admin"
 }
 
 response = requests.post(url, json=data, headers=headers)

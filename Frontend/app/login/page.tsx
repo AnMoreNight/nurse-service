@@ -13,9 +13,11 @@ export default function LoginPage() {
   // Redirect if already logged in
   useEffect(() => {
     if (!isLoading && currentUser) {
-      if (currentUser.role === 'system_admin') {
+      // SUPER_ADMIN goes to admin page
+      if (currentUser.role === 'SUPER_ADMIN') {
         router.push('/admin');
       } else {
+        // Everyone else goes to dashboard
         router.push('/dashboard');
       }
     }
@@ -24,7 +26,8 @@ export default function LoginPage() {
   const handleLogin = (user: AuthUser) => {
     setCurrentUser(user);
 
-    if (user.role === 'system_admin') {
+    // Route based on role
+    if (user.role === 'SUPER_ADMIN') {
       router.push('/admin');
     } else {
       router.push('/dashboard');

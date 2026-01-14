@@ -6,10 +6,9 @@ export { scheduleService } from './scheduleService';
 export { shiftService } from './shiftService';
 export { statusService } from './statusService';
 
-export * from './authService';
-export * from './companyService';
-export * from './userService';
-export * from './patientService';
-export * from './scheduleService';
-export * from './shiftService';
-export * from './statusService';
+// Export types
+export type { User, UserCreate, UserUpdate, UserInvite } from './userService';
+export type { Company, CompanyCreate, CompanyUpdate } from './companyService';
+export type { Schedule, ScheduleCreate, ScheduleUpdate } from './scheduleService';
+export type { Shift, ShiftCreate, ShiftUpdate } from './shiftService';
+export type { ScheduleStatus, ScheduleStatusCreate, ScheduleStatusUpdate } from './statusService';

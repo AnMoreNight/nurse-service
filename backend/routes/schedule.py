@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.schemas import ScheduleCreate, ScheduleUpdate, ScheduleCopy
 from controller.schedule_controller import ScheduleController
 from db.database import get_db
-from middleware.auth import get_current_user
+from middleware.auth import get_current_user, require_company_admin
 from uuid import UUID
 from typing import Optional
 
@@ -11,7 +11,7 @@ router = APIRouter(prefix="/schedules", tags=["Schedules"])
 
 @router.post("")
 async def create_schedule(req: ScheduleCreate, request: Request, db: AsyncSession = Depends(get_db)):
-    user = await get_current_user(request, db)
+    user = await require_company_admin(request, db)  # Admin only
     # SUPER_ADMIN can specify company_id for impersonation, others use their own
     company_id = req.company_id if (user["role"] == "SUPER_ADMIN" and req.company_id) else user["company_id"]
     recurring_rule = req.recurring_rule.model_dump() if req.recurring_rule else None
@@ -32,11 +32,15 @@ async def get_schedules(
     user = await get_current_user(request, db)
     # SUPER_ADMIN can specify company_id for impersonation, others use their own
     effective_company_id = company_id if (user["role"] == "SUPER_ADMIN" and company_id) else user["company_id"]
-    return await ScheduleController.get_schedules(db, effective_company_id, start_date, end_date, patient_name)
+    
+    # NORMAL_USER can only see schedules they're assigned to
+    filter_by_user = user["user_id"] if user["role"] == "NORMAL_USER" else None
+    
+    return await ScheduleController.get_schedules(db, effective_company_id, start_date, end_date, patient_name, filter_by_user)
 
 @router.put("/{schedule_id}")
 async def update_schedule(schedule_id: UUID, req: ScheduleUpdate, request: Request, db: AsyncSession = Depends(get_db)):
-    user = await get_current_user(request, db)
+    user = await require_company_admin(request, db)  # Admin only
     update_data = req.model_dump(exclude_unset=True)
     update_scope = update_data.pop('update_scope', 'this')
     # SUPER_ADMIN can specify company_id for impersonation, others use their own
@@ -46,7 +50,7 @@ async def update_schedule(schedule_id: UUID, req: ScheduleUpdate, request: Reque
 
 @router.delete("/{schedule_id}")
 async def delete_schedule(schedule_id: UUID, request: Request, db: AsyncSession = Depends(get_db)):
-    user = await get_current_user(request, db)
+    user = await require_company_admin(request, db)  # Admin only
     return await ScheduleController.delete_schedule(db, schedule_id, user["company_id"])
 
 @router.get("/{schedule_id}/copy")

@@ -74,15 +74,15 @@ export interface ShiftAssignment {
   type: ShiftType;
 }
 
-export type UserRole = 'system_admin' | 'admin' | 'user';
+export type UserRole = 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'NORMAL_USER';
 
 export interface AuthUser {
-  id: string;
-  username: string;
+  user_id: string;
+  email: string;
   name: string;
   role: UserRole;
-  companyId?: string; // Null for system_admin
-  companyName?: string;
+  company_id?: string | null; // Null for SUPER_ADMIN
+  companyName?: string | null;
 }
 
 export interface UserAccount extends AuthUser {

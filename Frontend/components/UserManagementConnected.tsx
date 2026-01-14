@@ -1,298 +1,371 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { userService, User, UserCreate, UserInvite } from '@/services';
-import { Plus, Edit, Trash2, Mail, User as UserIcon, Shield } from 'lucide-react';
+import { useApp } from '@/lib/context';
+import { userService, User, UserCreate, UserUpdate } from '@/services';
+import { Plus, Pencil, Trash2, X, Save, Mail, Briefcase, Users as UsersIcon } from 'lucide-react';
 
 interface UserManagementConnectedProps {
   companyId: string;
 }
 
 export const UserManagementConnected: React.FC<UserManagementConnectedProps> = ({ companyId }) => {
+  const { currentUser } = useApp();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isInviteMode, setIsInviteMode] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [formData, setFormData] = useState({
+    name: '',
     email: '',
     password: '',
-    name: '',
-    role: 'User',
+    role: 'NORMAL_USER' as 'COMPANY_ADMIN' | 'NORMAL_USER',
     profession: '',
     job_title: '',
-    display_color: '#3b82f6',
+    display_color: '#3B82F6'
   });
 
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [companyId]);
 
   const loadUsers = async () => {
     try {
-      const data = await userService.getAll();
-      setUsers(data);
+      setLoading(true);
+      const allUsers = await userService.getAll(companyId);
+      // Filter to only show users from this company
+      const companyUsers = allUsers.filter(u => u.company_id === companyId);
+      setUsers(companyUsers);
     } catch (error) {
       console.error('Failed to load users:', error);
+      alert('ユーザーの読み込みに失敗しました');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleOpenModal = (user?: User, invite = false) => {
-    setIsInviteMode(invite);
+  const openModal = (user?: User) => {
     if (user) {
       setEditingUser(user);
       setFormData({
+        name: user.name,
         email: user.email,
         password: '',
-        name: user.name,
-        role: user.role,
+        role: user.role as any,
         profession: user.profession || '',
         job_title: user.job_title || '',
-        display_color: user.display_color || '#3b82f6',
+        display_color: user.display_color || '#3B82F6'
       });
     } else {
       setEditingUser(null);
       setFormData({
+        name: '',
         email: '',
         password: '',
-        name: '',
-        role: 'User',
+        role: 'NORMAL_USER',
         profession: '',
         job_title: '',
-        display_color: '#3b82f6',
+        display_color: '#3B82F6'
       });
     }
     setIsModalOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async () => {
     try {
-      if (isInviteMode) {
-        await userService.invite({ email: formData.email, role: formData.role });
-        alert('招待メールを送信しました');
-      } else if (editingUser) {
-        await userService.update(editingUser.user_id, {
+      if (!formData.name.trim() || !formData.email.trim()) {
+        alert('名前とメールアドレスは必須です');
+        return;
+      }
+
+      if (editingUser) {
+        // Update existing user
+        const updateData: UserUpdate = {
           name: formData.name,
           role: formData.role,
-          profession: formData.profession,
-          job_title: formData.job_title,
-          display_color: formData.display_color,
-        });
+          profession: formData.profession || undefined,
+          job_title: formData.job_title || undefined,
+          display_color: formData.display_color || undefined,
+        };
+        await userService.update(editingUser.user_id, updateData);
       } else {
-        await userService.create(formData as UserCreate);
+        // Create new user
+        if (!formData.password) {
+          alert('新規ユーザーにはパスワードが必要です');
+          return;
+        }
+        const createData: UserCreate = {
+          email: formData.email,
+          password: formData.password,
+          name: formData.name,
+          role: formData.role,
+          profession: formData.profession || undefined,
+          job_title: formData.job_title || undefined,
+          display_color: formData.display_color || undefined,
+        };
+        await userService.create(createData);
       }
+
       await loadUsers();
       setIsModalOpen(false);
+      alert(editingUser ? 'ユーザーを更新しました' : 'ユーザーを追加しました');
     } catch (error: any) {
-      alert(error.message);
+      console.error('Failed to save user:', error);
+      alert(error.message || '保存に失敗しました');
     }
   };
 
   const handleDelete = async (userId: string) => {
-    if (!confirm('このユーザーを削除しますか？')) return;
+    if (!confirm('本当にこのユーザーを削除しますか？')) {
+      return;
+    }
+
     try {
       await userService.delete(userId);
       await loadUsers();
+      alert('ユーザーを削除しました');
     } catch (error: any) {
-      alert(error.message);
+      console.error('Failed to delete user:', error);
+      alert(error.message || '削除に失敗しました');
     }
   };
 
-  if (loading) return <div className="p-8 text-center">読み込み中...</div>;
+  const getRoleBadge = (role: string) => {
+    if (role === 'COMPANY_ADMIN') {
+      return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">管理者</span>;
+    }
+    return <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">一般ユーザー</span>;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="w-8 h-8 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-          <Shield className="w-6 h-6" />
-          ユーザー管理
-        </h2>
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleOpenModal(undefined, true)}
-            className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-          >
-            <Mail className="w-4 h-4" />
-            招待
-          </button>
-          <button
-            onClick={() => handleOpenModal()}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            直接作成
-          </button>
+    <div className="h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+      {/* Header */}
+      <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
+        <div>
+          <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+            <UsersIcon className="w-5 h-5 text-purple-600" />
+            ユーザー管理
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">{users.length} 人</p>
         </div>
+        <button
+          onClick={() => openModal()}
+          className="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors text-sm font-bold shadow-sm"
+        >
+          <Plus className="w-4 h-4" />
+          ユーザー追加
+        </button>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50">
+      {/* Table */}
+      <div className="flex-1 overflow-auto">
+        <table className="w-full text-left border-collapse">
+          <thead className="bg-white border-b sticky top-0 z-10">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">名前</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">メール</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">役割</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">職種</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">状態</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">操作</th>
+              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">名前</th>
+              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">メール</th>
+              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">職種</th>
+              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">役職</th>
+              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">権限</th>
+              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">状態</th>
+              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase text-right">操作</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-100">
             {users.map((user) => (
-              <tr key={user.user_id}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: user.display_color }}>
-                      <UserIcon className="w-4 h-4 text-white" />
+              <tr key={user.user_id} className="hover:bg-gray-50 group">
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold"
+                      style={{ backgroundColor: user.display_color || '#3B82F6' }}
+                    >
+                      {user.name.charAt(0)}
                     </div>
-                    {user.name}
+                    <div className="font-bold text-gray-800">{user.name}</div>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.email}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 py-1 text-xs rounded-full ${user.role === 'SystemAdmin' ? 'bg-purple-100 text-purple-800' :
-                      user.role === 'CompanyAdmin' ? 'bg-blue-100 text-blue-800' :
-                        'bg-gray-100 text-gray-800'
-                    }`}>
-                    {user.role}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.profession || '-'}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 py-1 text-xs rounded-full ${user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
+                <td className="px-6 py-4 text-sm text-gray-600">{user.profession || '-'}</td>
+                <td className="px-6 py-4 text-sm text-gray-600">{user.job_title || '-'}</td>
+                <td className="px-6 py-4">{getRoleBadge(user.role)}</td>
+                <td className="px-6 py-4">
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${user.is_active ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
                     }`}>
                     {user.is_active ? '有効' : '無効'}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button
-                    onClick={() => handleOpenModal(user)}
-                    className="text-blue-600 hover:text-blue-900 mr-3"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(user.user_id)}
-                    className="text-red-600 hover:text-red-900"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                <td className="px-6 py-4 text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => openModal(user)}
+                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="編集"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(user.user_id)}
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="削除"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
+            {users.length === 0 && (
+              <tr>
+                <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                  ユーザーがいません。「ユーザー追加」ボタンから追加してください。
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
+      {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-white/30 flex items-center justify-center z-50 backdrop-blur-md">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-xl font-bold mb-4">
-              {isInviteMode ? 'ユーザー招待' : editingUser ? 'ユーザー編集' : 'ユーザー作成'}
-            </h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="fixed inset-0 bg-black/30 z-50 flex justify-center items-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="p-6 border-b bg-gray-50 flex justify-between items-center">
+              <h3 className="text-xl font-bold text-gray-800">
+                {editingUser ? 'ユーザー編集' : '新規ユーザー'}
+              </h3>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
               <div>
-                <label className="block text-sm font-medium mb-1">メールアドレス</label>
+                <label className="block text-sm font-bold text-gray-600 mb-2">
+                  名前 <span className="text-red-500">*</span>
+                </label>
                 <input
-                  type="email"
-                  className="w-full border rounded-lg px-3 py-2"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  disabled={!!editingUser}
-                  required
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+                  placeholder="例: 山田 太郎"
                 />
               </div>
 
-              {!isInviteMode && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">名前</label>
-                    <input
-                      type="text"
-                      className="w-full border rounded-lg px-3 py-2"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      required
-                    />
-                  </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-600 mb-2">
+                  メールアドレス <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+                    placeholder="例: yamada@example.com"
+                    disabled={!!editingUser}
+                  />
+                </div>
+                {editingUser && (
+                  <p className="text-xs text-gray-500 mt-1">※ メールアドレスは変更できません</p>
+                )}
+              </div>
 
-                  {!editingUser && (
-                    <div>
-                      <label className="block text-sm font-medium mb-1">パスワード</label>
-                      <input
-                        type="password"
-                        className="w-full border rounded-lg px-3 py-2"
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        required
-                      />
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">職種</label>
-                    <input
-                      type="text"
-                      className="w-full border rounded-lg px-3 py-2"
-                      value={formData.profession}
-                      onChange={(e) => setFormData({ ...formData, profession: e.target.value })}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">役職</label>
-                    <input
-                      type="text"
-                      className="w-full border rounded-lg px-3 py-2"
-                      value={formData.job_title}
-                      onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">表示カラー</label>
-                    <input
-                      type="color"
-                      className="w-full h-10 border rounded-lg"
-                      value={formData.display_color}
-                      onChange={(e) => setFormData({ ...formData, display_color: e.target.value })}
-                    />
-                  </div>
-                </>
+              {!editingUser && (
+                <div>
+                  <label className="block text-sm font-bold text-gray-600 mb-2">
+                    パスワード <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+                    placeholder="パスワードを入力"
+                  />
+                </div>
               )}
 
               <div>
-                <label className="block text-sm font-medium mb-1">役割</label>
+                <label className="block text-sm font-bold text-gray-600 mb-2">権限</label>
                 <select
-                  className="w-full border rounded-lg px-3 py-2"
                   value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
                 >
-                  <option value="User">一般ユーザー</option>
-                  <option value="CompanyAdmin">管理者</option>
-                  <option value="SystemAdmin">システム管理者</option>
+                  <option value="NORMAL_USER">一般ユーザー</option>
+                  <option value="COMPANY_ADMIN">管理者</option>
                 </select>
               </div>
 
-              <div className="flex gap-2 justify-end">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
-                >
-                  キャンセル
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  {isInviteMode ? '招待' : editingUser ? '更新' : '作成'}
-                </button>
+              <div>
+                <label className="block text-sm font-bold text-gray-600 mb-2">職種</label>
+                <div className="relative">
+                  <Briefcase className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={formData.profession}
+                    onChange={(e) => setFormData({ ...formData, profession: e.target.value })}
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+                    placeholder="例: 看護師"
+                  />
+                </div>
               </div>
-            </form>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-600 mb-2">役職</label>
+                <input
+                  type="text"
+                  value={formData.job_title}
+                  onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+                  placeholder="例: 主任"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-600 mb-2">表示色</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={formData.display_color}
+                    onChange={(e) => setFormData({ ...formData, display_color: e.target.value })}
+                    className="w-16 h-10 rounded border border-gray-300 cursor-pointer"
+                  />
+                  <span className="text-sm text-gray-600">{formData.display_color}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t bg-gray-50 flex gap-3">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg font-bold transition-colors flex items-center justify-center gap-2"
+              >
+                <X className="w-4 h-4" />
+                キャンセル
+              </button>
+              <button
+                onClick={handleSave}
+                className="flex-1 px-4 py-2 bg-teal-600 text-white hover:bg-teal-700 rounded-lg font-bold transition-colors flex items-center justify-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                保存
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -27,21 +27,14 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       // Store auth data
       authService.storeAuth(response.access_token, response.user);
 
-      // Map role from backend format to frontend format
-      const roleMap: Record<string, 'system_admin' | 'admin' | 'user'> = {
-        'SUPER_ADMIN': 'system_admin',
-        'COMPANY_ADMIN': 'admin',
-        'NORMAL_USER': 'user',
-      };
-
       // Convert to AuthUser format
       const authUser: AuthUser = {
-        id: response.user.user_id,
-        username: response.user.email,
+        user_id: response.user.user_id,
+        email: response.user.email,
         name: response.user.name,
-        role: roleMap[response.user.role] || 'user',
-        companyId: (response.user as any).company_id,
-        companyName: (response.user as any).company_name,
+        role: response.user.role as 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'NORMAL_USER',
+        company_id: (response.user as any).company_id || null,
+        companyName: (response.user as any).company_name || null,
       };
 
       onLogin(authUser);
@@ -73,7 +66,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
               NurseAssist Pro
             </h1>
             <p className="text-teal-100 text-sm">
-              訪問看護スケジュール管理プラットフォーム
+              訪問看護スケジュール管理プラット フォーム
             </p>
           </div>
 

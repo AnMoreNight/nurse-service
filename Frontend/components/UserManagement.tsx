@@ -1,280 +1,214 @@
 "use client";
 
 import React, { useState } from 'react';
-import { UserAccount, UserRole } from '@/lib/types';
-import { Plus, Edit, Trash2, Key, User, ShieldCheck, Eye, EyeOff, Users } from 'lucide-react';
+import { User } from '@/services';
+import { Plus, Pencil, Trash2, Save, X } from 'lucide-react';
 
 interface UserManagementProps {
     companyId: string;
-    users: UserAccount[];
-    onAddUser: (user: UserAccount) => void;
-    onUpdateUser: (user: UserAccount) => void;
-    onDeleteUser: (userId: string) => void;
+    users: User[];
+    onAddUser: (user: User) => void;
+    onUpdateUser: (user: User) => void;
+    onDeleteUser: (id: string) => void;
 }
 
-export const UserManagement: React.FC<UserManagementProps> = ({ companyId, users, onAddUser, onUpdateUser, onDeleteUser }) => {
-    const companyUsers = users.filter(u => u.companyId === companyId);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingUser, setEditingUser] = useState<UserAccount | null>(null);
+export const UserManagement: React.FC<UserManagementProps> = ({
+    companyId,
+    users,
+    onAddUser,
+    onUpdateUser,
+    onDeleteUser
+}) => {
+    const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [isAdding, setIsAdding] = useState(false);
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        password: '',
+        role: 'NORMAL_USER' as 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'NORMAL_USER',
+        profession: '',
+        job_title: ''
+    });
 
-    // Password Visibility State for Table
-    const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
-
-    // Password Visibility State for Modal
-    const [showModalPassword, setShowModalPassword] = useState(false);
-
-    // Form State
-    const [name, setName] = useState('');
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const [role, setRole] = useState<UserRole>('user');
-
-    const handleOpenModal = (user?: UserAccount) => {
-        setShowModalPassword(false); // Reset visibility
-        if (user) {
-            setEditingUser(user);
-            setName(user.name);
-            setUsername(user.username);
-            setPassword(user.password || ''); // Pre-fill password for viewing/editing
-            setRole(user.role);
-        } else {
-            setEditingUser(null);
-            setName('');
-            setUsername('');
-            setPassword('');
-            setRole('user');
-        }
-        setIsModalOpen(true);
-    };
-
-    const toggleTablePassword = (userId: string) => {
-        setVisiblePasswords(prev => ({
-            ...prev,
-            [userId]: !prev[userId]
-        }));
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!name || !username) {
-            alert('名前とユーザーIDは必須です');
-            return;
-        }
-
+    const handleSave = () => {
         if (editingUser) {
-            // Update
-            onUpdateUser({
-                ...editingUser,
-                name,
-                username,
-                password: password, // Update with current input value
-                role
-            });
+            onUpdateUser({ ...editingUser, ...formData });
+            setEditingUser(null);
         } else {
-            // Add
-            if (!password) {
-                alert('新規ユーザーにはパスワードが必要です');
-                return;
-            }
-            const newUser: UserAccount = {
-                id: `u_${Date.now()}`,
-                name,
-                username,
-                password,
-                role,
-                companyId
+            const newUserData = {
+                user_id: `new_${Date.now()}`,
+                company_id: companyId,
+                name: formData.name,
+                email: formData.email,
+                role: formData.role,
+                profession: formData.profession || undefined,
+                job_title: formData.job_title || undefined,
+                is_active: true,
+                sort_order: users.length,
             };
-            onAddUser(newUser);
+            onAddUser(newUserData as any); // Type will be validated by API
+            setIsAdding(false);
         }
-        setIsModalOpen(false);
+        resetForm();
     };
 
-    const handleDelete = (id: string) => {
-        if (window.confirm('本当にこのユーザーを削除しますか？')) {
-            onDeleteUser(id);
-        }
+    const resetForm = () => {
+        setFormData({
+            name: '',
+            email: '',
+            password: '',
+            role: 'NORMAL_USER',
+            profession: '',
+            job_title: ''
+        });
+    };
+
+    const handleEdit = (user: User) => {
+        setEditingUser(user);
+        setFormData({
+            name: user.name,
+            email: user.email,
+            password: '',
+            role: user.role as 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'NORMAL_USER',
+            profession: user.profession || '',
+            job_title: user.job_title || ''
+        });
+    };
+
+    const handleCancel = () => {
+        setEditingUser(null);
+        setIsAdding(false);
+        resetForm();
     };
 
     return (
-        <div className="h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
-            {/* Header */}
-            <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
-                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                    <Users className="w-5 h-5 text-purple-600" />
-                    ユーザー管理
-                </h2>
-                <button
-                    onClick={() => handleOpenModal()}
-                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-bold shadow-sm"
-                >
-                    <Plus className="w-4 h-4" />
-                    ユーザー追加
-                </button>
+        <div className="p-6 bg-white rounded-lg shadow">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-800">ユーザー管理</h2>
+                {!isAdding && !editingUser && (
+                    <button
+                        onClick={() => setIsAdding(true)}
+                        className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 flex items-center gap-2"
+                    >
+                        <Plus size={20} />
+                        ユーザー追加
+                    </button>
+                )}
             </div>
 
-            {/* Table */}
-            <div className="flex-1 overflow-auto">
-                <table className="w-full text-left border-collapse">
-                    <thead className="bg-white border-b sticky top-0 z-10">
-                        <tr>
-                            <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">名前</th>
-                            <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">ログインID</th>
-                            <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">パスワード</th>
-                            <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">権限</th>
-                            <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase text-right">操作</th>
+            {(isAdding || editingUser) && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <h3 className="text-lg font-semibold mb-4">
+                        {editingUser ? 'ユーザー編集' : '新規ユーザー'}
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                        <input
+                            type="text"
+                            placeholder="名前"
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            className="px-3 py-2 border rounded-lg"
+                        />
+                        <input
+                            type="email"
+                            placeholder="メール"
+                            value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                            className="px-3 py-2 border rounded-lg"
+                        />
+                        <input
+                            type="password"
+                            placeholder="パスワード"
+                            value={formData.password}
+                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                            className="px-3 py-2 border rounded-lg"
+                        />
+                        <select
+                            value={formData.role}
+                            onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
+                            className="px-3 py-2 border rounded-lg"
+                        >
+                            <option value="NORMAL_USER">一般ユーザー</option>
+                            <option value="COMPANY_ADMIN">管理者</option>
+                        </select>
+                        <input
+                            type="text"
+                            placeholder="職種"
+                            value={formData.profession}
+                            onChange={(e) => setFormData({ ...formData, profession: e.target.value })}
+                            className="px-3 py-2 border rounded-lg"
+                        />
+                        <input
+                            type="text"
+                            placeholder="役職"
+                            value={formData.job_title}
+                            onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
+                            className="px-3 py-2 border rounded-lg"
+                        />
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                        <button
+                            onClick={handleSave}
+                            className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 flex items-center gap-2"
+                        >
+                            <Save size={18} />
+                            保存
+                        </button>
+                        <button
+                            onClick={handleCancel}
+                            className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 flex items-center gap-2"
+                        >
+                            <X size={18} />
+                            キャンセル
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            <div className="overflow-x-auto">
+                <table className="w-full">
+                    <thead>
+                        <tr className="border-b">
+                            <th className="text-left py-2 px-4">名前</th>
+                            <th className="text-left py-2 px-4">メール</th>
+                            <th className="text-left py-2 px-4">役職</th>
+                            <th className="text-left py-2 px-4">職種</th>
+                            <th className="text-left py-2 px-4">権限</th>
+                            <th className="text-right py-2 px-4">操作</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
-                        {companyUsers.map(user => (
-                            <tr key={user.id} className="hover:bg-gray-50 group">
-                                <td className="px-6 py-4">
-                                    <div className="font-bold text-gray-800">{user.name}</div>
-                                </td>
-                                <td className="px-6 py-4 text-sm font-mono text-gray-600">
-                                    {user.username}
-                                </td>
-                                <td className="px-6 py-4">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm font-mono text-gray-600 w-24">
-                                            {visiblePasswords[user.id] ? user.password : '••••••••'}
-                                        </span>
-                                        <button
-                                            onClick={() => toggleTablePassword(user.id)}
-                                            className="text-gray-400 hover:text-gray-600 focus:outline-none"
-                                            title={visiblePasswords[user.id] ? "隠す" : "表示"}
-                                        >
-                                            {visiblePasswords[user.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                        </button>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>
-                                        {user.role === 'admin' ? <ShieldCheck className="w-3 h-3" /> : <User className="w-3 h-3" />}
-                                        {user.role === 'admin' ? '管理者' : '一般'}
+                    <tbody>
+                        {users.map((user) => (
+                            <tr key={user.user_id} className="border-b hover:bg-gray-50">
+                                <td className="py-2 px-4">{user.name}</td>
+                                <td className="py-2 px-4">{user.email}</td>
+                                <td className="py-2 px-4">{user.job_title || '-'}</td>
+                                <td className="py-2 px-4">{user.profession || '-'}</td>
+                                <td className="py-2 px-4">
+                                    <span className={`px-2 py-1 rounded text-xs ${user.role === 'COMPANY_ADMIN' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                                        }`}>
+                                        {user.role === 'COMPANY_ADMIN' ? '管理者' : '一般'}
                                     </span>
                                 </td>
-                                <td className="px-6 py-4 text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                        <button
-                                            onClick={() => handleOpenModal(user)}
-                                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                            title="編集"
-                                        >
-                                            <Edit className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(user.id)}
-                                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                            title="削除"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </div>
+                                <td className="py-2 px-4 text-right">
+                                    <button
+                                        onClick={() => handleEdit(user)}
+                                        className="text-blue-600 hover:text-blue-800 mr-3"
+                                    >
+                                        <Pencil size={18} />
+                                    </button>
+                                    <button
+                                        onClick={() => onDeleteUser(user.user_id)}
+                                        className="text-red-600 hover:text-red-800"
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
-
-            {/* Modal */}
-            {isModalOpen && (
-                <div className="fixed inset-0 bg-white/30 z-50 flex justify-center items-center p-4 backdrop-blur-md">
-                    <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden">
-                        <div className="p-5 border-b bg-gray-50 flex justify-between items-center">
-                            <h3 className="font-bold text-gray-800">{editingUser ? 'ユーザー編集' : '新規ユーザー'}</h3>
-                            <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
-                                <span className="text-2xl">&times;</span>
-                            </button>
-                        </div>
-                        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-sm font-bold text-gray-600 mb-1">名前</label>
-                                <input
-                                    type="text"
-                                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                    value={name}
-                                    onChange={e => setName(e.target.value)}
-                                    placeholder="例: 鈴木 一郎"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-600 mb-1">ログインID</label>
-                                <input
-                                    type="text"
-                                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                    value={username}
-                                    onChange={e => setUsername(e.target.value)}
-                                    placeholder="例: suzuki"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-600 mb-1">
-                                    パスワード
-                                </label>
-                                <div className="relative">
-                                    <Key className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                                    <input
-                                        type={showModalPassword ? "text" : "password"}
-                                        className="w-full pl-9 pr-10 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                        value={password}
-                                        onChange={e => setPassword(e.target.value)}
-                                        placeholder={editingUser ? "パスワード" : "パスワード"}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowModalPassword(!showModalPassword)}
-                                        className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
-                                    >
-                                        {showModalPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                    </button>
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-600 mb-1">権限</label>
-                                <div className="flex gap-4">
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input
-                                            type="radio"
-                                            name="role"
-                                            checked={role === 'user'}
-                                            onChange={() => setRole('user')}
-                                            className="text-blue-600 focus:ring-blue-500"
-                                        />
-                                        <span className="text-sm">一般</span>
-                                    </label>
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input
-                                            type="radio"
-                                            name="role"
-                                            checked={role === 'admin'}
-                                            onChange={() => setRole('admin')}
-                                            className="text-blue-600 focus:ring-blue-500"
-                                        />
-                                        <span className="text-sm">管理者</span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div className="pt-4 flex justify-end gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsModalOpen(false)}
-                                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-bold"
-                                >
-                                    キャンセル
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-bold shadow-sm"
-                                >
-                                    保存
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

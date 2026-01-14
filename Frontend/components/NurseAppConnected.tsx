@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useApp } from '@/lib/context';
 import {
   authService, userService, scheduleService, shiftService, statusService, patientService,
   User, Schedule, Shift, ScheduleStatus
@@ -45,7 +46,7 @@ export default function NurseAppConnected() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const isReadOnly = currentUser?.role === 'NormalUser';
+  const isReadOnly = currentUser?.role === 'NORMAL_USER';
   const isAdmin = currentUser?.role === 'CompanyAdmin';
 
   useEffect(() => {
