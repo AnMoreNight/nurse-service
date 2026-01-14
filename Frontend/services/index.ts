@@ -7,7 +7,7 @@ export { shiftService } from './shiftService';
 export { statusService } from './statusService';
 
 // Export types
-export type { User, UserCreate, UserUpdate, UserInvite } from './userService';
+export type { User, UserCreate, UserUpdate, UserInvite, UserCreateByAdmin, AssignCompanyAdmin, RemoveCompanyAdmin } from './userService';
 export type { Company, CompanyCreate, CompanyUpdate } from './companyService';
 export type { Schedule, ScheduleCreate, ScheduleUpdate } from './scheduleService';
 export type { Shift, ShiftCreate, ShiftUpdate } from './shiftService';

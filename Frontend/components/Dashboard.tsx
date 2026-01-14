@@ -108,6 +108,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
         setDropPreview(null);
     };
 
+    const handleDragEnd = () => {
+        // Clear drag state and preview when drag ends (even without drop)
+        setDragState(null);
+        setDropPreview(null);
+    };
+
     const handleDragOverWithTime = (e: React.DragEvent, targetStaffId: string) => {
         if (isReadOnly) return;
         e.preventDefault();
@@ -369,7 +375,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                 <div className="relative w-full h-full" id={`staff-container-${staff.id}`}>
                                     {isToday && <div className="absolute left-0 right-0 border-t-2 border-red-500 z-30 pointer-events-none opacity-80" style={{ top: `${currentTimeTop}px` }}></div>}
 
-                                    {dropPreview && dropPreview.staffId === staff.id && dragState?.visit && (
+                                    {dropPreview && dropPreview.staffId === staff.id && dragState?.visit && dropPreview.time && (
                                         (() => {
                                             const visit = dragState.visit;
                                             const { bgClass, opacity } = getVisitStyles(visit, isHoliday);
@@ -407,20 +413,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                         ></div>
                                     ))}
 
-                                    {staffVisits.map(visit => {
+                                    {staffVisits.map((visit, visitIndex) => {
                                         const top = getPosition(visit.startTime);
                                         const height = getHeight(visit.startTime, visit.endTime);
                                         const layout = layoutMap.get(visit.id) || { left: '0%', width: '100%' };
                                         const { bgClass, opacity } = getVisitStyles(visit, isHoliday);
                                         const isBeingDragged = dragState?.id === visit.id;
-                                        // Create unique key for recurring instances: visit.id-date-staffId
-                                        const uniqueKey = `${visit.id}-${currentDate}-${staff.id}`;
+                                        // Create unique key with index to prevent duplicates
+                                        const uniqueKey = `${visit.id}-${currentDate}-${staff.id}-${visitIndex}`;
 
                                         return (
                                             <div
                                                 key={uniqueKey}
                                                 draggable={!isReadOnly}
                                                 onDragStart={(e) => handleDragStart(e, visit, staff.id)}
+                                                onDragEnd={handleDragEnd}
                                                 onDragOver={(e) => handleDragOverWithTime(e, staff.id)}
                                                 onDrop={(e) => handleContainerDrop(e, staff.id)}
                                                 onClick={(e) => { e.stopPropagation(); onSelectVisit(visit); }}

@@ -392,8 +392,13 @@ function DashboardContent() {
             settings={companySettings}
             onSave={async (newSettings) => {
               try {
-                // Import the statusService for bulk update
+                console.log('[Settings Save] Received settings:', newSettings);
+                console.log('[Settings Save] JobTitles:', newSettings.jobTitles);
+                console.log('[Settings Save] Current user:', currentUser);
+                
+                // Import the required services
                 const { statusService } = await import('@/services/statusService');
+                const { companyService } = await import('@/services/companyService');
 
                 // Prepare all statuses for bulk update
                 const statusItems = newSettings.visitStatuses.map((status, index) => {
@@ -408,8 +413,20 @@ function DashboardContent() {
                   };
                 });
 
-                // Single bulk update API call - replaces the entire for loop!
+                console.log('[Settings Save] Saving statuses:', statusItems);
+                // Save statuses
                 await statusService.bulkUpdate({ statuses: statusItems });
+                console.log('[Settings Save] Statuses saved successfully');
+                
+                // Save jobTitles separately
+                if (currentUser?.company_id) {
+                  console.log('[Settings Save] Saving jobTitles to company:', currentUser.company_id);
+                  console.log('[Settings Save] JobTitles value:', newSettings.jobTitles);
+                  await companyService.upsertSetting(currentUser.company_id, 'jobTitles', newSettings.jobTitles);
+                  console.log('[Settings Save] JobTitles saved successfully');
+                } else {
+                  console.warn('[Settings Save] No company_id found, skipping jobTitles save');
+                }
 
                 showToast('設定を保存しました');
                 // Refresh data to get updated statuses

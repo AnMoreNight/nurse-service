@@ -98,6 +98,31 @@ class UserUpdate(BaseModel):
     join_date: Optional[str] = None  # YYYY-MM-DD
     left_date: Optional[str] = None  # YYYY-MM-DD
 
+# Admin-specific user creation (includes company_id)
+class UserCreateByAdmin(BaseModel):
+    company_id: UUID  # Required for admin to specify which company
+    email: str
+    password: str
+    role: str
+    name: str
+    profession: Optional[str] = None
+    job_title: Optional[str] = None
+    display_color: Optional[str] = None
+    join_date: Optional[str] = None  # YYYY-MM-DD
+    left_date: Optional[str] = None  # YYYY-MM-DD
+    
+    @field_validator('email')
+    @classmethod
+    def validate_email_field(cls, v):
+        return validate_email(v)
+
+class AssignCompanyAdmin(BaseModel):
+    company_id: UUID
+    user_id: UUID
+
+class RemoveCompanyAdmin(BaseModel):
+    user_id: UUID
+
 class UserSortOrder(BaseModel):
     user_id: UUID
     sort_order: int

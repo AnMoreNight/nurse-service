@@ -38,6 +38,7 @@ interface AppContextType {
   shifts: ShiftAssignment[];
   statuses: ScheduleStatus[];
   companySettings: CompanySettings;
+  setShifts: React.Dispatch<React.SetStateAction<ShiftAssignment[]>>;
 
   // Data loading
   refreshData: () => Promise<void>;
@@ -272,14 +273,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         // Convert to company settings format
         if (statusList.length > 0) {
-          setCompanySettings({
-            ...DEFAULT_SETTINGS,
+          const newSettings: CompanySettings = {
             visitStatuses: statusList.map(s => ({
               key: s.status_id,
               label: s.name,
               color: s.color,
             })),
-          });
+            jobTitles: DEFAULT_SETTINGS.jobTitles, // Default for now
+          };
+          setCompanySettings(newSettings);
+          console.log('[Context] Set default company settings:', newSettings);
+
+          // Load jobTitles from backend
+          if (currentUser?.company_id) {
+            console.log('[Context] Loading jobTitles for company:', currentUser.company_id);
+            try {
+              const { companyService } = await import('@/services/companyService');
+              const jobTitlesSetting = await companyService.getSetting(currentUser.company_id, 'jobTitles');
+              console.log('[Context] JobTitles setting received:', jobTitlesSetting);
+              if (jobTitlesSetting?.value && Array.isArray(jobTitlesSetting.value)) {
+                console.log('[Context] Setting jobTitles from backend:', jobTitlesSetting.value);
+                setCompanySettings(prev => ({
+                  ...prev,
+                  jobTitles: jobTitlesSetting.value
+                }));
+              } else {
+                console.log('[Context] JobTitles value not an array or empty');
+              }
+            } catch (error) {
+              // Setting might not exist yet, use defaults
+              console.log('[Context] JobTitles not found (error):', error);
+            }
+          } else {
+            console.log('[Context] No company_id, skipping jobTitles load');
+          }
         }
       }
 
@@ -445,10 +472,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         'night2_holiday': 'NightDuty2DayOff',
       };
 
-      // Check if shift exists
+      // Find existing shift
       const existingShift = shifts.find(s => s.staffId === staffId && s.date === date);
 
+      // Optimistic update - immediately reflect in UI
+      const tempShifts = [...shifts];
+      const existingIndex = tempShifts.findIndex(s => s.staffId === staffId && s.date === date);
+      
       if (type && type !== 'none') {
+        const newShift: ShiftAssignment = {
+          id: existingShift?.id || `temp-${Date.now()}`,
+          companyId: currentUser?.company_id || '',
+          staffId: staffId,
+          date: date,
+          type: type as any
+        };
+        
+        if (existingIndex >= 0) {
+          tempShifts[existingIndex] = newShift;
+        } else {
+          tempShifts.push(newShift);
+        }
+        setShifts(tempShifts);
+        
+        // Background API call
         if (existingShift) {
           await shiftService.update(existingShift.id, { shift_type: typeMap[type] || type });
         } else {
@@ -459,15 +506,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           });
         }
       } else if (existingShift) {
+        // Remove shift optimistically
+        if (existingIndex >= 0) {
+          tempShifts.splice(existingIndex, 1);
+          setShifts(tempShifts);
+        }
         await shiftService.delete(existingShift.id);
       }
 
+      // Refresh from server to get real data
       await refreshData();
     } catch (err: any) {
+      // On error, revert by refreshing
+      await refreshData();
       setError(err.message);
       throw err;
     }
-  }, [shifts, refreshData]);
+  }, [shifts, refreshData, currentUser]);
 
   const applyWeeklyRules = useCallback(async (startDate: string, endDate: string) => {
     try {
@@ -541,6 +596,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       staff,
       visits,
       shifts,
+      setShifts,
       statuses,
       companySettings,
       refreshData,

@@ -26,4 +26,13 @@ export const companyService = {
   update: (id: string, data: CompanyUpdate) => apiClient.patch<Company>(`/companies/${id}`, data),
 
   delete: (id: string) => apiClient.delete(`/companies/${id}`),
+
+  // Company Settings
+  getAllSettings: (companyId: string) => apiClient.get<Record<string, any>>(`/companies/${companyId}/settings`),
+
+  getSetting: (companyId: string, key: string) => apiClient.get<{ key: string; value: any }>(`/companies/${companyId}/settings/${key}`),
+
+  upsertSetting: (companyId: string, key: string, value: any) => apiClient.put(`/companies/${companyId}/settings/${key}`, value),
+
+  deleteSetting: (companyId: string, key: string) => apiClient.delete(`/companies/${companyId}/settings/${key}`),
 };

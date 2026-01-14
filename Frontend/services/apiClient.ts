@@ -19,6 +19,8 @@ class ApiClient {
     });
 
     if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Request failed' }));
+      
       // Handle 401 Unauthorized - auto logout
       if (response.status === 401) {
         if (typeof window !== 'undefined') {
@@ -28,7 +30,19 @@ class ApiClient {
         }
       }
 
-      const error = await response.json().catch(() => ({ detail: 'Request failed' }));
+      // Handle 403 Forbidden - check if account not properly configured
+      if (response.status === 403) {
+        const errorDetail = typeof error.detail === 'string' ? error.detail : '';
+        // If user account is misconfigured, force logout and show message
+        if (errorDetail.includes('not properly configured') || errorDetail.includes('assign you to a company')) {
+          if (typeof window !== 'undefined') {
+            alert('Your account has been updated. Please log in again.');
+            localStorage.removeItem('token');
+            localStorage.removeItem('currentUser');
+            window.location.href = '/login';
+          }
+        }
+      }
       
       // Handle error detail properly - it might be a string or an object
       let errorMessage: string;
@@ -62,6 +76,13 @@ class ApiClient {
   async patch<T>(endpoint: string, data: any): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PUT',  // Backend uses PUT, not PATCH
+      body: JSON.stringify(data),
+    });
+  }
+
+  async put<T>(endpoint: string, data: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PUT',
       body: JSON.stringify(data),
     });
   }

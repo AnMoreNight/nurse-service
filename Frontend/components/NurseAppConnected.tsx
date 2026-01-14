@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useApp } from '@/lib/context';
 import {
   authService, userService, scheduleService, shiftService, statusService, patientService,
@@ -38,6 +38,7 @@ export default function NurseAppConnected() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [statuses, setStatuses] = useState<ScheduleStatus[]>([]);
+  const [jobTitles, setJobTitles] = useState<string[]>([]);
 
   const [currentDate, setCurrentDate] = useState<string>(toLocalISOString(new Date()));
   const [selectedVisit, setSelectedVisit] = useState<any>(null);
@@ -45,6 +46,10 @@ export default function NurseAppConnected() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  
+  // Debounce timer ref for shift updates
+  const shiftUpdateTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingShiftUpdatesRef = useRef<Map<string, any>>(new Map());
 
   const isReadOnly = currentUser?.role === 'NORMAL_USER';
   const isAdmin = currentUser?.role === 'CompanyAdmin';
@@ -70,6 +75,20 @@ export default function NurseAppConnected() {
       setSchedules(schedulesData);
       setShifts(shiftsData);
       setStatuses(statusesData);
+
+      // Load job titles from company settings
+      if (currentUser?.company_id) {
+        try {
+          const { companyService } = await import('@/services/companyService');
+          const setting = await companyService.getSetting(currentUser.company_id, 'jobTitles');
+          if (setting?.value && Array.isArray(setting.value)) {
+            setJobTitles(setting.value);
+          }
+        } catch (error) {
+          // Setting might not exist yet, that's ok
+          console.log('Job titles not found, using empty array');
+        }
+      }
     } catch (error: any) {
       showToast(error.message || 'データの読み込みに失敗しました');
     } finally {
@@ -95,17 +114,19 @@ export default function NurseAppConnected() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Convert backend data to frontend format
+  // Convert backend data to frontend format - Filter only NORMAL_USER
   const staffList = useMemo(() => {
-    return staff.map(s => ({
-      id: s.user_id,
-      companyId: s.company_id || '',
-      name: s.name,
-      jobTitle: s.job_title,
-      color: s.display_color || 'blue',
-      avatar: s.avatar_url || '',
-      joinedDate: s.created_at.split('T')[0],
-    }));
+    return staff
+      .filter(s => s.role === 'NORMAL_USER') // Only show normal users, not admins
+      .map(s => ({
+        id: s.user_id,
+        companyId: s.company_id || '',
+        name: s.name,
+        jobTitle: s.job_title,
+        color: s.display_color || 'blue',
+        avatar: s.avatar_url || '',
+        joinedDate: s.created_at.split('T')[0],
+      }));
   }, [staff]);
 
   const visits = useMemo(() => {
@@ -152,8 +173,8 @@ export default function NurseAppConnected() {
       label: st.name,
       color: st.color,
     })),
-    jobTitles: [],
-  }), [statuses]);
+    jobTitles: jobTitles,
+  }), [statuses, jobTitles]);
 
   const handleAddVisit = async (visitData: any) => {
     try {
@@ -233,22 +254,72 @@ export default function NurseAppConnected() {
     }
   };
 
-  const handleUpdateShift = async (staffId: string, date: string, type: any) => {
-    try {
-      const existing = shifts.find(s => s.user_id === staffId && s.shift_date === date);
-
+  const handleUpdateShift = useCallback((staffId: string, date: string, type: any) => {
+    // Optimistic update: immediately update local state
+    setShifts(prevShifts => {
+      const existing = prevShifts.find(s => s.user_id === staffId && s.shift_date === date);
       if (existing) {
-        await shiftService.update(existing.shift_id, { shift_type: type });
+        return prevShifts.map(s => 
+          s.user_id === staffId && s.shift_date === date 
+            ? { ...s, shift_type: type } 
+            : s
+        );
       } else {
-        await shiftService.create({ user_id: staffId, shift_date: date, shift_type: type });
+        // Add new shift optimistically
+        const newShift: any = {
+          shift_id: `temp-${Date.now()}`,
+          user_id: staffId,
+          shift_date: date,
+          shift_type: type,
+          company_id: currentUser?.company_id
+        };
+        return [...prevShifts, newShift];
       }
+    });
 
-      await loadData();
-      showToast('シフトを更新しました');
-    } catch (error: any) {
-      showToast(error.message || 'シフト更新に失敗しました');
+    // Store pending update for API call
+    const key = `${staffId}-${date}`;
+    pendingShiftUpdatesRef.current.set(key, { staffId, date, type });
+    
+    // Clear existing timer
+    if (shiftUpdateTimerRef.current) {
+      clearTimeout(shiftUpdateTimerRef.current);
     }
-  };
+    
+    // Set new timer for batched update (500ms debounce)
+    shiftUpdateTimerRef.current = setTimeout(async () => {
+      const updates = Array.from(pendingShiftUpdatesRef.current.values());
+      pendingShiftUpdatesRef.current.clear();
+      
+      try {
+        // Process all pending updates - get current shifts from state
+        setShifts(currentShifts => {
+          // Process updates in background without modifying state here
+          (async () => {
+            for (const update of updates) {
+              const existing = currentShifts.find(s => s.user_id === update.staffId && s.shift_date === update.date);
+              if (existing && !existing.shift_id.startsWith('temp-')) {
+                await shiftService.update(existing.shift_id, { shift_type: update.type });
+              } else {
+                await shiftService.create({ user_id: update.staffId, shift_date: update.date, shift_type: update.type });
+              }
+            }
+            // Refresh from server after all updates complete
+            await loadData();
+          })().catch((error: any) => {
+            // On error, revert by reloading
+            showToast(error.message || 'シフト更新に失敗しました');
+            loadData();
+          });
+          return currentShifts;
+        });
+      } catch (error: any) {
+        showToast(error.message || 'シフト更新に失敗しました');
+        await loadData();
+      }
+    }, 500);
+  }, [loadData, currentUser]);
+
 
   const handleAddStaff = async (staffData: any) => {
     try {

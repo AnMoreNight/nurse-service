@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, Request, Query
+from fastapi import APIRouter, Depends, Request, Query, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from models.schemas import UserCreate, UserInvite, UserUpdate, UserSortOrder
+from models.schemas import UserCreate, UserInvite, UserUpdate, UserSortOrder, UserCreateByAdmin, AssignCompanyAdmin, RemoveCompanyAdmin
 from controller.user_controller import UserController
 from db.database import get_db
-from middleware.auth import get_current_user, require_company_admin
+from middleware.auth import get_current_user, require_company_admin, require_super_admin
 from uuid import UUID
 from typing import Optional
 
@@ -12,6 +12,12 @@ router = APIRouter(prefix="/users", tags=["Users"])
 @router.post("")
 async def create_user(req: UserCreate, request: Request, db: AsyncSession = Depends(get_db)):
     user = await require_company_admin(request, db)  # Admin only
+    # Ensure admin has a company_id to assign to new users
+    if not user["company_id"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot create users without a company. SUPER_ADMIN should use /users/admin/create endpoint."
+        )
     return await UserController.create_user(
         db, user["company_id"], req.email, req.password, req.role, req.name,
         req.profession, req.job_title, req.display_color, req.join_date, req.left_date
@@ -25,8 +31,13 @@ async def invite_user(req: UserInvite, request: Request, db: AsyncSession = Depe
 @router.get("")
 async def get_users(request: Request, company_id: Optional[UUID] = Query(None), db: AsyncSession = Depends(get_db)):
     user = await get_current_user(request, db)
-    # SUPER_ADMIN can specify company_id for impersonation, others use their own
-    effective_company_id = company_id if (user["role"] == "SUPER_ADMIN" and company_id) else user["company_id"]
+    
+    # SUPER_ADMIN: None = all users, or specific company_id if provided
+    # COMPANY_ADMIN/NORMAL_USER: their own company only
+    if user["role"] == "SUPER_ADMIN":
+        effective_company_id = company_id  # None means all users
+    else:
+        effective_company_id = user["company_id"]
     
     # NORMAL_USER can only see themselves
     filter_by_user = user["user_id"] if user["role"] == "NORMAL_USER" else None
@@ -58,3 +69,31 @@ async def update_sort_orders(orders: list[UserSortOrder], request: Request, db: 
 async def delete_user(user_id: UUID, request: Request, db: AsyncSession = Depends(get_db)):
     user = await require_company_admin(request, db)  # Admin only
     return await UserController.deactivate_user(db, user_id, user["company_id"])
+
+# SUPER_ADMIN only endpoints
+@router.post("/admin/create")
+async def create_user_by_admin(req: UserCreateByAdmin, request: Request, db: AsyncSession = Depends(get_db)):
+    """SUPER_ADMIN creates a user for any company"""
+    await require_super_admin(request, db)
+    return await UserController.create_user_by_admin(
+        db, req.company_id, req.email, req.password, req.role, req.name,
+        req.profession, req.job_title, req.display_color, req.join_date, req.left_date
+    )
+
+@router.post("/admin/assign-company-admin")
+async def assign_company_admin(req: AssignCompanyAdmin, request: Request, db: AsyncSession = Depends(get_db)):
+    """SUPER_ADMIN assigns a user as COMPANY_ADMIN for a specific company"""
+    await require_super_admin(request, db)
+    return await UserController.assign_company_admin(db, req.company_id, req.user_id)
+
+@router.post("/admin/remove-company-admin")
+async def remove_company_admin(req: RemoveCompanyAdmin, request: Request, db: AsyncSession = Depends(get_db)):
+    """SUPER_ADMIN removes company admin role (user becomes NORMAL_USER, company remains)"""
+    await require_super_admin(request, db)
+    return await UserController.remove_company_admin(db, req.user_id)
+
+@router.get("/admin/company-admins/{company_id}")
+async def get_company_admins(company_id: UUID, request: Request, db: AsyncSession = Depends(get_db)):
+    """SUPER_ADMIN gets all company admins for a specific company"""
+    await require_super_admin(request, db)
+    return await UserController.get_company_admins(db, company_id)

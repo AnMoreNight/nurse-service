@@ -29,6 +29,28 @@ export interface UserCreate {
   left_date?: string;
 }
 
+export interface UserCreateByAdmin {
+  company_id: string;
+  email: string;
+  password: string;
+  role: string;
+  name: string;
+  profession?: string;
+  job_title?: string;
+  display_color?: string;
+  join_date?: string;
+  left_date?: string;
+}
+
+export interface AssignCompanyAdmin {
+  company_id: string;
+  user_id: string;
+}
+
+export interface RemoveCompanyAdmin {
+  user_id: string;
+}
+
 export interface UserUpdate {
   name?: string;
   profession?: string;
@@ -69,4 +91,16 @@ export const userService = {
     apiClient.post('/users/sort-order', sortOrders),
 
   delete: (id: string) => apiClient.delete(`/users/${id}`),
+
+  // Admin-only endpoints
+  createByAdmin: (data: UserCreateByAdmin) => apiClient.post<User>('/users/admin/create', data),
+
+  assignCompanyAdmin: (data: AssignCompanyAdmin) =>
+    apiClient.post('/users/admin/assign-company-admin', data),
+
+  removeCompanyAdmin: (data: RemoveCompanyAdmin) =>
+    apiClient.post('/users/admin/remove-company-admin', data),
+
+  getCompanyAdmins: (companyId: string) =>
+    apiClient.get<User[]>(`/users/admin/company-admins/${companyId}`),
 };

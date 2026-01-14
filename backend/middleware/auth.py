@@ -19,12 +19,21 @@ async def get_current_user(request: Request, db: AsyncSession) -> dict:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
     
     # Return user info from token
-    return {
+    user = {
         "user_id": UUID(payload.get("user_id")),
         "company_id": UUID(payload.get("company_id")) if payload.get("company_id") else None,
         "role": payload.get("role"),
         "email": payload.get("email")
     }
+    
+    # Security check: Non-SUPER_ADMIN users MUST have a company_id
+    if user["role"] != "SUPER_ADMIN" and not user["company_id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Your account is not properly configured. Please contact system administrator to assign you to a company."
+        )
+    
+    return user
 
 async def require_super_admin(request: Request, db: AsyncSession) -> dict:
     """Require the current user to be a super admin."""
@@ -41,5 +50,12 @@ async def require_company_admin(request: Request, db: AsyncSession) -> dict:
     
     if user["role"] not in ["SUPER_ADMIN", "COMPANY_ADMIN"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    
+    # Security check: COMPANY_ADMIN must have a company_id
+    if user["role"] == "COMPANY_ADMIN" and not user["company_id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Company admin account is not properly configured. Contact system administrator."
+        )
     
     return user

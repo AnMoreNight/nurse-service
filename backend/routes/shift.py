@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, Query, Response
+from fastapi import APIRouter, Depends, Request, Query, Response, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.schemas import ShiftCreate, ShiftUpdate, ShiftBulkCreate, WeeklyOffRuleCreate
 from controller.shift_controller import ShiftController
@@ -12,6 +12,11 @@ router = APIRouter(prefix="/shifts", tags=["Shifts"])
 @router.post("")
 async def create_shift(req: ShiftCreate, request: Request, db: AsyncSession = Depends(get_db)):
     user = await require_company_admin(request, db)  # Admin only
+    if not user["company_id"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail=f"User must belong to a company to create shifts. User role: {user.get('role')}, company_id: {user.get('company_id')}"
+        )
     return await ShiftController.create_shift(db, user["company_id"], req.user_id, req.shift_date, req.shift_type)
 
 @router.get("")
@@ -35,21 +40,29 @@ async def get_shifts(
 @router.put("/{shift_id}")
 async def update_shift(shift_id: UUID, req: ShiftUpdate, request: Request, db: AsyncSession = Depends(get_db)):
     user = await require_company_admin(request, db)  # Admin only
+    if not user["company_id"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User must belong to a company")
     return await ShiftController.update_shift(db, shift_id, user["company_id"], req.shift_type)
 
 @router.delete("/{shift_id}")
 async def delete_shift(shift_id: UUID, request: Request, db: AsyncSession = Depends(get_db)):
     user = await require_company_admin(request, db)  # Admin only
+    if not user["company_id"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User must belong to a company")
     return await ShiftController.delete_shift(db, shift_id, user["company_id"])
 
 @router.post("/bulk")
 async def bulk_create_shifts(req: ShiftBulkCreate, request: Request, db: AsyncSession = Depends(get_db)):
     user = await require_company_admin(request, db)  # Admin only
+    if not user["company_id"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User must belong to a company")
     return await ShiftController.bulk_create_shifts(db, user["company_id"], req.user_id, req.shifts)
 
 @router.post("/weekly-off-rules")
 async def create_weekly_off_rule(req: WeeklyOffRuleCreate, request: Request, db: AsyncSession = Depends(get_db)):
     user = await require_company_admin(request, db)  # Admin only
+    if not user["company_id"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User must belong to a company")
     # Convert day_of_week string to int
     day_map = {"Sunday": 6, "Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3, "Friday": 4,"Saturday": 5}
     day_int = day_map.get(req.day_of_week, 0)
@@ -67,6 +80,8 @@ async def get_weekly_off_rules(
 @router.post("/apply-weekly-rules")
 async def apply_weekly_rules(year: int, month: int, request: Request, db: AsyncSession = Depends(get_db)):
     user = await require_company_admin(request, db)  # Admin only
+    if not user["company_id"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User must belong to a company")
     return await ShiftController.apply_weekly_off_rules(db, user["company_id"], year, month)
 
 @router.get("/export/csv")

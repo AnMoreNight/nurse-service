@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/lib/context';
-import { companyService, userService, Company, User, UserCreate, UserUpdate } from '@/services';
+import { companyService, userService, Company, User, UserCreate, UserUpdate, UserCreateByAdmin } from '@/services';
 import {
   Building2, Users, Plus, Pencil, Trash2, X, Save,
   Mail, Phone, MapPin, UserPlus, Shield, LogOut, Key, Eye, EyeOff
@@ -27,6 +27,13 @@ export default function AdminPage() {
     admin_password: '',
     admin_name: ''
   });
+
+  // Company admin management modal
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [companyAdmins, setCompanyAdmins] = useState<User[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string>('');
 
   // User modal state
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
@@ -157,7 +164,9 @@ export default function AdminPage() {
             return;
           }
 
-          await userService.create({
+          // Use admin endpoint with company_id
+          await userService.createByAdmin({
+            company_id: newCompany.company_id,
             email: companyForm.admin_email,
             password: companyForm.admin_password,
             name: companyForm.admin_name,
@@ -248,7 +257,10 @@ export default function AdminPage() {
           alert('新規ユーザーにはパスワードが必要です');
           return;
         }
-        const createData: UserCreate = {
+        
+        // Use admin endpoint with company_id
+        const createData: UserCreateByAdmin = {
+          company_id: userForm.company_id,
           email: userForm.email,
           password: userForm.password,
           name: userForm.name,
@@ -256,7 +268,7 @@ export default function AdminPage() {
           profession: userForm.profession || undefined,
           job_title: userForm.job_title || undefined,
         };
-        await userService.create(createData);
+        await userService.createByAdmin(createData);
         alert('ユーザーを作成しました');
       }
 
@@ -280,6 +292,77 @@ export default function AdminPage() {
     } catch (error: any) {
       console.error('Failed to delete user:', error);
       alert(error.message || '削除に失敗しました');
+    }
+  };
+
+  // Company admin management handlers
+  const openAdminModal = async (company: Company) => {
+    try {
+      setSelectedCompany(company);
+      setLoading(true);
+      
+      // Load company admins and all users
+      const [admins, allUsers] = await Promise.all([
+        userService.getCompanyAdmins(company.company_id),
+        userService.getAll()
+      ]);
+      
+      setCompanyAdmins(admins);
+      // Filter available users (exclude existing admins and super admins)
+      const adminIds = new Set(admins.map(a => a.user_id));
+      setAvailableUsers(
+        allUsers.filter(u => 
+          !adminIds.has(u.user_id) && 
+          u.role !== 'SUPER_ADMIN' &&
+          u.company_id === company.company_id
+        )
+      );
+      setSelectedUserId('');
+      setIsAdminModalOpen(true);
+    } catch (error) {
+      console.error('Failed to load admin data:', error);
+      alert('管理者データの読み込みに失敗しました');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAssignAdmin = async () => {
+    if (!selectedUserId || !selectedCompany) return;
+
+    try {
+      await userService.assignCompanyAdmin({
+        company_id: selectedCompany.company_id,
+        user_id: selectedUserId
+      });
+      
+      // Reload admin list
+      await openAdminModal(selectedCompany);
+      await loadData(); // Refresh main data
+      alert('管理者を割り当てました');
+    } catch (error: any) {
+      console.error('Failed to assign admin:', error);
+      alert(error.message || '管理者の割り当てに失敗しました');
+    }
+  };
+
+  const handleRemoveAdmin = async (userId: string) => {
+    if (!confirm('この管理者権限を削除しますか？ユーザーは一般ユーザーになります。')) {
+      return;
+    }
+
+    try {
+      await userService.removeCompanyAdmin({ user_id: userId });
+      
+      // Reload admin list
+      if (selectedCompany) {
+        await openAdminModal(selectedCompany);
+      }
+      await loadData(); // Refresh main data
+      alert('管理者権限を削除しました');
+    } catch (error: any) {
+      console.error('Failed to remove admin:', error);
+      alert(error.message || '管理者権限の削除に失敗しました');
     }
   };
 
@@ -409,6 +492,13 @@ export default function AdminPage() {
                     >
                       <Pencil size={16} />
                       編集
+                    </button>
+                    <button
+                      onClick={() => openAdminModal(company)}
+                      className="flex-1 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2 text-sm"
+                    >
+                      <Shield size={16} />
+                      管理者
                     </button>
                     <button
                       onClick={() => handleDeleteCompany(company.company_id)}
@@ -744,6 +834,101 @@ export default function AdminPage() {
               >
                 <Save size={18} />
                 保存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Company Admin Management Modal */}
+      {isAdminModalOpen && selectedCompany && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-gray-200 flex-shrink-0">
+              <h3 className="text-xl font-bold text-gray-900">
+                {selectedCompany.name} - 管理者管理
+              </h3>
+              <p className="text-sm text-gray-600 mt-1">会社管理者の追加・削除</p>
+            </div>
+
+            <div className="p-6 space-y-6 overflow-y-auto flex-1">
+              {/* Current admins */}
+              <div>
+                <h4 className="text-sm font-bold text-gray-700 mb-3">現在の管理者</h4>
+                {companyAdmins.length === 0 ? (
+                  <div className="text-sm text-gray-500 bg-gray-50 rounded-lg p-4 text-center">
+                    管理者が設定されていません
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {companyAdmins.map((admin) => (
+                      <div
+                        key={admin.user_id}
+                        className="flex items-center justify-between bg-purple-50 border border-purple-200 rounded-lg p-3"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                            {admin.name.substring(0, 1)}
+                          </div>
+                          <div>
+                            <div className="font-semibold text-gray-900">{admin.name}</div>
+                            <div className="text-sm text-gray-600">{admin.email}</div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveAdmin(admin.user_id)}
+                          className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm transition-colors flex items-center gap-1"
+                        >
+                          <X size={14} />
+                          削除
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Assign new admin */}
+              <div className="border-t border-gray-200 pt-6">
+                <h4 className="text-sm font-bold text-gray-700 mb-3">新しい管理者を割り当て</h4>
+                {availableUsers.length === 0 ? (
+                  <div className="text-sm text-gray-500 bg-gray-50 rounded-lg p-4 text-center">
+                    割り当て可能なユーザーがいません
+                  </div>
+                ) : (
+                  <div className="flex gap-3">
+                    <select
+                      value={selectedUserId}
+                      onChange={(e) => setSelectedUserId(e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                    >
+                      <option value="">ユーザーを選択...</option>
+                      {availableUsers.map((user) => (
+                        <option key={user.user_id} value={user.user_id}>
+                          {user.name} ({user.email})
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={handleAssignAdmin}
+                      disabled={!selectedUserId}
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Shield size={18} />
+                      割り当て
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex-shrink-0">
+              <button
+                onClick={() => setIsAdminModalOpen(false)}
+                className="w-full px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <X size={18} />
+                閉じる
               </button>
             </div>
           </div>
