@@ -109,7 +109,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
     };
 
     const handleDragEnd = () => {
-        // Clear drag state and preview when drag ends (even without drop)
         setDragState(null);
         setDropPreview(null);
     };
@@ -293,14 +292,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
             <div id="dashboard-scroll-container" className="flex-1 overflow-auto relative overscroll-contain">
                 <div className="flex min-w-max">
-                    <div className="w-9 md:w-16 flex-shrink-0 border-r border-gray-100 bg-white sticky left-0 z-30">
-                        <div className="h-[72px] md:h-[68px] border-b border-gray-100 bg-white"></div>
+                    <div className="w-12 md:w-16 flex-shrink-0 border-r border-gray-200 bg-gray-50 sticky left-0 z-30">
+                        <div className="h-[90px] border-b border-gray-200 bg-gray-50"></div>
                         {HOURS.map(hour => (
-                            <div key={hour} className="relative text-[10px] md:text-xs text-gray-400 text-center" style={{ height: SLOT_HEIGHT }}>
-                                <span className="relative -top-2 bg-white px-1">{hour > 0 ? hour : ''}</span>
+                            <div key={hour} className="relative text-xs text-gray-500 text-center font-medium" style={{ height: SLOT_HEIGHT }}>
+                                <span className="relative -top-2 bg-gray-50 px-1">{hour > 0 ? hour : ''}</span>
                             </div>
                         ))}
-                        {isToday && <div className="absolute right-0 w-2 h-2 rounded-full bg-red-500 translate-x-1/2 z-40" style={{ top: `calc(${currentTimeTop}px + 72px)` }}></div>}
+                        {isToday && <div className="absolute right-0 w-2 h-2 rounded-full bg-red-500 translate-x-1/2 z-40" style={{ top: `calc(${currentTimeTop}px + 90px)` }}></div>}
                     </div>
 
                     {staffList.map((staff, colIndex) => {
@@ -313,37 +312,37 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         const isDragOver = dragOverColumnIndex === colIndex;
 
                         return (
-                            <div key={staff.id} className={`w-[30vw] min-w-[100px] md:w-[200px] flex-shrink-0 border-r relative group ${isHoliday ? 'bg-slate-50' : 'bg-white'} ${isDragOver ? 'border-r-4 border-r-blue-500 bg-blue-50' : 'border-gray-100'}`}>
+                            <div key={staff.id} className={`w-[200px] md:w-[220px] flex-shrink-0 border-r relative group ${isHoliday ? 'bg-gray-50' : 'bg-white'} ${isDragOver ? 'border-r-4 border-r-blue-500 bg-blue-50' : 'border-gray-200'}`}>
                                 <div
-                                    className={`h-auto border-b border-gray-100 bg-white sticky top-0 z-20 flex flex-col justify-center px-1 md:px-2 py-2 gap-1 font-medium text-gray-700 shadow-sm ${isHoliday ? 'bg-slate-100' : ''} ${!isReadOnly ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                                    className={`h-auto border-b border-gray-200 bg-white sticky top-0 z-20 flex flex-col justify-center px-3 py-3 gap-2 ${isHoliday ? 'bg-gray-50' : ''} ${!isReadOnly ? 'cursor-grab active:cursor-grabbing' : ''}`}
                                     draggable={!isReadOnly}
                                     onDragStart={(e) => handleColumnDragStart(e, colIndex)}
                                     onDragOver={(e) => handleColumnDragOver(e, colIndex)}
                                     onDragLeave={handleColumnDragLeave}
                                     onDrop={(e) => handleColumnDrop(e, colIndex)}
                                 >
-                                    <div className="flex items-center justify-between w-full pointer-events-none">
-                                        <div className="flex items-center gap-1.5 overflow-hidden flex-1 min-w-0">
-                                            {!isReadOnly && <GripVertical className="w-3 h-3 md:w-4 md:h-4 text-gray-300 shrink-0" />}
-                                            <div className={`w-5 h-5 md:w-7 md:h-7 rounded-full flex items-center justify-center text-[10px] md:text-xs font-bold text-white bg-${staff.color}-500 shadow-sm shrink-0`}>
+                                    <div className="flex items-start justify-between w-full pointer-events-none gap-2">
+                                        <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
+                                            {!isReadOnly && <GripVertical className="w-4 h-4 text-gray-300 shrink-0 mt-1" />}
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white bg-${staff.color}-500 shadow-md shrink-0`}>
                                                 {staff.avatar}
                                             </div>
                                             <div className="flex flex-col min-w-0 flex-1">
-                                                <span className="line-clamp-1 text-[10px] md:text-sm font-semibold" title={staff.name}>{staff.name}</span>
-                                                <span className="truncate text-[8px] md:text-[10px] text-gray-400 h-3">{staff.jobTitle || '\u00A0'}</span>
+                                                <span className="line-clamp-1 text-base font-bold text-gray-800" title={staff.name}>{staff.name}</span>
+                                                <span className="truncate text-xs text-gray-500 mt-0.5">{staff.jobTitle || '\u00A0'}</span>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-1 shrink-0 pointer-events-auto">
+                                        <div className="flex items-center gap-1.5 shrink-0 pointer-events-auto mt-1">
                                             <div className="relative flex items-center justify-center">
                                                 <select
                                                     disabled={isReadOnly}
-                                                    className={`appearance-none w-4 h-4 md:w-6 md:h-6 rounded-full text-[10px] font-bold text-center border focus:outline-none focus:ring-1 focus:ring-offset-0 focus:ring-indigo-400 ${isReadOnly ? 'cursor-default opacity-80' : 'cursor-pointer'} 
-                                            ${effectiveType === 'night1' ? 'bg-indigo-500 text-white border-indigo-600' : ''} 
-                                            ${effectiveType === 'night2' ? 'bg-pink-500 text-white border-pink-600' : ''} 
-                                            ${effectiveType === 'night1_holiday' ? 'bg-indigo-500 text-white border-indigo-600 ring-1 ring-gray-300' : ''} 
-                                            ${effectiveType === 'night2_holiday' ? 'bg-pink-500 text-white border-pink-600 ring-1 ring-gray-300' : ''} 
-                                            ${effectiveType === 'holiday' ? 'bg-gray-500 text-white border-gray-600' : ''} 
-                                            ${effectiveType === 'none' || effectiveType === 'work' ? 'bg-gray-100 text-gray-400 border-gray-300 hover:border-gray-400' : ''}`}
+                                                    className={`appearance-none w-7 h-7 rounded-md text-xs font-bold text-center border-2 focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-blue-400 transition-all ${isReadOnly ? 'cursor-default opacity-80' : 'cursor-pointer'} 
+                                            ${effectiveType === 'night1' ? 'bg-indigo-500 text-white border-indigo-600 shadow-sm' : ''} 
+                                            ${effectiveType === 'night2' ? 'bg-pink-500 text-white border-pink-600 shadow-sm' : ''} 
+                                            ${effectiveType === 'night1_holiday' ? 'bg-indigo-500 text-white border-indigo-600 ring-2 ring-gray-300 shadow-sm' : ''} 
+                                            ${effectiveType === 'night2_holiday' ? 'bg-pink-500 text-white border-pink-600 ring-2 ring-gray-300 shadow-sm' : ''} 
+                                            ${effectiveType === 'holiday' ? 'bg-gray-500 text-white border-gray-600 shadow-sm' : ''} 
+                                            ${effectiveType === 'none' || effectiveType === 'work' ? 'bg-white text-gray-600 border-gray-300 hover:border-gray-400 hover:bg-gray-50' : ''}`}
                                                     value={effectiveType === 'none' || effectiveType === null ? 'work' : effectiveType}
                                                     onChange={(e) => { e.stopPropagation(); onUpdateShift(staff.id, currentDate, e.target.value as ShiftType); }}
                                                     onMouseDown={(e) => e.stopPropagation()}
@@ -358,16 +357,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="flex items-center justify-center mt-0.5 px-0.5 w-full pointer-events-none">
-                                        <div className="flex items-center gap-1 text-[9px] md:text-[10px] text-gray-500 font-bold" title="訪問件数 (日次 / 月次)">
-                                            <Notebook className="w-3 h-3 text-gray-400" />
-                                            <span>日:{visitCount} / 月:{monthTotal}</span>
+                                    <div className="flex items-center justify-start w-full pointer-events-none">
+                                        <div className="flex items-center gap-1.5 text-xs text-gray-600 bg-gray-50 px-2.5 py-1 rounded-md border border-gray-200" title="訪問件数 (日次 / 月次)">
+                                            <Notebook className="w-3.5 h-3.5 text-gray-500" />
+                                            <span className="font-medium">日:{visitCount} / 月:{monthTotal}</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 {isHoliday && (
-                                    <div className="absolute top-20 left-1/2 -translate-x-1/2 z-10 px-2 md:px-3 py-0.5 md:py-1 bg-gray-500 text-white text-[10px] md:text-xs font-bold rounded-full shadow opacity-80 pointer-events-none whitespace-nowrap">
+                                    <div className="absolute top-24 left-1/2 -translate-x-1/2 z-10 px-3 py-1 bg-gray-500 text-white text-xs font-bold rounded-full shadow-md opacity-80 pointer-events-none whitespace-nowrap">
                                         {effectiveType === 'night1_holiday' ? '夜間1(休)' : effectiveType === 'night2_holiday' ? '夜間2(休)' : 'OFF'}
                                     </div>
                                 )}
@@ -390,12 +389,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                                             return (
                                                 <div
-                                                    className={`absolute rounded-sm md:rounded-md border-l-4 p-1.5 md:p-2.5 text-xs overflow-hidden z-50 pointer-events-none shadow-lg ${bgClass} ${opacity}`}
-                                                    style={{ top: dropPreview.top, height: `${Math.max(height, 30)}px`, left: '2px', width: 'calc(100% - 4px)' }}
+                                                    className={`absolute rounded-lg border-l-4 p-2.5 text-xs overflow-hidden z-50 pointer-events-none shadow-lg ${bgClass} ${opacity}`}
+                                                    style={{ top: dropPreview.top, height: `${Math.max(height, 30)}px`, left: '4px', width: 'calc(100% - 8px)' }}
                                                 >
                                                     <div className="flex justify-between items-start gap-1">
-                                                        <span className="font-bold truncate text-[11px] md:text-[13px] leading-tight">{dropPreview.time} - {endTimeStr} {visit.patientName}</span>
-                                                        {visit.recurrence === 'custom' && <Repeat className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0 text-gray-600" />}
+                                                        <span className="font-bold truncate text-sm leading-tight">{dropPreview.time} {visit.patientName}</span>
+                                                        {visit.recurrence === 'custom' && <Repeat className="w-4 h-4 flex-shrink-0 text-gray-600" />}
                                                     </div>
                                                 </div>
                                             );
@@ -405,7 +404,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                     {HOURS.map(hour => (
                                         <div
                                             key={hour}
-                                            className={`border-b border-gray-100 relative w-full ${isReadOnly ? '' : 'hover:bg-gray-50 transition-colors cursor-pointer'}`}
+                                            className={`border-b border-gray-100 relative w-full ${isReadOnly ? '' : 'hover:bg-blue-50/30 transition-colors cursor-pointer'}`}
                                             style={{ height: SLOT_HEIGHT }}
                                             onDragOver={(e) => handleDragOverWithTime(e, staff.id)}
                                             onDrop={(e) => handleContainerDrop(e, staff.id)}
@@ -419,7 +418,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                         const layout = layoutMap.get(visit.id) || { left: '0%', width: '100%' };
                                         const { bgClass, opacity } = getVisitStyles(visit, isHoliday);
                                         const isBeingDragged = dragState?.id === visit.id;
-                                        // Create unique key with index to prevent duplicates
                                         const uniqueKey = `${visit.id}-${currentDate}-${staff.id}-${visitIndex}`;
 
                                         return (
@@ -431,26 +429,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                                 onDragOver={(e) => handleDragOverWithTime(e, staff.id)}
                                                 onDrop={(e) => handleContainerDrop(e, staff.id)}
                                                 onClick={(e) => { e.stopPropagation(); onSelectVisit(visit); }}
-                                                className={`absolute rounded-sm md:rounded-md border-l-4 p-1.5 md:p-2.5 text-xs transition-all select-none overflow-hidden z-10 ${bgClass} ${opacity} ${isBeingDragged ? 'opacity-0' : ''} ${isReadOnly ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'}`}
+                                                className={`absolute rounded-lg border-l-4 p-2.5 text-xs transition-all select-none overflow-hidden z-10 ${bgClass} ${opacity} ${isBeingDragged ? 'opacity-0' : ''} ${isReadOnly ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'}`}
                                                 style={{
                                                     top: `${top}px`,
                                                     height: `${Math.max(height, 30)}px`,
-                                                    left: layout.left === '0%' ? '2px' : `calc(${layout.left} + 2px)`,
-                                                    width: layout.width === '100%' ? 'calc(100% - 4px)' : `calc(${layout.width} - 4px)`
+                                                    left: layout.left === '0%' ? '4px' : `calc(${layout.left} + 4px)`,
+                                                    width: layout.width === '100%' ? 'calc(100% - 8px)' : `calc(${layout.width} - 8px)`
                                                 }}
                                             >
                                                 <div className="flex justify-between items-start gap-1 pointer-events-none">
-                                                    <span className="font-bold truncate text-[11px] md:text-[13px] leading-snug">{visit.startTime} {visit.patientName}</span>
-                                                    {visit.recurrence === 'custom' && <Repeat className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0 text-gray-600" />}
+                                                    <span className="font-bold truncate text-sm leading-snug">{visit.startTime} {visit.patientName}</span>
+                                                    {visit.recurrence === 'custom' && <Repeat className="w-4 h-4 flex-shrink-0 text-gray-600" />}
                                                 </div>
                                                 {visit.staffMembers && visit.staffMembers.length > 1 && (
                                                     <div className="flex -space-x-1 mt-1 pointer-events-none">
                                                         {visit.staffMembers.map(s => (
-                                                            <div key={s.id} className={`w-4 h-4 md:w-5 md:h-5 rounded-full border border-white text-[8px] md:text-[9px] flex items-center justify-center text-white bg-${s.color}-500`}>{s.avatar}</div>
+                                                            <div key={s.id} className={`w-5 h-5 rounded-full border border-white text-[9px] flex items-center justify-center text-white bg-${s.color}-500`}>{s.avatar}</div>
                                                         ))}
                                                     </div>
                                                 )}
-                                                {height > 35 && visit.notes && <div className="mt-1 text-[10px] md:text-[11px] opacity-80 truncate pointer-events-none">{visit.notes}</div>}
+                                                {height > 35 && visit.notes && <div className="mt-1 text-[11px] opacity-80 truncate pointer-events-none">{visit.notes}</div>}
                                             </div>
                                         );
                                     })}
