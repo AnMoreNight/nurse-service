@@ -52,7 +52,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       {/* Mobile Header */}
       <div className="md:hidden h-14 bg-slate-900 text-white flex items-center justify-between px-4 shrink-0 z-40 shadow-md">
         <div className="flex items-center gap-2 font-bold text-lg">
-          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+          <div className="size-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
             <Image src="/image.png" alt="Logo" width={32} height={32} className="object-contain" />
           </div>
           NurseAssist
@@ -78,7 +78,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       `}>
         <div className="h-16 flex items-center justify-between px-6 border-b border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
               <Image src="/image.png" alt="Logo" width={32} height={32} className="object-contain" />
             </div>
             <span className="font-bold text-white text-lg">NurseAssist</span>
