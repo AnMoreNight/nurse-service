@@ -16,8 +16,10 @@ import { UserManagement } from './UserManagement';
 import { Toast } from './Toast';
 import { toLocalISOString } from '@/lib/constants';
 import {
-  Calendar, Notebook, LogOut, Download, Search, Users, Settings, Menu, X
+  Calendar, Notebook, LogOut, Download, Search, Users, Settings, Menu, X, UserCircle2
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { CompanySettingsView } from './CompanySettings';
 
 const NavButton = ({ active, onClick, icon, label }: any) => (
   <button
@@ -31,6 +33,7 @@ const NavButton = ({ active, onClick, icon, label }: any) => (
 );
 
 export default function NurseAppConnected() {
+  const router = useRouter();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [view, setView] = useState<'schedule' | 'shifts' | 'users' | 'settings'>('schedule');
 
@@ -46,13 +49,13 @@ export default function NurseAppConnected() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  
+
   // Debounce timer ref for shift updates
   const shiftUpdateTimerRef = useRef<NodeJS.Timeout | null>(null);
   const pendingShiftUpdatesRef = useRef<Map<string, any>>(new Map());
 
   const isReadOnly = currentUser?.role === 'NORMAL_USER';
-  const isAdmin = currentUser?.role === 'CompanyAdmin';
+  const isAdmin = currentUser?.role === 'COMPANY_ADMIN';
 
   useEffect(() => {
     const user = authService.getStoredUser();
@@ -76,17 +79,20 @@ export default function NurseAppConnected() {
       setShifts(shiftsData);
       setStatuses(statusesData);
 
-      // Load job titles from company settings
+      // Load job titles from company settings (dynamic from DB)
       if (currentUser?.company_id) {
         try {
           const { companyService } = await import('@/services/companyService');
-          const setting = await companyService.getSetting(currentUser.company_id, 'jobTitles');
-          if (setting?.value && Array.isArray(setting.value)) {
-            setJobTitles(setting.value);
+          const jobTitlesSetting = await companyService.getSetting(currentUser.company_id, 'jobTitles');
+          if (jobTitlesSetting?.value && Array.isArray(jobTitlesSetting.value)) {
+            setJobTitles(jobTitlesSetting.value);
+          } else {
+            setJobTitles([]);
           }
         } catch (error) {
-          // Setting might not exist yet, that's ok
+          // Setting might not exist yet, use empty array
           console.log('Job titles not found, using empty array');
+          setJobTitles([]);
         }
       }
     } catch (error: any) {
@@ -114,10 +120,9 @@ export default function NurseAppConnected() {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Convert backend data to frontend format - Filter only NORMAL_USER
+  // Convert backend data to frontend format - Backend already filters to NORMAL_USER only
   const staffList = useMemo(() => {
     return staff
-      .filter(s => s.role === 'NORMAL_USER') // Only show normal users, not admins
       .map(s => ({
         id: s.user_id,
         companyId: s.company_id || '',
@@ -259,9 +264,9 @@ export default function NurseAppConnected() {
     setShifts(prevShifts => {
       const existing = prevShifts.find(s => s.user_id === staffId && s.shift_date === date);
       if (existing) {
-        return prevShifts.map(s => 
-          s.user_id === staffId && s.shift_date === date 
-            ? { ...s, shift_type: type } 
+        return prevShifts.map(s =>
+          s.user_id === staffId && s.shift_date === date
+            ? { ...s, shift_type: type }
             : s
         );
       } else {
@@ -280,17 +285,17 @@ export default function NurseAppConnected() {
     // Store pending update for API call
     const key = `${staffId}-${date}`;
     pendingShiftUpdatesRef.current.set(key, { staffId, date, type });
-    
+
     // Clear existing timer
     if (shiftUpdateTimerRef.current) {
       clearTimeout(shiftUpdateTimerRef.current);
     }
-    
+
     // Set new timer for batched update (500ms debounce)
     shiftUpdateTimerRef.current = setTimeout(async () => {
       const updates = Array.from(pendingShiftUpdatesRef.current.values());
       pendingShiftUpdatesRef.current.clear();
-      
+
       try {
         // Process all pending updates - get current shifts from state
         setShifts(currentShifts => {
@@ -424,12 +429,24 @@ export default function NurseAppConnected() {
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
-          <NavButton active={view === 'schedule'} onClick={() => { setView('schedule'); setIsMobileMenuOpen(false); }} icon={<Calendar className="w-5 h-5" />} label="スケジュール" />
-          <NavButton active={view === 'shifts'} onClick={() => { setView('shifts'); setIsMobileMenuOpen(false); }} icon={<Notebook className="w-5 h-5" />} label="シフト管理" />
-          {isAdmin && <NavButton active={view === 'users'} onClick={() => { setView('users'); setIsMobileMenuOpen(false); }} icon={<Users className="w-5 h-5" />} label="ユーザー管理" />}
+          {!isReadOnly && (
+            <>
+              <NavButton active={view === 'schedule'} onClick={() => { setView('schedule'); setIsMobileMenuOpen(false); }} icon={<Calendar className="w-5 h-5" />} label="スケジュール" />
+              <NavButton active={view === 'shifts'} onClick={() => { setView('shifts'); setIsMobileMenuOpen(false); }} icon={<Notebook className="w-5 h-5" />} label="シフト管理" />
+              {isAdmin && <NavButton active={view === 'users'} onClick={() => { setView('users'); setIsMobileMenuOpen(false); }} icon={<Users className="w-5 h-5" />} label="ユーザー管理" />}
+              {isAdmin && <NavButton active={view === 'settings'} onClick={() => { setView('settings'); setIsMobileMenuOpen(false); }} icon={<Settings className="w-5 h-5" />} label="設定" />}
+            </>
+          )}
         </nav>
 
-        <div className="p-4 border-t border-slate-700">
+        <div className="p-4 border-t border-slate-700 space-y-2">
+          <button
+            onClick={() => router.push('/profile')}
+            className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-slate-700 hover:text-white rounded-lg transition-all"
+          >
+            <UserCircle2 className="w-5 h-5" />
+            <span>プロフィール</span>
+          </button>
           <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-slate-700 rounded-lg transition-all">
             <LogOut className="w-5 h-5" />
             <span>ログアウト</span>
@@ -447,6 +464,7 @@ export default function NurseAppConnected() {
             {view === 'schedule' && 'スケジュール管理'}
             {view === 'shifts' && 'シフト管理'}
             {view === 'users' && 'ユーザー管理'}
+            {view === 'settings' && '詳細設定'}
           </h2>
           <div className="flex gap-2">
             {view === 'schedule' && <button onClick={handleExportSchedules} className="px-4 py-2 bg-teal-600 hover:bg-teal-700 rounded-lg flex items-center gap-2"><Download className="w-4 h-4" />CSV</button>}
@@ -552,6 +570,44 @@ export default function NurseAppConnected() {
                     await userService.delete(id);
                     await loadData();
                     showToast('ユーザーを削除しました');
+                  }}
+                />
+              )}
+
+              {view === 'settings' && isAdmin && (
+                <CompanySettingsView
+                  settings={companySettings}
+                  isLoading={loading}
+                  onSave={async (updatedSettings) => {
+                    try {
+                      setLoading(true);
+                      const { companyService } = await import('@/services/companyService');
+                      
+                      // Save visit statuses using status bulk update API
+                      const statusItems = updatedSettings.visitStatuses.map((s: any, index: number) => ({
+                        status_id: statuses.find(st => st.status_id === s.key)?.status_id,
+                        name: s.label,
+                        color: s.color,
+                        sort_order: index
+                      }));
+                      
+                      await statusService.bulkUpdate({ statuses: statusItems });
+                      
+                      // Save job titles to company settings
+                      await companyService.upsertSetting(
+                        currentUser.company_id,
+                        'jobTitles',
+                        updatedSettings.jobTitles
+                      );
+                      
+                      // Reload data to reflect changes
+                      await loadData();
+                      showToast('設定を保存しました');
+                    } catch (error: any) {
+                      showToast(error.message || '設定の保存に失敗しました');
+                    } finally {
+                      setLoading(false);
+                    }
                   }}
                 />
               )}

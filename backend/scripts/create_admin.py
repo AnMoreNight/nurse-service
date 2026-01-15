@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv('.env')
 
-url = "http://localhost:8000/bootstrap/create-admin"
+url = "http://localhost:5000/bootstrap/create-admin"
 headers = {"X-Bootstrap-Secret": os.getenv("BOOTSTRAP_SECRET")}
 data = {
     "email": "admin@nurseservice.com",

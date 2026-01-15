@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, case
 from models.orm import User, UserInvitation
 from utils.utils import hash_password
 from fastapi import HTTPException, status
@@ -70,6 +70,10 @@ class UserController:
         # NORMAL_USER can only see themselves
         if filter_by_user:
             query = query.where(User.user_id == filter_by_user)
+        
+        # Exclude SUPER_ADMIN and COMPANY_ADMIN from user lists (they shouldn't appear in schedules/shifts)
+        # Only return NORMAL_USER role users for scheduling purposes
+        query = query.where(User.role == 'NORMAL_USER')
         
         result = await db.execute(query.order_by(User.sort_order, User.name))
         users = result.scalars().all()

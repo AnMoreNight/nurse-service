@@ -1,21 +1,23 @@
+"""Add performance indexes
+
+Revision ID: a1b2c3d4e5f6
+Revises: 4d8961528eb0
+Create Date: 2026-01-14 18:36:00.000000
+
 """
-Database Migration: Add Performance Indexes
-
-Run this migration to add indexes for better query performance.
-
-Usage:
-    alembic revision --autogenerate -m "add_performance_indexes"
-    Then replace the content with this migration.
-"""
-
 from alembic import op
 import sqlalchemy as sa
+
+# revision identifiers, used by Alembic.
+revision = 'a1b2c3d4e5f6'
+down_revision = '4d8961528eb0'
+branch_labels = None
+depends_on = None
 
 
 def upgrade():
     """Add performance indexes for multi-tenant queries"""
     
-    # Composite index on schedules for common queries
     op.create_index(
         'idx_schedules_company_date',
         'schedules',
@@ -23,7 +25,6 @@ def upgrade():
         unique=False
     )
     
-    # Index on schedule_assignments for user filtering
     op.create_index(
         'idx_schedule_assignments_user',
         'schedule_assignments',
@@ -31,7 +32,6 @@ def upgrade():
         unique=False
     )
     
-    # Composite index on shifts for date range queries
     op.create_index(
         'idx_shifts_company_date',
         'shifts',
@@ -39,7 +39,6 @@ def upgrade():
         unique=False
     )
     
-    # Index on shifts for user filtering
     op.create_index(
         'idx_shifts_user_date',
         'shifts',
@@ -47,7 +46,6 @@ def upgrade():
         unique=False
     )
     
-    # Index on users for company queries
     op.create_index(
         'idx_users_company_active',
         'users',
@@ -55,7 +53,6 @@ def upgrade():
         unique=False
     )
     
-    # Index on statuses for company queries
     op.create_index(
         'idx_statuses_company',
         'schedule_statuses',
@@ -63,7 +60,6 @@ def upgrade():
         unique=False
     )
     
-    # Index on recurring_series_id for schedule grouping
     op.create_index(
         'idx_schedules_recurring_series',
         'schedules',

@@ -554,7 +554,7 @@ export const VisitModal: React.FC<VisitModalProps> = ({
                         />
                     </div>
 
-                    {onAiQuery && !isReadOnly && (
+                    {/* {onAiQuery && !isReadOnly && (
                         <div className="flex justify-end">
                             <button
                                 onClick={() => onAiQuery({ patientName, address, date, staffIds })}
@@ -565,7 +565,7 @@ export const VisitModal: React.FC<VisitModalProps> = ({
                                 この条件でAI提案を使用
                             </button>
                         </div>
-                    )}
+                    )} */}
                 </div>
 
                 {/* Footer */}

@@ -334,14 +334,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-1 shrink-0 pointer-events-auto">
-                                            <div className="relative">
+                                            <div className="relative flex items-center justify-center">
                                                 <select
                                                     disabled={isReadOnly}
-                                                    className={`appearance-none w-4 h-4 md:w-6 md:h-6 rounded-full text-[10px] font-bold text-center border focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-400 ${isReadOnly ? 'cursor-default opacity-80' : 'cursor-pointer'} 
+                                                    className={`appearance-none w-4 h-4 md:w-6 md:h-6 rounded-full text-[10px] font-bold text-center border focus:outline-none focus:ring-1 focus:ring-offset-0 focus:ring-indigo-400 ${isReadOnly ? 'cursor-default opacity-80' : 'cursor-pointer'} 
                                             ${effectiveType === 'night1' ? 'bg-indigo-500 text-white border-indigo-600' : ''} 
                                             ${effectiveType === 'night2' ? 'bg-pink-500 text-white border-pink-600' : ''} 
-                                            ${effectiveType === 'night1_holiday' ? 'bg-indigo-500 text-white border-indigo-600 ring-2 ring-gray-300' : ''} 
-                                            ${effectiveType === 'night2_holiday' ? 'bg-pink-500 text-white border-pink-600 ring-2 ring-gray-300' : ''} 
+                                            ${effectiveType === 'night1_holiday' ? 'bg-indigo-500 text-white border-indigo-600 ring-1 ring-gray-300' : ''} 
+                                            ${effectiveType === 'night2_holiday' ? 'bg-pink-500 text-white border-pink-600 ring-1 ring-gray-300' : ''} 
                                             ${effectiveType === 'holiday' ? 'bg-gray-500 text-white border-gray-600' : ''} 
                                             ${effectiveType === 'none' || effectiveType === 'work' ? 'bg-gray-100 text-gray-400 border-gray-300 hover:border-gray-400' : ''}`}
                                                     value={effectiveType === 'none' || effectiveType === null ? 'work' : effectiveType}
@@ -373,7 +373,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                 )}
 
                                 <div className="relative w-full h-full" id={`staff-container-${staff.id}`}>
-                                    {isToday && <div className="absolute left-0 right-0 border-t-2 border-red-500 z-30 pointer-events-none opacity-80" style={{ top: `${currentTimeTop}px` }}></div>}
+                                    {isToday && <div className="absolute inset-x-0 border-t-2 border-red-500 z-30 pointer-events-none opacity-80" style={{ top: `${currentTimeTop}px` }}></div>}
 
                                     {dropPreview && dropPreview.staffId === staff.id && dragState?.visit && dropPreview.time && (
                                         (() => {
@@ -390,7 +390,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                                             return (
                                                 <div
-                                                    className={`absolute rounded-sm md:rounded-md border-l-3 md:border-l-4 p-1.5 md:p-2.5 text-xs overflow-hidden z-50 pointer-events-none shadow-lg ${bgClass} ${opacity}`}
+                                                    className={`absolute rounded-sm md:rounded-md border-l-4 p-1.5 md:p-2.5 text-xs overflow-hidden z-50 pointer-events-none shadow-lg ${bgClass} ${opacity}`}
                                                     style={{ top: dropPreview.top, height: `${Math.max(height, 30)}px`, left: '2px', width: 'calc(100% - 4px)' }}
                                                 >
                                                     <div className="flex justify-between items-start gap-1">
@@ -431,8 +431,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                                 onDragOver={(e) => handleDragOverWithTime(e, staff.id)}
                                                 onDrop={(e) => handleContainerDrop(e, staff.id)}
                                                 onClick={(e) => { e.stopPropagation(); onSelectVisit(visit); }}
-                                                className={`absolute rounded-sm md:rounded-md border-l-3 md:border-l-4 p-1.5 md:p-2.5 text-xs transition-all select-none overflow-hidden z-10 ${bgClass} ${opacity} ${isBeingDragged ? 'opacity-0' : ''} ${isReadOnly ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'}`}
-                                                style={{ top: `${top}px`, height: `${Math.max(height, 30)}px`, left: layout.left, width: `calc(${layout.width} - 2px)`, marginLeft: '1px' }}
+                                                className={`absolute rounded-sm md:rounded-md border-l-4 p-1.5 md:p-2.5 text-xs transition-all select-none overflow-hidden z-10 ${bgClass} ${opacity} ${isBeingDragged ? 'opacity-0' : ''} ${isReadOnly ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'}`}
+                                                style={{
+                                                    top: `${top}px`,
+                                                    height: `${Math.max(height, 30)}px`,
+                                                    left: layout.left === '0%' ? '2px' : `calc(${layout.left} + 2px)`,
+                                                    width: layout.width === '100%' ? 'calc(100% - 4px)' : `calc(${layout.width} - 4px)`
+                                                }}
                                             >
                                                 <div className="flex justify-between items-start gap-1 pointer-events-none">
                                                     <span className="font-bold truncate text-[11px] md:text-[13px] leading-snug">{visit.startTime} {visit.patientName}</span>

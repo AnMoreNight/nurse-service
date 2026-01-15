@@ -88,7 +88,7 @@ export const userService = {
   update: (id: string, data: UserUpdate) => apiClient.patch(`/users/${id}`, data),
 
   updateSortOrders: (sortOrders: UserSortOrder[]) =>
-    apiClient.post('/users/sort-order', sortOrders),
+    apiClient.put('/users/sort-order', sortOrders),
 
   delete: (id: string) => apiClient.delete(`/users/${id}`),
 

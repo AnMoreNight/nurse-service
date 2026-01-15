@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Staff, ShiftAssignment, ShiftType, CompanySettings } from '@/lib/types';
 import { ChevronLeft, ChevronRight, Moon, Sun, Palmtree, Plus, Edit, Trash2, Copy, Check, Users } from 'lucide-react';
 import { getEffectiveShiftType, toLocalISOString } from '@/lib/constants';
@@ -27,6 +27,8 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
   });
 
   const [showCopyConfirm, setShowCopyConfirm] = useState(false);
+  const [activeCell, setActiveCell] = useState<{ staffId: string; date: string; rect?: DOMRect } | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -36,26 +38,30 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
   const prevMonth = () => setViewDate(new Date(year, month - 1, 1));
   const nextMonth = () => setViewDate(new Date(year, month + 1, 1));
 
-  const cycleShiftType = (staffMember: Staff, dayIndex: number) => {
+  const handleCellClick = (e: React.MouseEvent, staffId: string, date: string) => {
     if (isReadOnly) return;
-
-    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayIndex).padStart(2, '0')}`;
-    const effective = getEffectiveShiftType(staffMember, dateStr, shifts);
-
-    // Cycle: none -> night1 -> night2 -> holiday -> night1_holiday -> night2_holiday -> work -> none
-    // 'work' is used to override a default holiday back to a regular working day.
-    // 'night(1|2)_holiday' combines night duty with the day also being a holiday.
-    let nextType: ShiftType = null;
-    if (effective === 'none' || effective === null) nextType = 'night1';
-    else if (effective === 'night1') nextType = 'night2';
-    else if (effective === 'night2') nextType = 'holiday';
-    else if (effective === 'holiday') nextType = 'night1_holiday';
-    else if (effective === 'night1_holiday') nextType = 'night2_holiday';
-    else if (effective === 'night2_holiday') nextType = 'work';
-    else if (effective === 'work') nextType = null; // Back to default
-
-    onUpdateShift(staffMember.id, dateStr, nextType);
+    e.stopPropagation();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setActiveCell({ staffId, date, rect });
   };
+
+  const handleShiftSelect = (type: ShiftType) => {
+    if (!activeCell) return;
+    onUpdateShift(activeCell.staffId, activeCell.date, type);
+    setActiveCell(null);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setActiveCell(null);
+      }
+    };
+    if (activeCell) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activeCell]);
 
   const renderCellIcon = (type: ShiftType | 'none') => {
     if (type === 'night1' || type === 'night2') {
@@ -268,12 +274,13 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
                   const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                   const effective = getEffectiveShiftType(member, dateStr, shifts);
                   const isToday = dateStr === toLocalISOString(new Date());
+                  const isActive = activeCell?.staffId === member.id && activeCell?.date === dateStr;
 
                   return (
                     <td
                       key={day}
-                      onClick={() => cycleShiftType(member, day)}
-                      className={`p-1 text-center border-r border-b border-gray-100 cursor-pointer hover:bg-gray-100 ${isToday ? 'bg-blue-50/50' : ''}`}
+                      onClick={(e) => handleCellClick(e, member.id, dateStr)}
+                      className={`p-1 text-center border-r border-b border-gray-100 cursor-pointer hover:bg-gray-100 relative ${isToday ? 'bg-blue-50/50' : ''} ${isActive ? 'bg-blue-100 ring-2 ring-blue-400 ring-inset' : ''}`}
                     >
                       <div className="flex justify-center">
                         {renderCellIcon(effective)}
@@ -297,6 +304,83 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
           </div>
         )
       }
+
+      {/* Shift Type Dropdown */}
+      {activeCell && activeCell.rect && (
+        <div
+          ref={dropdownRef}
+          className="fixed z-50 bg-white rounded-lg shadow-xl border border-gray-200 py-2 min-w-[200px]"
+          style={{
+            top: `${activeCell.rect.bottom + window.scrollY + 5}px`,
+            left: `${activeCell.rect.left + window.scrollX}px`,
+          }}
+        >
+          <div className="px-3 py-2 text-xs font-semibold text-gray-500 border-b">シフト選択</div>
+          <button
+            onClick={() => handleShiftSelect(null)}
+            className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-sm"
+          >
+            <div className="w-6 h-6"></div>
+            <span className="text-gray-600">なし（デフォルト）</span>
+          </button>
+          <button
+            onClick={() => handleShiftSelect('work')}
+            className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-sm"
+          >
+            <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
+              <Sun className="w-3.5 h-3.5 text-emerald-600" />
+            </div>
+            <span className="text-gray-700">出勤</span>
+          </button>
+          <button
+            onClick={() => handleShiftSelect('holiday')}
+            className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-sm"
+          >
+            <div className="w-6 h-6 rounded-full bg-pink-100 flex items-center justify-center">
+              <Palmtree className="w-3.5 h-3.5 text-pink-600" />
+            </div>
+            <span className="text-gray-700">公休</span>
+          </button>
+          <button
+            onClick={() => handleShiftSelect('night1')}
+            className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-sm"
+          >
+            <div className="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center">
+              <Moon className="w-3.5 h-3.5 text-white" />
+            </div>
+            <span className="text-gray-700">夜間待機1</span>
+          </button>
+          <button
+            onClick={() => handleShiftSelect('night2')}
+            className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-sm"
+          >
+            <div className="w-6 h-6 rounded-full bg-slate-500 flex items-center justify-center">
+              <Moon className="w-3.5 h-3.5 text-white" />
+            </div>
+            <span className="text-gray-700">夜間待機2</span>
+          </button>
+          <button
+            onClick={() => handleShiftSelect('night1_holiday')}
+            className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-sm"
+          >
+            <div className="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center relative">
+              <Moon className="w-3.5 h-3.5 text-white" />
+              <Palmtree className="w-2.5 h-2.5 text-pink-400 absolute -bottom-0.5 -right-0.5" />
+            </div>
+            <span className="text-gray-700">夜間待機1（休）</span>
+          </button>
+          <button
+            onClick={() => handleShiftSelect('night2_holiday')}
+            className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-sm"
+          >
+            <div className="w-6 h-6 rounded-full bg-slate-500 flex items-center justify-center relative">
+              <Moon className="w-3.5 h-3.5 text-white" />
+              <Palmtree className="w-2.5 h-2.5 text-pink-400 absolute -bottom-0.5 -right-0.5" />
+            </div>
+            <span className="text-gray-700">夜間待機2（休）</span>
+          </button>
+        </div>
+      )}
     </div >
   );
 };

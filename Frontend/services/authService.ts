@@ -60,4 +60,22 @@ export const authService = {
       localStorage.setItem('user', JSON.stringify(user));
     }
   },
+
+  setStoredUser: (user: any) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('user', JSON.stringify(user));
+    }
+  },
+
+  getProfile: async () => {
+    return await apiClient.get('/auth/profile');
+  },
+
+  updateProfile: async (data: { name?: string; email?: string }) => {
+    return await apiClient.put('/auth/profile', data);
+  },
+
+  changePassword: async (data: { current_password: string; new_password: string }) => {
+    return await apiClient.post('/auth/change-password', data);
+  },
 };

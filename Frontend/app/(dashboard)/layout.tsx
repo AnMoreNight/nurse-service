@@ -130,7 +130,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             </button>
           )} */}
 
-          <div className="flex items-center gap-3 px-2 mb-4 overflow-hidden">
+          <div className="flex items-center gap-3 px-2 mb-4 overflow-hidden"
+            onClick={()=> router.push('/profile')}
+          >
             <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center shrink-0">
               <User size={16} />
             </div>

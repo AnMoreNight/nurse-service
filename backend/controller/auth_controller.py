@@ -132,4 +132,85 @@ class AuthController:
         await db.commit()
         await db.refresh(new_user)
         
-        return {"message": "Account created successfully", "user_id": str(new_user.user_id)}
+        return {"message": "Account created successfully", "user_id": str(new_user.user_id)}    
+    @staticmethod
+    async def get_profile(db: AsyncSession, user_id: UUID):
+        """Get user profile"""
+        result = await db.execute(
+            select(User).where(User.user_id == user_id)
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        
+        return {
+            "user_id": str(user.user_id),
+            "email": user.email,
+            "name": user.name,
+            "role": user.role,
+            "company_id": str(user.company_id) if user.company_id else None,
+            "profession": user.profession,
+            "job_title": user.job_title,
+            "display_color": user.display_color,
+            "avatar_url": user.avatar_url,
+            "join_date": str(user.join_date) if user.join_date else None,
+            "left_date": str(user.left_date) if user.left_date else None,
+            "created_at": user.created_at.isoformat() if user.created_at else None
+        }
+    
+    @staticmethod
+    async def update_profile(db: AsyncSession, user_id: UUID, name: str = None, email: str = None):
+        """Update user profile (name and email)"""
+        result = await db.execute(
+            select(User).where(User.user_id == user_id)
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        
+        # Check if email is already taken by another user
+        if email and email != user.email:
+            existing = await db.execute(
+                select(User).where(User.email == email, User.user_id != user_id)
+            )
+            if existing.scalar_one_or_none():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Email already in use"
+                )
+            user.email = email
+        
+        if name:
+            user.name = name
+        
+        user.updated_at = datetime.utcnow()
+        await db.commit()
+        
+        return {"message": "Profile updated successfully"}
+    
+    @staticmethod
+    async def change_password(db: AsyncSession, user_id: UUID, current_password: str, new_password: str):
+        """Change user password"""
+        result = await db.execute(
+            select(User).where(User.user_id == user_id)
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        
+        # Verify current password
+        if not verify_password(current_password, user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current password is incorrect"
+            )
+        
+        # Update password
+        user.password_hash = hash_password(new_password)
+        user.updated_at = datetime.utcnow()
+        await db.commit()
+        
+        return {"message": "Password changed successfully"}

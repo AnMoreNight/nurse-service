@@ -50,6 +50,21 @@ class InvitationAccept(BaseModel):
     password: str
     name: str
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+class UpdateProfileRequest(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    
+    @field_validator('email')
+    @classmethod
+    def validate_email_field(cls, v):
+        if v:
+            return validate_email(v)
+        return v
+
 # Company Models
 class CompanyCreate(BaseModel):
     name: str

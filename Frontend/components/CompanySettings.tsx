@@ -22,6 +22,12 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
   // New Job Title Form State
   const [newJobTitle, setNewJobTitle] = useState('');
 
+  // Sync with settings prop when it changes
+  useEffect(() => {
+    setVisitStatuses(settings.visitStatuses);
+    setJobTitles(settings.jobTitles);
+  }, [settings]);
+
   // Updated Default Keys based on new requirements
   const DEFAULT_KEYS = ['REGULAR_NURSE', 'REGULAR_REHAB', 'EMERGENCY', 'OTHER', 'CANCELLED'];
 
@@ -49,10 +55,6 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
   };
 
   const handleDeleteStatus = (key: string) => {
-    if (DEFAULT_KEYS.includes(key)) {
-      alert('システムデフォルトのステータスは削除できません。');
-      return;
-    }
     if (window.confirm('このステータスを削除しますか？')) {
       setVisitStatuses(visitStatuses.filter(s => s.key !== key));
     }
@@ -165,14 +167,12 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      {!DEFAULT_KEYS.includes(status.key) && (
-                        <button
-                          onClick={() => handleDeleteStatus(status.key)}
-                          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => handleDeleteStatus(status.key)}
+                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}
