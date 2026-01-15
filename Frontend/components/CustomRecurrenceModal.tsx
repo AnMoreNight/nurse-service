@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { RecurrenceRule, RecurrenceFrequency } from '@/lib/types';
 import { X } from 'lucide-react';
+import { useModal } from '@/contexts/ModalContext';
 
 interface CustomRecurrenceModalProps {
     initialRule?: RecurrenceRule;
@@ -12,6 +13,7 @@ interface CustomRecurrenceModalProps {
 }
 
 export const CustomRecurrenceModal: React.FC<CustomRecurrenceModalProps> = ({ initialRule, startDate, onSave, onClose }) => {
+    const { showAlert } = useModal();
     // Default to monthly if passed rule is daily or weekly, or undefined.
     // Weekly is now handled only by the main VisitModal dropdown, not custom.
     const [frequency, setFrequency] = useState<RecurrenceFrequency>(
@@ -59,7 +61,7 @@ export const CustomRecurrenceModal: React.FC<CustomRecurrenceModalProps> = ({ in
         }
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         // Basic validation
         let finalWeekDays = weekDays;
         let finalWeekNos = weekNos;
@@ -75,11 +77,11 @@ export const CustomRecurrenceModal: React.FC<CustomRecurrenceModalProps> = ({ in
             } else {
                 // Monthly by weekday mode: validate selections
                 if (finalWeekDays.length === 0) {
-                    alert('曜日を選択してください');
+                    await showAlert('曜日を選択してください', 'error');
                     return;
                 }
                 if (finalWeekNos.length === 0) {
-                    alert('週（第1〜5）を選択してください');
+                    await showAlert('週（第1〜5）を選択してください', 'error');
                     return;
                 }
                 finalDayOfMonth = undefined;

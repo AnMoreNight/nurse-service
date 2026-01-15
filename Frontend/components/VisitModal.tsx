@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { VisitWithStaff, Staff, RecurrenceRule, RecurrenceScope, CompanySettings } from '@/lib/types';
 import { X, Save, User, Trash2, FileText, Repeat, Users, Check, MapPin, ExternalLink, Copy, Calendar, Sparkles, AlertTriangle } from 'lucide-react';
 import { RecurrenceScopeModal } from './RecurrenceScopeModal';
+import { useModal } from '@/contexts/ModalContext';
 
 interface VisitModalProps {
     visit: VisitWithStaff;
@@ -30,6 +31,7 @@ export const VisitModal: React.FC<VisitModalProps> = ({
 }) => {
     const isNew = visit.id.startsWith('new_') || visit.id.startsWith('ai_') || visit.id.startsWith('dup_');
     const isRecurring = visit.recurrence === 'custom';
+    const { showAlert, showConfirm } = useModal();
 
     const [date, setDate] = useState(visit.date);
     const [patientName, setPatientName] = useState(visit.patientName);
@@ -129,14 +131,14 @@ export const VisitModal: React.FC<VisitModalProps> = ({
         }
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!date || !startTime || !endTime) {
-            alert('日付と時間は必須です');
+            await showAlert('日付と時間は必須です', 'error');
             return;
         }
 
         if (staffIds.length === 0) {
-            alert('担当スタッフを選択してください');
+            await showAlert('担当スタッフを選択してください', 'error');
             return;
         }
 
@@ -165,11 +167,12 @@ export const VisitModal: React.FC<VisitModalProps> = ({
         onClose();
     };
 
-    const handleDelete = () => {
+    const handleDelete = async () => {
         if (!isNew && isRecurring) {
             setShowScopeModal('delete');
         } else {
-            if (window.confirm('この予定を削除しますか？')) {
+            const confirmed = await showConfirm('この予定を削除しますか？');
+            if (confirmed) {
                 onDelete(visit.id, 'this');
                 onClose();
             }

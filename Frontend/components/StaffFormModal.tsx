@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Staff } from '@/lib/types';
 import { X, Save, Calendar, Briefcase } from 'lucide-react';
+import { useModal } from '@/contexts/ModalContext';
 
 interface StaffFormModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ interface StaffFormModalProps {
 export const StaffFormModal: React.FC<StaffFormModalProps> = ({
   isOpen, onClose, onSave, initialStaff, currentDate, jobTitles
 }) => {
+  const { showAlert } = useModal();
   const [name, setName] = useState('');
   const [jobTitle, setJobTitle] = useState('');
   const [defaultHolidays, setDefaultHolidays] = useState<number[]>([]);
@@ -46,10 +48,10 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({
     );
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) return;
     if (!joinedDate) {
-      alert("入職日を入力してください");
+      await showAlert("入職日を入力してください", 'error');
       return;
     }
     onSave(name, jobTitle, defaultHolidays, joinedDate);

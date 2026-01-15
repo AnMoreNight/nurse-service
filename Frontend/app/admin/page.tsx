@@ -8,10 +8,12 @@ import {
   Building2, Users, Plus, Pencil, Trash2, X, Save,
   Mail, Phone, MapPin, UserPlus, Shield, LogOut, Key, Eye, EyeOff
 } from 'lucide-react';
+import { useModal } from '@/contexts/ModalContext';
 
 export default function AdminPage() {
   const router = useRouter();
   const { currentUser, isLoading } = useApp();
+  const { showAlert, showConfirm } = useModal();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +81,7 @@ export default function AdminPage() {
       setCompanies(companiesData);
     } catch (error) {
       console.error('Failed to load companies:', error);
-      alert('会社データの読み込みに失敗しました');
+      await showAlert('会社データの読み込みに失敗しました', 'error');
     } finally {
       setLoading(false);
     }
@@ -93,7 +95,7 @@ export default function AdminPage() {
       setUsers(usersData);
     } catch (error) {
       console.error('Failed to load users:', error);
-      alert('ユーザーデータの読み込みに失敗しました');
+      await showAlert('ユーザーデータの読み込みに失敗しました', 'error');
     } finally {
       setLoading(false);
     }
@@ -110,7 +112,7 @@ export default function AdminPage() {
       setUsers(usersData);
     } catch (error) {
       console.error('Failed to load data:', error);
-      alert('データの読み込みに失敗しました');
+      await showAlert('データの読み込みに失敗しました', 'error');
     } finally {
       setLoading(false);
     }
@@ -143,7 +145,7 @@ export default function AdminPage() {
   const handleSaveCompany = async () => {
     try {
       if (!companyForm.name.trim()) {
-        alert('会社名は必須です');
+        await showAlert('会社名は必須です', 'error');
         return;
       }
 
@@ -160,7 +162,7 @@ export default function AdminPage() {
         // Create admin user for this company if requested
         if (companyForm.create_admin) {
           if (!companyForm.admin_email || !companyForm.admin_password || !companyForm.admin_name) {
-            alert('管理者を作成する場合は、名前、メール、パスワードが必要です');
+            await showAlert('管理者を作成する場合は、名前、メール、パスワードが必要です', 'error');
             return;
           }
 
@@ -177,25 +179,26 @@ export default function AdminPage() {
 
       await loadData();
       setIsCompanyModalOpen(false);
-      alert(editingCompany ? '会社を更新しました' : '会社を作成しました');
+      await showAlert(editingCompany ? '会社を更新しました' : '会社を作成しました', 'success');
     } catch (error: any) {
       console.error('Failed to save company:', error);
-      alert(error.message || '保存に失敗しました');
+      await showAlert(error.message || '保存に失敗しました', 'error');
     }
   };
 
   const handleDeleteCompany = async (companyId: string) => {
-    if (!confirm('本当にこの会社を削除しますか？関連するすべてのデータが削除されます。')) {
+    const confirmed = await showConfirm('本当にこの会社を削除しますか？関連するすべてのデータが削除されます。');
+    if (!confirmed) {
       return;
     }
 
     try {
       await companyService.delete(companyId);
       await loadData();
-      alert('会社を削除しました');
+      await showAlert('会社を削除しました', 'success');
     } catch (error: any) {
       console.error('Failed to delete company:', error);
-      alert(error.message || '削除に失敗しました');
+      await showAlert(error.message || '削除に失敗しました', 'error');
     }
   };
 
@@ -231,13 +234,13 @@ export default function AdminPage() {
   const handleSaveUser = async () => {
     try {
       if (!userForm.name.trim() || !userForm.email.trim()) {
-        alert('名前とメールアドレスは必須です');
+        await showAlert('名前とメールアドレスは必須です', 'error');
         return;
       }
 
       // Validate company for non-SUPER_ADMIN users
       if (!editingUser && userForm.role !== 'SUPER_ADMIN' && !userForm.company_id) {
-        alert('会社を選択してください');
+        await showAlert('会社を選択してください', 'error');
         return;
       }
 
@@ -250,14 +253,14 @@ export default function AdminPage() {
           job_title: userForm.job_title || undefined,
         };
         await userService.update(editingUser.user_id, updateData);
-        alert('ユーザーを更新しました');
+        await showAlert('ユーザーを更新しました', 'success');
       } else {
         // Create new user
         if (!userForm.password) {
-          alert('新規ユーザーにはパスワードが必要です');
+          await showAlert('新規ユーザーにはパスワードが必要です', 'error');
           return;
         }
-        
+
         // Use admin endpoint with company_id
         const createData: UserCreateByAdmin = {
           company_id: userForm.company_id,
@@ -269,29 +272,30 @@ export default function AdminPage() {
           job_title: userForm.job_title || undefined,
         };
         await userService.createByAdmin(createData);
-        alert('ユーザーを作成しました');
+        await showAlert('ユーザーを作成しました', 'success');
       }
 
       await loadData();
       setIsUserModalOpen(false);
     } catch (error: any) {
       console.error('Failed to save user:', error);
-      alert(error.message || '保存に失敗しました');
+      await showAlert(error.message || '保存に失敗しました', 'error');
     }
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm('本当にこのユーザーを削除しますか？')) {
+    const confirmed = await showConfirm('本当にこのユーザーを削除しますか？');
+    if (!confirmed) {
       return;
     }
 
     try {
       await userService.delete(userId);
       await loadData();
-      alert('ユーザーを削除しました');
+      await showAlert('ユーザーを削除しました', 'success');
     } catch (error: any) {
       console.error('Failed to delete user:', error);
-      alert(error.message || '削除に失敗しました');
+      await showAlert(error.message || '削除に失敗しました', 'error');
     }
   };
 
@@ -300,19 +304,19 @@ export default function AdminPage() {
     try {
       setSelectedCompany(company);
       setLoading(true);
-      
+
       // Load company admins and all users
       const [admins, allUsers] = await Promise.all([
         userService.getCompanyAdmins(company.company_id),
         userService.getAll()
       ]);
-      
+
       setCompanyAdmins(admins);
       // Filter available users (exclude existing admins and super admins)
       const adminIds = new Set(admins.map(a => a.user_id));
       setAvailableUsers(
-        allUsers.filter(u => 
-          !adminIds.has(u.user_id) && 
+        allUsers.filter(u =>
+          !adminIds.has(u.user_id) &&
           u.role !== 'SUPER_ADMIN' &&
           u.company_id === company.company_id
         )
@@ -321,7 +325,7 @@ export default function AdminPage() {
       setIsAdminModalOpen(true);
     } catch (error) {
       console.error('Failed to load admin data:', error);
-      alert('管理者データの読み込みに失敗しました');
+      await showAlert('管理者データの読み込みに失敗しました', 'error');
     } finally {
       setLoading(false);
     }
@@ -335,34 +339,35 @@ export default function AdminPage() {
         company_id: selectedCompany.company_id,
         user_id: selectedUserId
       });
-      
+
       // Reload admin list
       await openAdminModal(selectedCompany);
       await loadData(); // Refresh main data
-      alert('管理者を割り当てました');
+      await showAlert('管理者を割り当てました', 'success');
     } catch (error: any) {
       console.error('Failed to assign admin:', error);
-      alert(error.message || '管理者の割り当てに失敗しました');
+      await showAlert(error.message || '管理者の割り当てに失敗しました', 'error');
     }
   };
 
   const handleRemoveAdmin = async (userId: string) => {
-    if (!confirm('この管理者権限を削除しますか？ユーザーは一般ユーザーになります。')) {
+    const confirmed = await showConfirm('この管理者権限を削除しますか？ユーザーは一般ユーザーになります。');
+    if (!confirmed) {
       return;
     }
 
     try {
       await userService.removeCompanyAdmin({ user_id: userId });
-      
+
       // Reload admin list
       if (selectedCompany) {
         await openAdminModal(selectedCompany);
       }
       await loadData(); // Refresh main data
-      alert('管理者権限を削除しました');
+      await showAlert('管理者権限を削除しました', 'success');
     } catch (error: any) {
       console.error('Failed to remove admin:', error);
-      alert(error.message || '管理者権限の削除に失敗しました');
+      await showAlert(error.message || '管理者権限の削除に失敗しました', 'error');
     }
   };
 

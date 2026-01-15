@@ -18,6 +18,7 @@ import { VisitWithStaff, Staff, RecurrenceScope, Visit, ShiftType, ScheduleSugge
 import { X, Loader2 } from 'lucide-react';
 import { scheduleService } from '@/services/scheduleService';
 import { shiftService } from '@/services/shiftService';
+import { useModal } from '@/contexts/ModalContext';
 
 function DashboardContent() {
   const {
@@ -56,6 +57,7 @@ function DashboardContent() {
   const [staffFormState, setStaffFormState] = useState<{ isOpen: boolean, initialStaff?: Staff }>({ isOpen: false });
   const [suggestionState, setSuggestionState] = useState<{ isOpen: boolean; initialValues?: any }>({ isOpen: false });
   const [localToast, setLocalToast] = useState<string | null>(null);
+  const { showConfirm } = useModal();
 
   const companyId = currentUser?.company_id;
 
@@ -305,7 +307,8 @@ function DashboardContent() {
   };
 
   const handleDeleteStaff = async (staffId: string) => {
-    if (window.confirm('このスタッフを削除（退職処理）しますか？')) {
+    const confirmed = await showConfirm('このスタッフを削除（退職処理）しますか？');
+    if (confirmed) {
       try {
         await deleteStaff(staffId);
       } catch (err) {
@@ -395,7 +398,7 @@ function DashboardContent() {
                 console.log('[Settings Save] Received settings:', newSettings);
                 console.log('[Settings Save] JobTitles:', newSettings.jobTitles);
                 console.log('[Settings Save] Current user:', currentUser);
-                
+
                 // Import the required services
                 const { statusService } = await import('@/services/statusService');
                 const { companyService } = await import('@/services/companyService');
@@ -417,7 +420,7 @@ function DashboardContent() {
                 // Save statuses
                 await statusService.bulkUpdate({ statuses: statusItems });
                 console.log('[Settings Save] Statuses saved successfully');
-                
+
                 // Save jobTitles separately
                 if (currentUser?.company_id) {
                   console.log('[Settings Save] Saving jobTitles to company:', currentUser.company_id);

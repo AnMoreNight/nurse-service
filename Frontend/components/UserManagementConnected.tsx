@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '@/lib/context';
 import { userService, User, UserCreate, UserUpdate } from '@/services';
 import { Plus, Pencil, Trash2, X, Save, Mail, Briefcase, Users as UsersIcon } from 'lucide-react';
+import { useModal } from '@/contexts/ModalContext';
 
 interface UserManagementConnectedProps {
   companyId: string;
@@ -11,6 +12,7 @@ interface UserManagementConnectedProps {
 
 export const UserManagementConnected: React.FC<UserManagementConnectedProps> = ({ companyId }) => {
   const { currentUser } = useApp();
+  const { showAlert, showConfirm } = useModal();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -38,7 +40,7 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
       setUsers(companyUsers);
     } catch (error) {
       console.error('Failed to load users:', error);
-      alert('ユーザーの読み込みに失敗しました');
+      await showAlert('ユーザーの読み込みに失敗しました', 'error');
     } finally {
       setLoading(false);
     }
@@ -74,7 +76,7 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
   const handleSave = async () => {
     try {
       if (!formData.name.trim() || !formData.email.trim()) {
-        alert('名前とメールアドレスは必須です');
+        await showAlert('名前とメールアドレスは必須です', 'error');
         return;
       }
 
@@ -91,7 +93,7 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
       } else {
         // Create new user
         if (!formData.password) {
-          alert('新規ユーザーにはパスワードが必要です');
+          await showAlert('新規ユーザーにはパスワードが必要です', 'error');
           return;
         }
         const createData: UserCreate = {
@@ -108,25 +110,26 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
 
       await loadUsers();
       setIsModalOpen(false);
-      alert(editingUser ? 'ユーザーを更新しました' : 'ユーザーを追加しました');
+      await showAlert(editingUser ? 'ユーザーを更新しました' : 'ユーザーを追加しました', 'success');
     } catch (error: any) {
       console.error('Failed to save user:', error);
-      alert(error.message || '保存に失敗しました');
+      await showAlert(error.message || '保存に失敗しました', 'error');
     }
   };
 
   const handleDelete = async (userId: string) => {
-    if (!confirm('本当にこのユーザーを削除しますか？')) {
+    const confirmed = await showConfirm('本当にこのユーザーを削除しますか？');
+    if (!confirmed) {
       return;
     }
 
     try {
       await userService.delete(userId);
       await loadUsers();
-      alert('ユーザーを削除しました');
+      await showAlert('ユーザーを削除しました', 'success');
     } catch (error: any) {
       console.error('Failed to delete user:', error);
-      alert(error.message || '削除に失敗しました');
+      await showAlert(error.message || '削除に失敗しました', 'error');
     }
   };
 
