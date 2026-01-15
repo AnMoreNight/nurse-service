@@ -20,14 +20,20 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport }) =
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(nextMonthStr);
   const [exportType, setExportType] = useState<'visits' | 'shifts'>('visits');
+  const [exporting, setExporting] = useState(false);
 
   const handleExport = async () => {
     if (startDate > endDate) {
       await showAlert('終了日は開始日より後の日付を指定してください。', 'error');
       return;
     }
-    onExport(exportType, startDate, endDate);
-    onClose();
+    try {
+      setExporting(true);
+      await onExport(exportType, startDate, endDate);
+      onClose();
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -112,9 +118,22 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport }) =
           <button onClick={onClose} className="px-5 py-2 text-gray-600 hover:bg-gray-200 rounded-lg font-bold transition-colors text-sm">
             キャンセル
           </button>
-          <button onClick={handleExport} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-md transition-transform active:scale-95 flex items-center gap-2 text-sm">
-            <Download className="w-4 h-4" />
-            CSV出力
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white rounded-lg font-bold shadow-md transition-transform active:scale-95 flex items-center gap-2 text-sm"
+          >
+            {exporting ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                出力中...
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4" />
+                CSV出力
+              </>
+            )}
           </button>
         </div>
 

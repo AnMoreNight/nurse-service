@@ -17,6 +17,7 @@ export default function AdminPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'companies' | 'users'>('companies');
 
   // Company modal state
@@ -149,6 +150,8 @@ export default function AdminPage() {
         return;
       }
 
+      setSaving(true);
+
       if (editingCompany) {
         await companyService.update(editingCompany.company_id, {
           name: companyForm.name,
@@ -183,6 +186,8 @@ export default function AdminPage() {
     } catch (error: any) {
       console.error('Failed to save company:', error);
       await showAlert(error.message || '保存に失敗しました', 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -193,12 +198,15 @@ export default function AdminPage() {
     }
 
     try {
+      setSaving(true);
       await companyService.delete(companyId);
       await loadData();
       await showAlert('会社を削除しました', 'success');
     } catch (error: any) {
       console.error('Failed to delete company:', error);
       await showAlert(error.message || '削除に失敗しました', 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -244,6 +252,8 @@ export default function AdminPage() {
         return;
       }
 
+      setSaving(true);
+
       if (editingUser) {
         // Update existing user
         const updateData: UserUpdate = {
@@ -280,6 +290,8 @@ export default function AdminPage() {
     } catch (error: any) {
       console.error('Failed to save user:', error);
       await showAlert(error.message || '保存に失敗しました', 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -290,12 +302,15 @@ export default function AdminPage() {
     }
 
     try {
+      setSaving(true);
       await userService.delete(userId);
       await loadData();
       await showAlert('ユーザーを削除しました', 'success');
     } catch (error: any) {
       console.error('Failed to delete user:', error);
       await showAlert(error.message || '削除に失敗しました', 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -684,10 +699,20 @@ export default function AdminPage() {
               </button>
               <button
                 onClick={handleSaveCompany}
-                className="flex-1 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                disabled={saving}
+                className="flex-1 px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2"
               >
-                <Save size={18} />
-                保存
+                {saving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    保存中...
+                  </>
+                ) : (
+                  <>
+                    <Save size={18} />
+                    保存
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -835,10 +860,20 @@ export default function AdminPage() {
               </button>
               <button
                 onClick={handleSaveUser}
-                className="flex-1 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                disabled={saving}
+                className="flex-1 px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2"
               >
-                <Save size={18} />
-                保存
+                {saving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    保存中...
+                  </>
+                ) : (
+                  <>
+                    <Save size={18} />
+                    保存
+                  </>
+                )}
               </button>
             </div>
           </div>

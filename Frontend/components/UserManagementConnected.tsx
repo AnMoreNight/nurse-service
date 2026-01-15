@@ -15,6 +15,7 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
   const { showAlert, showConfirm } = useModal();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [formData, setFormData] = useState({
@@ -80,6 +81,8 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
         return;
       }
 
+      setSaving(true);
+
       if (editingUser) {
         // Update existing user
         const updateData: UserUpdate = {
@@ -114,6 +117,8 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
     } catch (error: any) {
       console.error('Failed to save user:', error);
       await showAlert(error.message || '保存に失敗しました', 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -124,12 +129,15 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
     }
 
     try {
+      setSaving(true);
       await userService.delete(userId);
       await loadUsers();
       await showAlert('ユーザーを削除しました', 'success');
     } catch (error: any) {
       console.error('Failed to delete user:', error);
       await showAlert(error.message || '削除に失敗しました', 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -363,10 +371,20 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
               </button>
               <button
                 onClick={handleSave}
-                className="flex-1 px-4 py-2 bg-teal-600 text-white hover:bg-teal-700 rounded-lg font-bold transition-colors flex items-center justify-center gap-2"
+                disabled={saving}
+                className="flex-1 px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white rounded-lg font-bold transition-colors flex items-center justify-center gap-2"
               >
-                <Save className="w-4 h-4" />
-                保存
+                {saving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    保存中...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    保存
+                  </>
+                )}
               </button>
             </div>
           </div>

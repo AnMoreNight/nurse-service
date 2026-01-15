@@ -22,6 +22,7 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({
   const [jobTitle, setJobTitle] = useState('');
   const [defaultHolidays, setDefaultHolidays] = useState<number[]>([]);
   const [joinedDate, setJoinedDate] = useState('');
+  const [saving, setSaving] = useState(false);
   const weekDayLabels = ['日', '月', '火', '水', '木', '金', '土'];
 
   useEffect(() => {
@@ -54,8 +55,13 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({
       await showAlert("入職日を入力してください", 'error');
       return;
     }
-    onSave(name, jobTitle, defaultHolidays, joinedDate);
-    onClose();
+    try {
+      setSaving(true);
+      await onSave(name, jobTitle, defaultHolidays, joinedDate);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const isEdit = !!initialStaff;
@@ -138,9 +144,22 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({
 
         <div className="p-5 border-t bg-gray-50 flex justify-end gap-3 mt-auto md:mt-0 pb-safe">
           <button onClick={onClose} className="px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-200 transition-colors text-sm font-medium">キャンセル</button>
-          <button onClick={handleSave} disabled={!name.trim()} className="px-4 py-2 rounded-lg bg-teal-600 text-white hover:bg-teal-700 transition-colors shadow-md flex items-center gap-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed">
-            <Save className="w-4 h-4" />
-            {isEdit ? '更新' : '追加'}
+          <button
+            onClick={handleSave}
+            disabled={!name.trim() || saving}
+            className="px-4 py-2 rounded-lg bg-teal-600 text-white hover:bg-teal-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors shadow-md flex items-center gap-2 text-sm font-medium"
+          >
+            {saving ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                {isEdit ? '更新中...' : '追加中...'}
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                {isEdit ? '更新' : '追加'}
+              </>
+            )}
           </button>
         </div>
       </div>
