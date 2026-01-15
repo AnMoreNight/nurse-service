@@ -303,18 +303,26 @@ class ScheduleController:
                 )
             )
             series_schedules = all_in_series.scalars().all()
+            series_schedule_ids = [s.schedule_id for s in series_schedules]
             
             for s in series_schedules:
                 for key, value in updates.items():
                     if value is not None and hasattr(s, key):
                         setattr(s, key, value)
-                
-                if assigned_user_ids is not None:
-                    await db.execute(
-                        delete(ScheduleAssignment).where(ScheduleAssignment.schedule_id == s.schedule_id)
+            
+            if assigned_user_ids is not None:
+                await db.execute(
+                    delete(ScheduleAssignment).where(
+                        ScheduleAssignment.schedule_id.in_(series_schedule_ids)
                     )
-                    for user_id in assigned_user_ids:
-                        db.add(ScheduleAssignment(schedule_id=s.schedule_id, user_id=user_id))
+                )
+                
+                new_assignments = [
+                    ScheduleAssignment(schedule_id=schedule_id, user_id=user_id)
+                    for schedule_id in series_schedule_ids
+                    for user_id in assigned_user_ids
+                ]
+                db.add_all(new_assignments)
         
         schedule.updated_at = datetime.utcnow()
         await db.commit()

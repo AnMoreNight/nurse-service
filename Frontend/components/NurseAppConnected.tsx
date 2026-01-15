@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { CompanySettingsView } from './CompanySettings';
+import { useModal } from '@/contexts/ModalContext';
 
 const NavButton = ({ active, onClick, icon, label }: any) => (
   <button
@@ -34,6 +35,7 @@ const NavButton = ({ active, onClick, icon, label }: any) => (
 
 export default function NurseAppConnected() {
   const router = useRouter();
+  const { showConfirm } = useModal();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [view, setView] = useState<'schedule' | 'shifts' | 'users' | 'settings'>('schedule');
 
@@ -527,7 +529,8 @@ export default function NurseAppConnected() {
                   onUpdateShift={handleUpdateShift}
                   onOpenStaffForm={(s) => setStaffFormState({ isOpen: true, initialStaff: s })}
                   onDeleteStaff={async (id) => {
-                    if (window.confirm('このスタッフを削除しますか？')) {
+                    const confirmed = await showConfirm('このスタッフを削除しますか？');
+                    if (confirmed) {
                       await userService.delete(id);
                       await loadData();
                       showToast('スタッフを削除しました');
@@ -582,7 +585,7 @@ export default function NurseAppConnected() {
                     try {
                       setLoading(true);
                       const { companyService } = await import('@/services/companyService');
-                      
+
                       // Save visit statuses using status bulk update API
                       const statusItems = updatedSettings.visitStatuses.map((s: any, index: number) => ({
                         status_id: statuses.find(st => st.status_id === s.key)?.status_id,
@@ -590,16 +593,16 @@ export default function NurseAppConnected() {
                         color: s.color,
                         sort_order: index
                       }));
-                      
+
                       await statusService.bulkUpdate({ statuses: statusItems });
-                      
+
                       // Save job titles to company settings
                       await companyService.upsertSetting(
                         currentUser.company_id,
                         'jobTitles',
                         updatedSettings.jobTitles
                       );
-                      
+
                       // Reload data to reflect changes
                       await loadData();
                       showToast('設定を保存しました');

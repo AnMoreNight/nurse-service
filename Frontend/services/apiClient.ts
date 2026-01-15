@@ -20,7 +20,7 @@ class ApiClient {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: 'Request failed' }));
-      
+
       // Handle 401 Unauthorized - auto logout
       if (response.status === 401) {
         if (typeof window !== 'undefined') {
@@ -36,14 +36,20 @@ class ApiClient {
         // If user account is misconfigured, force logout and show message
         if (errorDetail.includes('not properly configured') || errorDetail.includes('assign you to a company')) {
           if (typeof window !== 'undefined') {
-            alert('Your account has been updated. Please log in again.');
+            // Use global modal if available, fallback to alert
+            if (window.showModalAlert) {
+              await window.showModalAlert('Your account has been updated. Please log in again.', 'warning');
+            } else {
+              alert('Your account has been updated. Please log in again.');
+            }
             localStorage.removeItem('token');
             localStorage.removeItem('currentUser');
             window.location.href = '/login';
           }
+          throw error;
         }
       }
-      
+
       // Handle error detail properly - it might be a string or an object
       let errorMessage: string;
       if (typeof error.detail === 'string') {
@@ -55,7 +61,7 @@ class ApiClient {
       } else {
         errorMessage = `HTTP ${response.status}`;
       }
-      
+
       throw new Error(errorMessage);
     }
 

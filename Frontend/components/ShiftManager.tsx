@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Staff, ShiftAssignment, ShiftType, CompanySettings } from '@/lib/types';
 import { ChevronLeft, ChevronRight, Moon, Sun, Palmtree, Plus, Edit, Trash2, Copy, Check, Users } from 'lucide-react';
 import { getEffectiveShiftType, toLocalISOString } from '@/lib/constants';
+import { useModal } from '@/contexts/ModalContext';
 
 interface ShiftManagerProps {
   staff: Staff[];
@@ -20,6 +21,7 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
   staff, shifts, currentDate, companySettings, onUpdateShift, onOpenStaffForm, onDeleteStaff, isReadOnly = false
 }) => {
   console.log('[ShiftManager] Received props:', { staffCount: staff.length, shiftsCount: shifts.length, staff });
+  const { showConfirm } = useModal();
 
   const [viewDate, setViewDate] = useState(() => {
     const [y, m] = currentDate.split('-').map(Number);
@@ -263,7 +265,7 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
                         <button onClick={() => onOpenStaffForm(member)} className="p-1 hover:bg-gray-200 rounded text-gray-400 hover:text-gray-600">
                           <Edit className="w-3 h-3" />
                         </button>
-                        <button onClick={() => { if (window.confirm(`${member.name}を削除しますか？`)) onDeleteStaff(member.id); }} className="p-1 hover:bg-red-100 rounded text-gray-400 hover:text-red-600">
+                        <button onClick={async () => { const confirmed = await showConfirm(`${member.name}を削除しますか？`); if (confirmed) onDeleteStaff(member.id); }} className="p-1 hover:bg-red-100 rounded text-gray-400 hover:text-red-600">
                           <Trash2 className="w-3 h-3" />
                         </button>
                       </div>

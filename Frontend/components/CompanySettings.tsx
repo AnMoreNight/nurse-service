@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { CompanySettings } from '@/lib/types';
 import { Settings, Plus, Trash2, Save, Loader2 } from 'lucide-react';
+import { useModal } from '@/contexts/ModalContext';
 
 interface CompanySettingsProps {
   settings: CompanySettings;
@@ -12,6 +13,7 @@ interface CompanySettingsProps {
 }
 
 export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, isLoading = false, onSave, onDirtyChange }) => {
+  const { showConfirm } = useModal();
   const [visitStatuses, setVisitStatuses] = useState(settings.visitStatuses);
   const [jobTitles, setJobTitles] = useState(settings.jobTitles);
 
@@ -54,8 +56,9 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
     setNewStatusColor('blue');
   };
 
-  const handleDeleteStatus = (key: string) => {
-    if (window.confirm('このステータスを削除しますか？')) {
+  const handleDeleteStatus = async (key: string) => {
+    const confirmed = await showConfirm('このステータスを削除しますか？');
+    if (confirmed) {
       setVisitStatuses(visitStatuses.filter(s => s.key !== key));
     }
   };

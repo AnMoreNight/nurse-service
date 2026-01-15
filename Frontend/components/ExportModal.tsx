@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { X, Download, Calendar, Notebook } from 'lucide-react';
 import { toLocalISOString } from '@/lib/constants';
+import { useModal } from '@/contexts/ModalContext';
 
 interface ExportModalProps {
   onClose: () => void;
@@ -10,6 +11,7 @@ interface ExportModalProps {
 }
 
 export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport }) => {
+  const { showAlert } = useModal();
   const today = toLocalISOString(new Date());
   const nextMonth = new Date();
   nextMonth.setMonth(nextMonth.getMonth() + 1);
@@ -19,9 +21,9 @@ export const ExportModal: React.FC<ExportModalProps> = ({ onClose, onExport }) =
   const [endDate, setEndDate] = useState(nextMonthStr);
   const [exportType, setExportType] = useState<'visits' | 'shifts'>('visits');
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (startDate > endDate) {
-      alert('終了日は開始日より後の日付を指定してください。');
+      await showAlert('終了日は開始日より後の日付を指定してください。', 'error');
       return;
     }
     onExport(exportType, startDate, endDate);
