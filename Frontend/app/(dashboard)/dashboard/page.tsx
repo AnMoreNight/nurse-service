@@ -71,7 +71,8 @@ function DashboardContent() {
   // Redirect user role away from admin-only views
   useEffect(() => {
     if (currentUser?.role === 'NORMAL_USER' && (view === 'users' || view === 'settings')) {
-      router.push('/dashboard?view=schedule');
+      // Immediately redirect normal users away from admin-only views
+      router.replace('/dashboard?view=schedule');
     }
   }, [view, currentUser, router]);
 
@@ -385,61 +386,69 @@ function DashboardContent() {
         )}
 
         {/* Users view - ADMIN ONLY */}
-        {view === 'users' && canManageUsers && (
-          <UserManagementConnected companyId={companyId!} />
+        {view === 'users' && (
+          <>
+            {!canManageUsers ? null : (
+              <UserManagementConnected companyId={companyId!} />
+            )}
+          </>
         )}
 
         {/* Settings view - ADMIN ONLY */}
-        {view === 'settings' && canManageSettings && (
-          <CompanySettingsView
-            settings={companySettings}
-            onSave={async (newSettings) => {
-              try {
-                console.log('[Settings Save] Received settings:', newSettings);
-                console.log('[Settings Save] JobTitles:', newSettings.jobTitles);
-                console.log('[Settings Save] Current user:', currentUser);
+        {view === 'settings' && (
+          <>
+            {!canManageSettings ? null : (
+              <CompanySettingsView
+                settings={companySettings}
+                onSave={async (newSettings) => {
+                  try {
+                    console.log('[Settings Save] Received settings:', newSettings);
+                    console.log('[Settings Save] JobTitles:', newSettings.jobTitles);
+                    console.log('[Settings Save] Current user:', currentUser);
 
-                // Import the required services
-                const { statusService } = await import('@/services/statusService');
-                const { companyService } = await import('@/services/companyService');
+                    // Import the required services
+                    const { statusService } = await import('@/services/statusService');
+                    const { companyService } = await import('@/services/companyService');
 
-                // Prepare all statuses for bulk update
-                const statusItems = newSettings.visitStatuses.map((status, index) => {
-                  // Check if this is a UUID (existing status) or a string key (new/default)
-                  const isUUID = status.key.length > 30 && status.key.includes('-');
+                    // Prepare all statuses for bulk update
+                    const statusItems = newSettings.visitStatuses.map((status, index) => {
+                      // Check if this is a UUID (existing status) or a string key (new/default)
+                      const isUUID = status.key.length > 30 && status.key.includes('-');
 
-                  return {
-                    status_id: isUUID ? status.key : undefined,
-                    name: status.label,
-                    color: status.color,
-                    sort_order: index,
-                  };
-                });
+                      return {
+                        status_id: isUUID ? status.key : undefined,
+                        name: status.label,
+                        color: status.color,
+                        sort_order: index,
+                      };
+                    });
 
-                console.log('[Settings Save] Saving statuses:', statusItems);
-                // Save statuses
-                await statusService.bulkUpdate({ statuses: statusItems });
-                console.log('[Settings Save] Statuses saved successfully');
+                    console.log('[Settings Save] Saving statuses:', statusItems);
+                    // Save statuses
+                    await statusService.bulkUpdate({ statuses: statusItems });
+                    console.log('[Settings Save] Statuses saved successfully');
 
-                // Save jobTitles separately
-                if (currentUser?.company_id) {
-                  console.log('[Settings Save] Saving jobTitles to company:', currentUser.company_id);
-                  console.log('[Settings Save] JobTitles value:', newSettings.jobTitles);
-                  await companyService.upsertSetting(currentUser.company_id, 'jobTitles', newSettings.jobTitles);
-                  console.log('[Settings Save] JobTitles saved successfully');
-                } else {
-                  console.warn('[Settings Save] No company_id found, skipping jobTitles save');
-                }
+                    // Save jobTitles separately
+                    if (currentUser?.company_id) {
+                      console.log('[Settings Save] Saving jobTitles to company:', currentUser.company_id);
+                      console.log('[Settings Save] JobTitles value:', newSettings.jobTitles);
+                      await companyService.upsertSetting(currentUser.company_id, 'jobTitles', newSettings.jobTitles);
+                      console.log('[Settings Save] JobTitles saved successfully');
+                    } else {
+                      console.warn('[Settings Save] No company_id found, skipping jobTitles save');
+                    }
 
-                showToast('設定を保存しました');
-                // Refresh data to get updated statuses
-                await refreshData();
-              } catch (error: any) {
-                showToast(`保存に失敗しました: ${error.message || '不明なエラー'}`);
-              }
-            }}
-            onDirtyChange={() => { }}
-          />
+                    showToast('設定を保存しました');
+                    // Refresh data to get updated statuses
+                    await refreshData();
+                  } catch (error: any) {
+                    showToast(`保存に失敗しました: ${error.message || '不明なエラー'}`);
+                  }
+                }}
+                onDirtyChange={() => { }}
+              />
+            )}
+          </>
         )}
       </div>
 
