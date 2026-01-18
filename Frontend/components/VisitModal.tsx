@@ -272,7 +272,7 @@ export const VisitModal: React.FC<VisitModalProps> = ({
 
     return (
         <div className="fixed inset-0 bg-white/30 z-[100] flex justify-center items-center p-0 md:p-4 backdrop-blur-md">
-            <div className="bg-white rounded-none md:rounded-2xl shadow-2xl w-full h-full md:h-auto md:max-w-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200 relative">
+            <div className="bg-white rounded-none md:rounded-2xl shadow-2xl w-full max-h-[100vh] md:max-h-[90vh] md:max-w-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200 relative">
 
                 {/* Header */}
                 <div className="p-4 md:p-5 border-b bg-gray-50 flex justify-between items-center rounded-t-none md:rounded-t-2xl shrink-0">
