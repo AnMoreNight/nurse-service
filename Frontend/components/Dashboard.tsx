@@ -30,6 +30,22 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const SLOT_HEIGHT = 50;
 const MINUTE_HEIGHT = SLOT_HEIGHT / 60;
 
+const getColorValue = (color: string) => {
+    const colorMap: Record<string, string> = {
+        'blue': '#3b82f6',
+        'red': '#ef4444',
+        'green': '#10b981',
+        'yellow': '#f59e0b',
+        'purple': '#a855f7',
+        'pink': '#ec4899',
+        'indigo': '#6366f1',
+        'teal': '#14b8a6',
+        'orange': '#f97316',
+        'cyan': '#06b6d4',
+    };
+    return colorMap[color] || colorMap['blue'];
+};
+
 const timeToMinutes = (time: string) => {
     const [h, m] = time.split(':').map(Number);
     return h * 60 + m;
@@ -238,22 +254,38 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
     const getVisitStyles = (visit: VisitWithStaff, isHoliday: boolean) => {
         const config = companySettings.visitStatuses.find(s => s.key === visit.status);
-        let bgClass = 'bg-blue-100 border-blue-500 text-blue-900 hover:bg-blue-200';
+        const colorMap: Record<string, { bg: string; border: string; text: string; hover: string }> = {
+            blue: { bg: 'bg-blue-100', border: 'border-blue-500', text: 'text-blue-900', hover: 'hover:bg-blue-200' },
+            red: { bg: 'bg-red-100', border: 'border-red-500', text: 'text-red-900', hover: 'hover:bg-red-200' },
+            green: { bg: 'bg-green-100', border: 'border-green-500', text: 'text-green-900', hover: 'hover:bg-green-200' },
+            emerald: { bg: 'bg-emerald-100', border: 'border-emerald-500', text: 'text-emerald-900', hover: 'hover:bg-emerald-200' },
+            yellow: { bg: 'bg-yellow-100', border: 'border-yellow-500', text: 'text-yellow-900', hover: 'hover:bg-yellow-200' },
+            orange: { bg: 'bg-orange-100', border: 'border-orange-500', text: 'text-orange-900', hover: 'hover:bg-orange-200' },
+            purple: { bg: 'bg-purple-100', border: 'border-purple-500', text: 'text-purple-900', hover: 'hover:bg-purple-200' },
+            pink: { bg: 'bg-pink-100', border: 'border-pink-500', text: 'text-pink-900', hover: 'hover:bg-pink-200' },
+            gray: { bg: 'bg-gray-200', border: 'border-gray-400', text: 'text-gray-500', hover: 'hover:bg-gray-300' },
+            indigo: { bg: 'bg-indigo-100', border: 'border-indigo-500', text: 'text-indigo-900', hover: 'hover:bg-indigo-200' },
+            teal: { bg: 'bg-teal-100', border: 'border-teal-500', text: 'text-teal-900', hover: 'hover:bg-teal-200' },
+            cyan: { bg: 'bg-cyan-100', border: 'border-cyan-500', text: 'text-cyan-900', hover: 'hover:bg-cyan-200' },
+        };
+
+        let colors = colorMap.blue;
+        let extraClasses = '';
         let opacity = 'opacity-100 shadow-sm';
 
         if (config) {
-            const color = config.color;
+            colors = colorMap[config.color] || colorMap.blue;
             if (visit.status === 'CANCELLED') {
-                bgClass = `bg-${color}-200 border-${color}-400 text-${color}-500 line-through hover:bg-${color}-300`;
+                extraClasses = 'line-through';
                 opacity = 'opacity-80';
-            } else {
-                bgClass = `bg-${color}-100 border-${color}-500 text-${color}-900 hover:bg-${color}-200`;
             }
         }
 
         if (isHoliday) {
             opacity = 'opacity-50 grayscale';
         }
+
+        const bgClass = `${colors.bg} ${colors.border} ${colors.text} ${colors.hover} ${extraClasses}`;
         return { bgClass, opacity };
     };
 
@@ -280,12 +312,29 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </div>
                 <div className="hidden md:flex items-center gap-3 overflow-x-auto max-w-[50%]">
                     <div className="flex items-center gap-2 text-xs text-gray-500 mr-4 whitespace-nowrap">
-                        {companySettings.visitStatuses.map(status => (
-                            <React.Fragment key={status.key}>
-                                <span className={`w-3 h-3 bg-${status.color}-100 border border-${status.color}-500 rounded-sm inline-block ml-2 first:ml-0`}></span>
-                                {status.label}
-                            </React.Fragment>
-                        ))}
+                        {companySettings.visitStatuses.map(status => {
+                            const legendColorMap: Record<string, string> = {
+                                blue: 'bg-blue-100 border-blue-500',
+                                red: 'bg-red-100 border-red-500',
+                                green: 'bg-green-100 border-green-500',
+                                emerald: 'bg-emerald-100 border-emerald-500',
+                                yellow: 'bg-yellow-100 border-yellow-500',
+                                orange: 'bg-orange-100 border-orange-500',
+                                purple: 'bg-purple-100 border-purple-500',
+                                pink: 'bg-pink-100 border-pink-500',
+                                gray: 'bg-gray-200 border-gray-400',
+                                indigo: 'bg-indigo-100 border-indigo-500',
+                                teal: 'bg-teal-100 border-teal-500',
+                                cyan: 'bg-cyan-100 border-cyan-500',
+                            };
+                            const colorClass = legendColorMap[status.color] || legendColorMap.blue;
+                            return (
+                                <React.Fragment key={status.key}>
+                                    <span className={`w-3 h-3 ${colorClass} border rounded-sm inline-block ml-2 first:ml-0`}></span>
+                                    {status.label}
+                                </React.Fragment>
+                            );
+                        })}
                     </div>
                 </div>
             </div>
@@ -324,7 +373,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                     <div className="flex items-start justify-between w-full pointer-events-none gap-2">
                                         <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
                                             {!isReadOnly && <GripVertical className="w-4 h-4 text-gray-300 shrink-0 mt-1" />}
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white bg-${staff.color}-500 shadow-md shrink-0`}>
+                                            <div 
+                                                className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-md shrink-0" 
+                                                style={{ backgroundColor: getColorValue(staff.color) }}
+                                            >
                                                 {staff.avatar}
                                             </div>
                                             <div className="flex flex-col min-w-0 flex-1">
@@ -433,8 +485,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                                 style={{
                                                     top: `${top}px`,
                                                     height: `${Math.max(height, 30)}px`,
-                                                    left: layout.left === '0%' ? '4px' : `calc(${layout.left} + 4px)`,
-                                                    width: layout.width === '100%' ? 'calc(100% - 8px)' : `calc(${layout.width} - 8px)`
+                                                    left: '4px',
+                                                    right: '4px',
+                                                    width: 'auto'
                                                 }}
                                             >
                                                 <div className="flex justify-between items-start gap-1 pointer-events-none">
@@ -444,7 +497,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                                 {visit.staffMembers && visit.staffMembers.length > 1 && (
                                                     <div className="flex -space-x-1 mt-1 pointer-events-none">
                                                         {visit.staffMembers.map(s => (
-                                                            <div key={s.id} className={`w-5 h-5 rounded-full border border-white text-[9px] flex items-center justify-center text-white bg-${s.color}-500`}>{s.avatar}</div>
+                                                            <div key={s.id} className="w-5 h-5 rounded-full border border-white text-[9px] flex items-center justify-center text-white" style={{backgroundColor: getColorValue(s.color)}}>{s.avatar}</div>
                                                         ))}
                                                     </div>
                                                 )}
