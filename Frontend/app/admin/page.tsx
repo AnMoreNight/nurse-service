@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useApp } from '@/lib/context';
 import { companyService, userService, Company, User, UserCreate, UserUpdate, UserCreateByAdmin } from '@/services';
 import {
@@ -416,7 +417,7 @@ export default function AdminPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-                <Shield className="w-7 h-7 text-purple-600" />
+                <Image src="/image.png" alt="Logo" width={28} height={28} className="object-contain" />
                 システム管理
               </h1>
               <p className="text-gray-600 text-sm mt-1">会社とユーザーの管理</p>
