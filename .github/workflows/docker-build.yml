@@ -44,3 +44,5 @@ jobs:
         context: ./Frontend
         push: true
         tags: superdev78/nur-frontend:latest
+        build-args: |
+          NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
