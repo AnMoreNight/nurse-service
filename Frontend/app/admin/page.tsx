@@ -68,7 +68,7 @@ export default function AdminPage() {
     if (currentUser?.role === 'SUPER_ADMIN') {
       loadData();
     }
-  }, [currentUser]);
+  }, [currentUser?.user_id]);
 
   const loadCompanies = async () => {
     if (companies.length > 0) return; // Already loaded
@@ -109,7 +109,11 @@ export default function AdminPage() {
       setUsers(usersData);
     } catch (error) {
       console.error('Failed to load data:', error);
-      await showAlert('データの読み込みに失敗しました', 'error');
+      // Don't show error alert if user is not authenticated (e.g., during logout)
+      const token = localStorage.getItem('token');
+      if (token) {
+        await showAlert('データの読み込みに失敗しました', 'error');
+      }
     } finally {
       setLoading(false);
     }
