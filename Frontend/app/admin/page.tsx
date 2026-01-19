@@ -66,14 +66,9 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (currentUser?.role === 'SUPER_ADMIN') {
-      // Load data based on active tab (lazy loading)
-      if (activeTab === 'companies') {
-        loadCompanies();
-      } else {
-        loadUsers();
-      }
+      loadData();
     }
-  }, [currentUser, activeTab]);
+  }, [currentUser]);
 
   const loadCompanies = async () => {
     if (companies.length > 0) return; // Already loaded
