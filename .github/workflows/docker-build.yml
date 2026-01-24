@@ -46,3 +46,14 @@ jobs:
         tags: superdev78/nur-frontend:latest
         build-args: |
           NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-frontend]
+    
+    steps:
+    - name: Deploy to VPS
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y sshpass
+        sshpass -p '${{ secrets.VPS_PASSWORD }}' ssh -o StrictHostKeyChecking=no root@85.131.253.225 'cd /root/deploy && bash update.sh'
