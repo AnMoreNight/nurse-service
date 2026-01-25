@@ -61,6 +61,7 @@ export interface UserUpdate {
   is_active?: boolean;
   join_date?: string;
   left_date?: string;
+  default_holiday_weekdays?: number[]; // Array of weekday indices (0=Sun, 1=Mon, etc.)
 }
 
 export interface UserInvite {
@@ -73,10 +74,35 @@ export interface UserSortOrder {
   sort_order: number;
 }
 
+export interface PaginatedResponse<T> {
+  data: T[];
+  total_count: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
 export const userService = {
   getAll: (companyId?: string) => {
     const params = companyId ? `?company_id=${companyId}` : '';
     return apiClient.get<User[]>(`/users${params}`);
+  },
+
+  // Get all users including admins with optional pagination - used by admin pages
+  getAllUsers: (
+    companyId?: string,
+    page?: number,
+    pageSize?: number,
+    noPagination: boolean = false
+  ) => {
+    const params = new URLSearchParams();
+    if (companyId) params.append('company_id', companyId);
+    if (!noPagination && page !== undefined) params.append('page', page.toString());
+    if (!noPagination && pageSize !== undefined) params.append('page_size', pageSize.toString());
+    if (noPagination) params.append('no_pagination', 'true');
+
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return apiClient.get<User[] | PaginatedResponse<User>>(`/users/all-users${query}`);
   },
 
   getById: (id: string) => apiClient.get<User>(`/users/${id}`),

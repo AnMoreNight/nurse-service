@@ -21,6 +21,12 @@ export default function AdminPage() {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'companies' | 'users'>('companies');
 
+  // Pagination state for users table
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
+
   // Company modal state
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
@@ -84,12 +90,21 @@ export default function AdminPage() {
     }
   };
 
-  const loadUsers = async () => {
-    if (users.length > 0) return; // Already loaded
+  const loadUsers = async (page: number = currentPage, size: number = pageSize) => {
     try {
       setLoading(true);
-      const usersData = await userService.getAll();
-      setUsers(usersData);
+      const response = await userService.getAllUsers(undefined, page, size, false);
+
+      // Handle paginated response
+      if (response && typeof response === 'object' && 'data' in response) {
+        setUsers(response.data);
+        setTotalPages(response.total_pages);
+        setTotalUsers(response.total_count);
+        setCurrentPage(response.page);
+      } else {
+        // Fallback for non-paginated response (shouldn't happen with new API)
+        setUsers(Array.isArray(response) ? response : []);
+      }
     } catch (error) {
       console.error('Failed to load users:', error);
       await showAlert('ユーザーデータの読み込みに失敗しました', 'error');
@@ -101,12 +116,21 @@ export default function AdminPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [companiesData, usersData] = await Promise.all([
+      const [companiesData, usersResponse] = await Promise.all([
         companyService.getAll(),
-        userService.getAll()
+        userService.getAllUsers(undefined, currentPage, pageSize, false)
       ]);
       setCompanies(companiesData);
-      setUsers(usersData);
+
+      // Handle paginated users response
+      if (usersResponse && typeof usersResponse === 'object' && 'data' in usersResponse) {
+        setUsers(usersResponse.data);
+        setTotalPages(usersResponse.total_pages);
+        setTotalUsers(usersResponse.total_count);
+        setCurrentPage(usersResponse.page);
+      } else {
+        setUsers(Array.isArray(usersResponse) ? usersResponse : []);
+      }
     } catch (error) {
       console.error('Failed to load data:', error);
       // Don't show error alert if user is not authenticated (e.g., during logout)
@@ -460,7 +484,7 @@ export default function AdminPage() {
             >
               <div className="flex items-center gap-2">
                 <Users size={20} />
-                ユーザー ({users.length})
+                ユーザー ({totalUsers})
               </div>
               {activeTab === 'users' && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-teal-600"></div>
@@ -535,7 +559,8 @@ export default function AdminPage() {
         ) : (
           <div>
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-900">全ユーザー</h2>
+              <h2 className="text-xl font-bold text-gray-900">全ユーザー ({totalUsers})
+              </h2>
               <button
                 onClick={() => openUserModal()}
                 className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors flex items-center gap-2 shadow-sm"
@@ -600,6 +625,67 @@ export default function AdminPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Pagination Controls */}
+            <div className="mt-4 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-gray-600">
+                  表示中: {users.length > 0 ? ((currentPage - 1) * pageSize + 1) : 0} - {Math.min(currentPage * pageSize, totalUsers)} / 全 {totalUsers} 件
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-600">表示件数:</label>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      const newSize = Number(e.target.value);
+                      setPageSize(newSize);
+                      setCurrentPage(1);
+                      loadUsers(1, newSize);
+                    }}
+                    className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    if (currentPage > 1) {
+                      const newPage = currentPage - 1;
+                      setCurrentPage(newPage);
+                      loadUsers(newPage, pageSize);
+                    }
+                  }}
+                  disabled={currentPage <= 1}
+                  className="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  前へ
+                </button>
+
+                <span className="text-sm text-gray-600">
+                  ページ {currentPage} / {totalPages}
+                </span>
+
+                <button
+                  onClick={() => {
+                    if (currentPage < totalPages) {
+                      const newPage = currentPage + 1;
+                      setCurrentPage(newPage);
+                      loadUsers(newPage, pageSize);
+                    }
+                  }}
+                  disabled={currentPage >= totalPages}
+                  className="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  次へ
+                </button>
+              </div>
             </div>
           </div>
         )}

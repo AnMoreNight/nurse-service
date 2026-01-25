@@ -289,7 +289,7 @@ function DashboardContent() {
   const handleSaveStaff = async (name: string, jobTitle: string, defaultHolidays: number[], joinedDate: string) => {
     try {
       if (staffFormState.initialStaff) {
-        await updateStaff(staffFormState.initialStaff.id, { name, jobTitle, joinedDate });
+        await updateStaff(staffFormState.initialStaff.id, { name, jobTitle, joinedDate, defaultHolidayWeekDays: defaultHolidays });
       } else {
         await addStaff({
           name,

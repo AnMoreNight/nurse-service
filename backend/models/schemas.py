@@ -14,7 +14,7 @@ def validate_email(email: str) -> str:
     local_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.local$'
     
     if not (re.match(pattern, email) or re.match(local_pattern, email)):
-        raise ValueError('Invalid email format')
+        raise ValueError('Invalid email format. Please use a valid email address (e.g., user@example.com)')
     
     return email.lower()
 
@@ -112,6 +112,7 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
     join_date: Optional[str] = None  # YYYY-MM-DD
     left_date: Optional[str] = None  # YYYY-MM-DD
+    default_holiday_weekdays: Optional[list[int]] = None  # Array of weekday indices (0=Sun, 1=Mon, etc.)
 
 # Admin-specific user creation (includes company_id)
 class UserCreateByAdmin(BaseModel):

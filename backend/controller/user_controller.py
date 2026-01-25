@@ -99,6 +99,102 @@ class UserController:
         ]
     
     @staticmethod
+    async def get_all_users(db: AsyncSession, company_id: Optional[UUID] = None, 
+                            page: Optional[int] = None, page_size: Optional[int] = None,
+                            no_pagination: bool = False):
+        """
+        Get all users (including admins) with optional pagination.
+        Used by admin interfaces. Different from get_users which only returns NORMAL_USER role.
+        
+        Args:
+            company_id: Filter by company (None = all companies for SUPER_ADMIN)
+            page: Page number (1-indexed)
+            page_size: Items per page (default 25, max 100)
+            no_pagination: Skip pagination and return all results
+        """
+        from sqlalchemy import func
+        
+        query = select(User)
+        
+        # Filter by company if specified
+        if company_id is not None:
+            query = query.where(User.company_id == company_id)
+        
+        # Get total count for pagination metadata
+        count_query = select(func.count()).select_from(User)
+        if company_id is not None:
+            count_query = count_query.where(User.company_id == company_id)
+        count_result = await db.execute(count_query)
+        total_count = count_result.scalar()
+        
+        # Order by role (SUPER_ADMIN first, then COMPANY_ADMIN, then NORMAL_USER) and name
+        query = query.order_by(User.role.desc(), User.name)
+        
+        # Apply pagination if requested
+        if not no_pagination and page is not None and page_size is not None:
+            # Validate and apply limits
+            page = max(1, page)  # Ensure page >= 1
+            page_size = min(max(1, page_size), 100)  # Clamp between 1 and 100
+            
+            offset = (page - 1) * page_size
+            query = query.limit(page_size).offset(offset)
+            
+            result = await db.execute(query)
+            users = result.scalars().all()
+            
+            total_pages = (total_count + page_size - 1) // page_size  # Ceiling division
+            
+            return {
+                "data": [
+                    {
+                        "user_id": str(u.user_id),
+                        "company_id": str(u.company_id) if u.company_id else None,
+                        "email": u.email,
+                        "role": u.role,
+                        "name": u.name,
+                        "profession": u.profession,
+                        "job_title": u.job_title,
+                        "display_color": u.display_color,
+                        "avatar_url": u.avatar_url,
+                        "sort_order": u.sort_order,
+                        "is_active": u.is_active,
+                        "join_date": str(u.join_date) if u.join_date else None,
+                        "left_date": str(u.left_date) if u.left_date else None,
+                        "created_at": u.created_at.isoformat() if u.created_at else None
+                    }
+                    for u in users
+                ],
+                "total_count": total_count,
+                "page": page,
+                "page_size": page_size,
+                "total_pages": total_pages
+            }
+        else:
+            # No pagination - return all results
+            result = await db.execute(query)
+            users = result.scalars().all()
+            
+            return [
+                {
+                    "user_id": str(u.user_id),
+                    "company_id": str(u.company_id) if u.company_id else None,
+                    "email": u.email,
+                    "role": u.role,
+                    "name": u.name,
+                    "profession": u.profession,
+                    "job_title": u.job_title,
+                    "display_color": u.display_color,
+                    "avatar_url": u.avatar_url,
+                    "sort_order": u.sort_order,
+                    "is_active": u.is_active,
+                    "join_date": str(u.join_date) if u.join_date else None,
+                    "left_date": str(u.left_date) if u.left_date else None,
+                    "created_at": u.created_at.isoformat() if u.created_at else None
+                }
+                for u in users
+            ]
+    
+    @staticmethod
     async def get_user(db: AsyncSession, user_id: UUID, company_id: UUID):
         result = await db.execute(
             select(User).where(User.user_id == user_id, User.company_id == company_id)

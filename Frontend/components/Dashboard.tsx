@@ -356,7 +356,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         const isHoliday = effectiveType === 'holiday' || effectiveType === 'night1_holiday' || effectiveType === 'night2_holiday';
                         const staffVisits = visits.filter(v => v.staffIds.includes(staff.id));
                         const layoutMap = calculateVisualLayout(staffVisits);
-                        const visitCount = staffVisits.length;
+                        // Only count visits for the current date, not all visits in the array
+                        const visitCount = staffVisits.filter(v => v.date === currentDate).length;
                         const monthTotal = monthlyStats[staff.id] || 0;
                         const isDragOver = dragOverColumnIndex === colIndex;
 
@@ -373,8 +374,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                     <div className="flex items-start justify-between w-full pointer-events-none gap-2">
                                         <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
                                             {!isReadOnly && <GripVertical className="w-4 h-4 text-gray-300 shrink-0 mt-1" />}
-                                            <div 
-                                                className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-md shrink-0" 
+                                            <div
+                                                className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-md shrink-0"
                                                 style={{ backgroundColor: getColorValue(staff.color) }}
                                             >
                                                 {staff.avatar}
@@ -497,7 +498,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                                 {visit.staffMembers && visit.staffMembers.length > 1 && (
                                                     <div className="flex -space-x-1 mt-1 pointer-events-none">
                                                         {visit.staffMembers.map(s => (
-                                                            <div key={s.id} className="w-5 h-5 rounded-full border border-white text-[9px] flex items-center justify-center text-white" style={{backgroundColor: getColorValue(s.color)}}>{s.avatar}</div>
+                                                            <div key={s.id} className="w-5 h-5 rounded-full border border-white text-[9px] flex items-center justify-center text-white" style={{ backgroundColor: getColorValue(s.color) }}>{s.avatar}</div>
                                                         ))}
                                                     </div>
                                                 )}

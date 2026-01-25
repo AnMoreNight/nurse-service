@@ -98,8 +98,12 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
     return <div className="w-7 h-7"></div>;
   };
 
-  const handleCopyLastMonth = () => {
+  const handleCopyLastMonth = async () => {
     if (isReadOnly) return;
+
+    // Show confirmation dialog before copying
+    const confirmed = await showConfirm('前月のシフトを今月にコピーしますか？\n（夜間待機のシフトのみコピーされます）');
+    if (!confirmed) return;
 
     const lastMonth = new Date(year, month - 1, 1);
     const lastMonthYear = lastMonth.getFullYear();

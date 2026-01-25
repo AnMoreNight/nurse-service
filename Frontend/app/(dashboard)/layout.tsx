@@ -9,7 +9,7 @@ import { useState, Suspense } from 'react';
 const NavButton = ({ active, onClick, icon, label }: any) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${active ? 'bg-teal-600 text-white font-bold shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all cursor-pointer ${active ? 'bg-teal-600 text-white font-bold shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
       }`}
   >
     {icon}
@@ -57,7 +57,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           </div>
           NurseAssist
         </div>
-        <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 text-slate-300 hover:text-white rounded-lg active:bg-slate-800">
+        <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 text-slate-300 hover:text-white rounded-lg active:bg-slate-800 cursor-pointer">
           <Menu size={24} />
         </button>
       </div>
@@ -83,7 +83,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             </div>
             <span className="font-bold text-white text-lg">NurseAssist</span>
           </div>
-          <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden text-slate-400 hover:text-white p-1 rounded-full hover:bg-slate-800">
+          <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden text-slate-400 hover:text-white p-1 rounded-full hover:bg-slate-800 cursor-pointer">
             <X size={24} />
           </button>
         </div>
@@ -114,7 +114,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           {isImpersonating && (
             <button
               onClick={handleBackToAdmin}
-              className="w-full mb-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-3 rounded-lg flex items-center justify-center gap-2 hover:shadow-lg transition-all active:scale-95 font-bold"
+              className="w-full mb-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-3 rounded-lg flex items-center justify-center gap-2 hover:shadow-lg transition-all active:scale-95 font-bold cursor-pointer"
             >
               <LogOut size={18} className="rotate-180" />
               <span>管理画面に戻る</span>
@@ -130,8 +130,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             </button>
           )} */}
 
-          <div className="flex items-center gap-3 px-2 mb-4 overflow-hidden"
-            onClick={()=> router.push('/profile')}
+          <div className="flex items-center gap-3 px-2 mb-4 overflow-hidden cursor-pointer"
+            onClick={() => router.push('/profile')}
           >
             <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center shrink-0">
               <User size={16} />
@@ -143,7 +143,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex gap-2 justify-center">
-            <button onClick={handleLogout} className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors" title="ログアウト">
+            <button onClick={handleLogout} className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer" title="ログアウト">
               <LogOut size={18} />
             </button>
           </div>

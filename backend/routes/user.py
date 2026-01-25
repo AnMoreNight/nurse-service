@@ -28,6 +28,34 @@ async def invite_user(req: UserInvite, request: Request, db: AsyncSession = Depe
     user = await require_company_admin(request, db)  # Admin only
     return await UserController.invite_user(db, user["company_id"], req.email, req.role)
 
+@router.get("/all-users")
+async def get_all_users(
+    request: Request, 
+    company_id: Optional[UUID] = Query(None),
+    page: Optional[int] = Query(None),
+    page_size: Optional[int] = Query(25),
+    no_pagination: bool = Query(False),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get all users (including admins) with optional pagination. Requires admin access."""
+    user = await get_current_user(request, db)
+    
+    # SUPER_ADMIN: can see all users or filter by company
+    # COMPANY_ADMIN: can only see their company's users
+    if user["role"] == "SUPER_ADMIN":
+        effective_company_id = company_id  # None means all users
+    elif user["role"] == "COMPANY_ADMIN":
+        effective_company_id = user["company_id"]
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can access this endpoint"
+        )
+    
+    return await UserController.get_all_users(
+        db, effective_company_id, page, page_size, no_pagination
+    )
+
 @router.get("")
 async def get_users(request: Request, company_id: Optional[UUID] = Query(None), db: AsyncSession = Depends(get_db)):
     user = await get_current_user(request, db)

@@ -205,10 +205,24 @@ class ShiftController:
         
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(['Date', 'Staff', 'Shift Type'])
+        writer.writerow(['日付', 'スタッフ', 'シフト種別'])
+        
+        # Map shift types to Japanese
+        shift_type_japanese = {
+            'Workday': '出勤',
+            'ScheduledDayOff': '公休',
+            'NightDuty1': '夜間待機1',
+            'NightDuty2': '夜間待機2',
+            'NightDuty1DayOff': '夜間待機1（休）',
+            'NightDuty2DayOff': '夜間待機2（休）',
+        }
         
         for s in shifts:
             user_name = users.get(s['user_id'], 'Unknown')
-            writer.writerow([s['shift_date'], user_name, s['shift_type']])
+            shift_type_jp = shift_type_japanese.get(s['shift_type'], s['shift_type'])
+            # Format date in Japanese style (YYYY年MM月DD日)
+            date_parts = s['shift_date'].split('-')
+            date_jp = f"{date_parts[0]}年{int(date_parts[1])}月{int(date_parts[2])}日"
+            writer.writerow([date_jp, user_name, shift_type_jp])
         
         return output.getvalue()

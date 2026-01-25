@@ -54,11 +54,13 @@ class AuthController:
     @staticmethod
     async def request_password_reset(db: AsyncSession, email: str):
         from models.orm import PasswordResetToken
+        from services.email_service import email_service
         
         result = await db.execute(select(User).where(User.email == email))
         user = result.scalar_one_or_none()
         
         if not user:
+            # Return success message even if user doesn't exist (security best practice)
             return {"message": "If email exists, reset link sent"}
         
         token = secrets.token_urlsafe(32)
@@ -72,7 +74,18 @@ class AuthController:
         db.add(reset_token)
         await db.commit()
         
-        return {"message": "If email exists, reset link sent", "token": token}
+        # Send password reset email
+        try:
+            await email_service.send_password_reset_email(
+                email=user.email,
+                reset_token=token,
+                user_name=user.name
+            )
+        except Exception as e:
+            # Log error but don't fail the request
+            print(f"Failed to send password reset email: {e}")
+        
+        return {"message": "If email exists, reset link sent"}
     
     @staticmethod
     async def reset_password(db: AsyncSession, token: str, new_password: str):

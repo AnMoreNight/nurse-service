@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useApp } from '@/lib/context';
-import { userService, User, UserCreate, UserUpdate } from '@/services';
+import { userService, User, UserCreate, UserUpdate, PaginatedResponse } from '@/services';
 import { Plus, Pencil, Trash2, X, Save, Mail, Briefcase, Users as UsersIcon } from 'lucide-react';
 import { useModal } from '@/contexts/ModalContext';
 
@@ -16,6 +16,10 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [formData, setFormData] = useState({
@@ -30,15 +34,28 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
 
   useEffect(() => {
     loadUsers();
-  }, [companyId]);
+  }, [companyId, currentPage, pageSize]);
 
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const allUsers = await userService.getAll(companyId);
-      // Filter to only show users from this company
-      const companyUsers = allUsers.filter(u => u.company_id === companyId);
-      setUsers(companyUsers);
+      const response = await userService.getAllUsers(
+        companyId,
+        currentPage,
+        pageSize
+      );
+
+      if ('data' in response) {
+        // Paginated response
+        setUsers(response.data);
+        setTotalUsers(response.total_count);
+        setTotalPages(response.total_pages);
+      } else {
+        // Non-paginated response (fallback)
+        setUsers(response);
+        setTotalUsers(response.length);
+        setTotalPages(1);
+      }
     } catch (error) {
       console.error('Failed to load users:', error);
       await showAlert('ユーザーの読み込みに失敗しました', 'error');
@@ -111,9 +128,9 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
         await userService.create(createData);
       }
 
-      await loadUsers();
       setIsModalOpen(false);
       await showAlert(editingUser ? 'ユーザーを更新しました' : 'ユーザーを追加しました', 'success');
+      await loadUsers();
     } catch (error: any) {
       console.error('Failed to save user:', error);
       await showAlert(error.message || '保存に失敗しました', 'error');
@@ -131,8 +148,8 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
     try {
       setSaving(true);
       await userService.delete(userId);
-      await loadUsers();
       await showAlert('ユーザーを削除しました', 'success');
+      await loadUsers();
     } catch (error: any) {
       console.error('Failed to delete user:', error);
       await showAlert(error.message || '削除に失敗しました', 'error');
@@ -165,7 +182,7 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
             <UsersIcon className="w-5 h-5 text-purple-600" />
             ユーザー管理
           </h2>
-          <p className="text-sm text-gray-500 mt-1">{users.length} 人</p>
+          <p className="text-sm text-gray-500 mt-1">{totalUsers} 人</p>
         </div>
         <button
           onClick={() => openModal()}
@@ -184,7 +201,6 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
               <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">名前</th>
               <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">メール</th>
               <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">職種</th>
-              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">役職</th>
               <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">権限</th>
               <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">状態</th>
               <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase text-right">操作</th>
@@ -206,7 +222,6 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
                 <td className="px-6 py-4 text-sm text-gray-600">{user.profession || '-'}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{user.job_title || '-'}</td>
                 <td className="px-6 py-4">{getRoleBadge(user.role)}</td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 rounded text-xs font-medium ${user.is_active ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
@@ -236,7 +251,7 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
             ))}
             {users.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                   ユーザーがいません。「ユーザー追加」ボタンから追加してください。
                 </td>
               </tr>
@@ -244,6 +259,52 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="p-4 border-t bg-gray-50 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600">
+              {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, totalUsers)} / {totalUsers}
+            </span>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600">表示件数:</label>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              前へ
+            </button>
+            <span className="text-sm text-gray-600">
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={currentPage >= totalPages}
+              className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              次へ
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal */}
       {isModalOpen && (

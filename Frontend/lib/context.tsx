@@ -353,7 +353,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         display_color: data.color,
         join_date: data.joinedDate,
         left_date: data.leftDate,
+        default_holiday_weekdays: data.defaultHolidayWeekDays,
       });
+
       await refreshData();
       showToast('スタッフを更新しました');
     } catch (err: any) {
@@ -478,7 +480,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Optimistic update - immediately reflect in UI
       const tempShifts = [...shifts];
       const existingIndex = tempShifts.findIndex(s => s.staffId === staffId && s.date === date);
-      
+
       if (type && type !== 'none') {
         const newShift: ShiftAssignment = {
           id: existingShift?.id || `temp-${Date.now()}`,
@@ -487,14 +489,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           date: date,
           type: type as any
         };
-        
+
         if (existingIndex >= 0) {
           tempShifts[existingIndex] = newShift;
         } else {
           tempShifts.push(newShift);
         }
         setShifts(tempShifts);
-        
+
         // Background API call
         if (existingShift) {
           await shiftService.update(existingShift.id, { shift_type: typeMap[type] || type });
