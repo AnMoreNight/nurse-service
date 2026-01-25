@@ -427,7 +427,33 @@ export const VisitModal: React.FC<VisitModalProps> = ({
                                 onChange={(e) => setStatus(e.target.value)}
                             >
                                 {companySettings.visitStatuses.map(s => (
-                                    <option key={s.key} value={s.key}>{s.label}</option>
+                                    <option 
+                                        key={s.key} 
+                                        value={s.key}
+                                        className={`py-2 font-bold text-${s.color}-700 bg-${s.color}-50`}
+                                        style={{
+                                            backgroundColor: s.color === 'red' ? '#fef2f2' :
+                                                           s.color === 'blue' ? '#eff6ff' :
+                                                           s.color === 'green' ? '#f0fdf4' :
+                                                           s.color === 'yellow' ? '#fefce8' :
+                                                           s.color === 'purple' ? '#faf5ff' :
+                                                           s.color === 'orange' ? '#fff7ed' :
+                                                           s.color === 'gray' ? '#f9fafb' :
+                                                           s.color === 'teal' ? '#f0fdfa' :
+                                                           s.color === 'pink' ? '#fdf2f8' : '#ffffff',
+                                            color: s.color === 'red' ? '#b91c1c' :
+                                                   s.color === 'blue' ? '#1d4ed8' :
+                                                   s.color === 'green' ? '#15803d' :
+                                                   s.color === 'yellow' ? '#a16207' :
+                                                   s.color === 'purple' ? '#7e22ce' :
+                                                   s.color === 'orange' ? '#c2410c' :
+                                                   s.color === 'gray' ? '#374151' :
+                                                   s.color === 'teal' ? '#0f766e' :
+                                                   s.color === 'pink' ? '#be185d' : '#111827'
+                                        }}
+                                    >
+                                        {s.label}
+                                    </option>
                                 ))}
                             </select>
                         </div>
