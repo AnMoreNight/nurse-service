@@ -24,9 +24,27 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
   const { showConfirm } = useModal();
 
   const [viewDate, setViewDate] = useState(() => {
+    // Try to restore the last viewed month from localStorage
+    const savedMonth = localStorage.getItem('shiftManager_viewMonth');
+    if (savedMonth) {
+      try {
+        const [y, m] = savedMonth.split('-').map(Number);
+        return new Date(y, m - 1, 1);
+      } catch {
+        // If parse fails, fall back to current date
+      }
+    }
+    // Default to current date
     const [y, m] = currentDate.split('-').map(Number);
     return new Date(y, m - 1, 1);
   });
+
+  // Persist the viewed month in localStorage whenever it changes
+  useEffect(() => {
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth() + 1;
+    localStorage.setItem('shiftManager_viewMonth', `${year}-${month}`);
+  }, [viewDate]);
 
   const [showCopyConfirm, setShowCopyConfirm] = useState(false);
   const [activeCell, setActiveCell] = useState<{ staffId: string; date: string; rect?: DOMRect } | null>(null);
@@ -102,7 +120,7 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
     if (isReadOnly) return;
 
     // Show confirmation dialog before copying
-    const confirmed = await showConfirm('前月のシフトを今月にコピーしますか？\n（夜間待機のシフトのみコピーされます）');
+    const confirmed = await showConfirm('前月のシフトを今月にコピーしますか？\n（全てのシフトがコピーされます）');
     if (!confirmed) return;
 
     const lastMonth = new Date(year, month - 1, 1);
@@ -116,11 +134,11 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
       return sy === lastMonthYear && sm === lastMonthMonth + 1;
     });
 
-    // Night shift types to copy
-    const nightShiftTypes: ShiftType[] = ['night1', 'night2', 'night1_holiday', 'night2_holiday'];
+    // All shift types to copy (copy all assigned shifts)
+    const shiftTypesToCopy: ShiftType[] = ['work', 'holiday', 'night1', 'night2', 'night1_holiday', 'night2_holiday'];
     let copiedCount = 0;
 
-    // For each day in current month, copy night shifts if they exist on same day-of-month in last month
+    // For each day in current month, copy shifts if they exist on same day-of-month in last month
     for (let day = 1; day <= daysInMonth; day++) {
       if (day > daysInLastMonth) break;
 
@@ -128,8 +146,8 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
 
       staff.forEach(s => {
         const lastMonthShift = lastMonthShifts.find(sh => sh.staffId === s.id && sh.date.endsWith(`-${String(day).padStart(2, '0')}`));
-        // Only copy if it's a night shift type
-        if (lastMonthShift && lastMonthShift.type && nightShiftTypes.includes(lastMonthShift.type)) {
+        // Copy if it's any of the shift types we want to copy
+        if (lastMonthShift && lastMonthShift.type && shiftTypesToCopy.includes(lastMonthShift.type)) {
           onUpdateShift(s.id, currentDateStr, lastMonthShift.type);
           copiedCount++;
         }
@@ -140,7 +158,7 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
     setTimeout(() => setShowCopyConfirm(false), 2000);
 
     // Optional: could add a console log for debugging
-    console.log(`Copied ${copiedCount} night shifts from last month`);
+    console.log(`Copied ${copiedCount} shifts from last month`);
   };
 
   // Show empty state if no staff
