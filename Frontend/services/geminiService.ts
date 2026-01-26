@@ -3,7 +3,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Staff, VisitWithStaff } from "@/lib/types";
 
 // Ensure API key is available.
-const apiKey = process.env.API_KEY || '';
+const apiKey = process.env.API_KEY || 'sssa';
 const ai = new GoogleGenAI({ apiKey });
 
 interface SuggestionInput {
