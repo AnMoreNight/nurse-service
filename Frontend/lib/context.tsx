@@ -102,6 +102,16 @@ function scheduleToVisit(schedule: Schedule): Visit {
     endTime: schedule.end_time.split('T')[1]?.slice(0, 5) || '10:00',
     status: schedule.status_id,
     recurrence: schedule.recurring_series_id ? 'custom' : 'none',
+    recurrenceRule: schedule.recurring_rule ? {
+      frequency: schedule.recurring_rule.frequency as any,
+      interval: schedule.recurring_rule.interval || 1,
+      weekDays: schedule.recurring_rule.day_of_week || [],
+      weekNos: schedule.recurring_rule.week_of_month ? [schedule.recurring_rule.week_of_month] : [],
+      dayOfMonth: schedule.recurring_rule.day_of_month,
+      endType: schedule.recurring_rule.end_date ? 'date' : 'never',
+      endDate: schedule.recurring_rule.end_date,
+      endCount: undefined,
+    } : undefined,
     notes: schedule.memo || '',
   };
 }
@@ -440,6 +450,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         status_id: data.status,
         memo: data.notes,
         assigned_user_ids: data.staffIds,
+        recurring_rule: data.recurrenceRule ? {
+          frequency: data.recurrenceRule.frequency,
+          interval: data.recurrenceRule.interval,
+          day_of_week: data.recurrenceRule.weekDays,
+          start_date: data.date,
+          end_date: data.recurrenceRule.endDate,
+        } : undefined,
         update_scope: scope as any,
       });
       await refreshData();

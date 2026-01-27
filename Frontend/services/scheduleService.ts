@@ -23,6 +23,8 @@ export interface Schedule {
   end_time: string;
   status_id: string;
   memo?: string;
+  recurring_rule_id?: string;
+  recurring_rule?: RecurringRule;
   recurring_series_id?: string;
   is_exception: boolean;
   assigned_users: User[];
@@ -51,6 +53,7 @@ export interface ScheduleUpdate {
   status_id?: string;
   memo?: string;
   assigned_user_ids?: string[];
+  recurring_rule?: RecurringRule;
   update_scope?: 'this' | 'future' | 'all';
 }
 

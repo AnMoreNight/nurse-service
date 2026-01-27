@@ -125,6 +125,17 @@ class ScheduleController:
                 "status_id": str(s.status_id) if s.status_id else None,
                 "memo": s.memo,
                 "recurring_series_id": str(s.recurring_series_id) if s.recurring_series_id else None,
+                "recurring_rule": {
+                    "frequency": s.recurring_rule.frequency,
+                    "day_of_week": s.recurring_rule.day_of_week,
+                    "week_of_month": s.recurring_rule.week_of_month,
+                    "day_of_week_monthly": s.recurring_rule.day_of_week_monthly,
+                    "month_of_year": s.recurring_rule.month_of_year,
+                    "day_of_month": s.recurring_rule.day_of_month,
+                    "interval": s.recurring_rule.interval,
+                    "start_date": s.recurring_rule.start_date.isoformat() if s.recurring_rule.start_date else None,
+                    "end_date": s.recurring_rule.end_date.isoformat() if s.recurring_rule.end_date else None,
+                } if s.recurring_rule else None,
                 "is_exception": s.is_exception,
                 "created_at": s.created_at.isoformat() if s.created_at else None,
                 "assigned_users": [
