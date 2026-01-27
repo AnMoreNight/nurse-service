@@ -85,7 +85,7 @@ function userToStaff(user: User): Staff {
     avatar: user.name.slice(0, 2).toUpperCase(),
     joinedDate: user.join_date || user.created_at.split('T')[0],
     leftDate: user.left_date,
-    defaultHolidayWeekDays: [],
+    defaultHolidayWeekDays: user.default_holiday_weekdays || [],
   };
 }
 

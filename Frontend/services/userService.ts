@@ -14,6 +14,7 @@ export interface User {
   is_active: boolean;
   join_date?: string;
   left_date?: string;
+  default_holiday_weekdays?: number[];
   created_at: string;
 }
 
@@ -27,6 +28,7 @@ export interface UserCreate {
   display_color?: string;
   join_date?: string;
   left_date?: string;
+  default_holiday_weekdays?: number[];
 }
 
 export interface UserCreateByAdmin {
@@ -40,6 +42,7 @@ export interface UserCreateByAdmin {
   display_color?: string;
   join_date?: string;
   left_date?: string;
+  default_holiday_weekdays?: number[];
 }
 
 export interface AssignCompanyAdmin {
