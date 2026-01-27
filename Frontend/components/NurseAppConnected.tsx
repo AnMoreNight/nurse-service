@@ -667,20 +667,22 @@ export default function NurseAppConnected() {
           currentDate={currentDate}
           jobTitles={companySettings.jobTitles}
           onClose={() => setStaffFormState({ isOpen: false })}
-          onSave={async (name, jobTitle, defaultHolidays, joinedDate) => {
+          onSave={async (name, jobTitle, defaultHolidays, joinedDate, color) => {
             if (staffFormState.initialStaff) {
               await handleUpdateStaff(staffFormState.initialStaff.id, { 
                 name, 
                 jobTitle, 
                 defaultHolidays, 
-                joinedDate 
+                joinedDate,
+                color
               });
             } else {
               await handleAddStaff({ 
                 name, 
                 jobTitle, 
                 defaultHolidays, 
-                joinedDate 
+                joinedDate,
+                color
               });
             }
             setStaffFormState({ isOpen: false });

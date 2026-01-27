@@ -8,7 +8,7 @@ import { useModal } from '@/contexts/ModalContext';
 interface StaffFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (name: string, jobTitle: string, defaultHolidays: number[], joinedDate: string) => void;
+  onSave: (name: string, jobTitle: string, defaultHolidays: number[], joinedDate: string, color: string) => void;
   initialStaff?: Staff;
   currentDate: string;
   jobTitles: string[]; // Provided from settings
@@ -20,6 +20,7 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({
   const { showAlert } = useModal();
   const [name, setName] = useState('');
   const [jobTitle, setJobTitle] = useState('');
+  const [color, setColor] = useState('#3B82F6');
   const [defaultHolidays, setDefaultHolidays] = useState<number[]>([]);
   const [joinedDate, setJoinedDate] = useState('');
   const [saving, setSaving] = useState(false);
@@ -30,11 +31,15 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({
       if (initialStaff) {
         setName(initialStaff.name);
         setJobTitle(initialStaff.jobTitle || '');
+        // Convert color name to hex or use as-is if already hex
+        const colorValue = initialStaff.color?.startsWith('#') ? initialStaff.color : '#3B82F6';
+        setColor(colorValue);
         setDefaultHolidays(initialStaff.defaultHolidayWeekDays || []);
         setJoinedDate(initialStaff.joinedDate);
       } else {
         setName('');
         setJobTitle(jobTitles[0] || '');
+        setColor('#3B82F6');
         setDefaultHolidays([]);
         setJoinedDate(currentDate);
       }
@@ -57,7 +62,7 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({
     }
     try {
       setSaving(true);
-      await onSave(name, jobTitle, defaultHolidays, joinedDate);
+      await onSave(name, jobTitle, defaultHolidays, joinedDate, color);
       onClose();
     } finally {
       setSaving(false);
@@ -106,6 +111,19 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({
                   <option key={t} value={t}>{t}</option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-500 mb-1">表示色</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+                className="w-16 h-10 rounded border border-gray-300 cursor-pointer"
+              />
+              <span className="text-sm text-gray-600">{color}</span>
             </div>
           </div>
 

@@ -400,12 +400,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                                     onChange={(e) => { e.stopPropagation(); onUpdateShift(staff.id, currentDate, e.target.value as ShiftType); }}
                                                     onMouseDown={(e) => e.stopPropagation()}
                                                 >
-                                                    <option value="work">出勤</option>
-                                                    <option value="holiday">休</option>
-                                                    <option value="night1">1</option>
-                                                    <option value="night2">2</option>
-                                                    <option value="night1_holiday">1(休)</option>
-                                                    <option value="night2_holiday">2(休)</option>
+                                                    <option value="work" style={{ backgroundColor: '#ffffff', color: '#4b5563' }}>出勤</option>
+                                                    <option value="holiday" style={{ backgroundColor: '#6b7280', color: '#ffffff' }}>休</option>
+                                                    <option value="night1" style={{ backgroundColor: '#6366f1', color: '#ffffff' }}>1</option>
+                                                    <option value="night2" style={{ backgroundColor: '#ec4899', color: '#ffffff' }}>2</option>
+                                                    <option value="night1_holiday" style={{ backgroundColor: '#6366f1', color: '#ffffff' }}>1(休)</option>
+                                                    <option value="night2_holiday" style={{ backgroundColor: '#ec4899', color: '#ffffff' }}>2(休)</option>
                                                 </select>
                                             </div>
                                         </div>
