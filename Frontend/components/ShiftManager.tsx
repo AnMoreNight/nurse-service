@@ -120,7 +120,7 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
     if (isReadOnly) return;
 
     // Show confirmation dialog before copying
-    const confirmed = await showConfirm('前月のシフトを今月にコピーしますか？\n（全てのシフトがコピーされます）');
+    const confirmed = await showConfirm('前月のシフトを今月にコピーしますか？\n（全てのシフトと固定休みがコピーされます）');
     if (!confirmed) return;
 
     const lastMonth = new Date(year, month - 1, 1);
@@ -154,11 +154,30 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
       });
     }
 
+    // Also apply default weekly holidays (固定休み) for the entire month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const currentDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const [y, m, d] = currentDateStr.split('-').map(Number);
+      const dayOfWeek = new Date(y, m - 1, d).getDay();
+
+      staff.forEach(s => {
+        // Check if this staff has default holidays for this day of week
+        if (s.defaultHolidayWeekDays && s.defaultHolidayWeekDays.includes(dayOfWeek)) {
+          // Only apply if there's no explicit shift already (don't override explicit shifts)
+          const existingShift = shifts.find(sh => sh.staffId === s.id && sh.date === currentDateStr);
+          if (!existingShift) {
+            onUpdateShift(s.id, currentDateStr, 'holiday');
+            copiedCount++;
+          }
+        }
+      });
+    }
+
     setShowCopyConfirm(true);
     setTimeout(() => setShowCopyConfirm(false), 2000);
 
     // Optional: could add a console log for debugging
-    console.log(`Copied ${copiedCount} shifts from last month`);
+    console.log(`Copied ${copiedCount} shifts and default holidays from last month`);
   };
 
   // Show empty state if no staff

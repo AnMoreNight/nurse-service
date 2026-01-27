@@ -333,10 +333,12 @@ export default function NurseAppConnected() {
       await userService.create({
         email: staffData.email || `${staffData.name}@example.com`,
         password: 'temp123',
-        role: 'NormalUser',
+        role: 'NORMAL_USER',
         name: staffData.name,
-        profession: staffData.jobTitle,
+        job_title: staffData.jobTitle,
         display_color: staffData.color,
+        join_date: staffData.joinedDate,
+        default_holiday_weekdays: staffData.defaultHolidays,
       });
 
       await loadData();
@@ -350,8 +352,10 @@ export default function NurseAppConnected() {
     try {
       await userService.update(staffId, {
         name: updates.name,
-        profession: updates.jobTitle,
+        job_title: updates.jobTitle,
         display_color: updates.color,
+        join_date: updates.joinedDate,
+        default_holiday_weekdays: updates.defaultHolidays,
       });
 
       await loadData();
@@ -664,9 +668,19 @@ export default function NurseAppConnected() {
           onClose={() => setStaffFormState({ isOpen: false })}
           onSave={async (name, jobTitle, defaultHolidays, joinedDate) => {
             if (staffFormState.initialStaff) {
-              await handleUpdateStaff(staffFormState.initialStaff.id, { name, jobTitle });
+              await handleUpdateStaff(staffFormState.initialStaff.id, { 
+                name, 
+                jobTitle, 
+                defaultHolidays, 
+                joinedDate 
+              });
             } else {
-              await handleAddStaff({ name, jobTitle });
+              await handleAddStaff({ 
+                name, 
+                jobTitle, 
+                defaultHolidays, 
+                joinedDate 
+              });
             }
             setStaffFormState({ isOpen: false });
           }}
