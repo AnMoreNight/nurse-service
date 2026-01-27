@@ -641,6 +641,7 @@ export default function NurseAppConnected() {
             staffMembers: selectedVisit.staffMembers,
           }}
           staffList={staffList}
+          statuses={statuses}
           companySettings={companySettings}
           onClose={() => setSelectedVisit(null)}
           onUpdate={async (updatedVisit, scope) => {

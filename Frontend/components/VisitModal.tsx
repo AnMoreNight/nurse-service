@@ -9,6 +9,7 @@ import { useModal } from '@/contexts/ModalContext';
 interface VisitModalProps {
     visit: VisitWithStaff;
     staffList: Staff[];
+    statuses: { status_id: string; name: string; color: string; }[];
     companySettings: CompanySettings;
     onClose: () => void;
     onUpdate: (updatedVisit: VisitWithStaff, scope?: RecurrenceScope) => void;
@@ -21,6 +22,7 @@ interface VisitModalProps {
 export const VisitModal: React.FC<VisitModalProps> = ({
     visit,
     staffList,
+    statuses,
     companySettings,
     onClose,
     onUpdate,
@@ -199,8 +201,8 @@ export const VisitModal: React.FC<VisitModalProps> = ({
         .map(s => s.name)
         .join(', ');
 
-    const getStatusColor = (key: string) => {
-        const s = companySettings.visitStatuses.find(s => s.key === key);
+    const getStatusColor = (statusId: string) => {
+        const s = statuses.find(s => s.status_id === statusId);
         return s ? s.color : 'gray';
     };
 
@@ -426,15 +428,16 @@ export const VisitModal: React.FC<VisitModalProps> = ({
                                 value={status}
                                 onChange={(e) => setStatus(e.target.value)}
                             >
-                                {companySettings.visitStatuses.map(s => (
+                                {statuses.map(s => (
                                     <option 
-                                        key={s.key} 
-                                        value={s.key}
+                                        key={s.status_id} 
+                                        value={s.status_id}
                                         className={`py-2 font-bold text-${s.color}-700 bg-${s.color}-50`}
                                         style={{
                                             backgroundColor: s.color === 'red' ? '#fef2f2' :
                                                            s.color === 'blue' ? '#eff6ff' :
                                                            s.color === 'green' ? '#f0fdf4' :
+                                                           s.color === 'emerald' ? '#ecfdf5' :
                                                            s.color === 'yellow' ? '#fefce8' :
                                                            s.color === 'purple' ? '#faf5ff' :
                                                            s.color === 'orange' ? '#fff7ed' :
@@ -444,15 +447,16 @@ export const VisitModal: React.FC<VisitModalProps> = ({
                                             color: s.color === 'red' ? '#b91c1c' :
                                                    s.color === 'blue' ? '#1d4ed8' :
                                                    s.color === 'green' ? '#15803d' :
+                                                   s.color === 'emerald' ? '#047857' :
                                                    s.color === 'yellow' ? '#a16207' :
                                                    s.color === 'purple' ? '#7e22ce' :
                                                    s.color === 'orange' ? '#c2410c' :
                                                    s.color === 'gray' ? '#374151' :
                                                    s.color === 'teal' ? '#0f766e' :
-                                                   s.color === 'pink' ? '#be185d' : '#111827'
+                                                   s.color === 'pink' ? '#be185d' : '#000000'
                                         }}
                                     >
-                                        {s.label}
+                                        {s.name}
                                     </option>
                                 ))}
                             </select>
