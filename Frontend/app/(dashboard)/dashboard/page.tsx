@@ -27,6 +27,7 @@ function DashboardContent() {
     visits: companyVisits,
     shifts: companyShifts,
     companySettings,
+    statuses,
     isLoading,
     error,
     clearError,
@@ -491,7 +492,7 @@ function DashboardContent() {
 
       {selectedVisit && (
         <VisitModal
-          visit={selectedVisit} staffList={filteredStaff} companySettings={companySettings}
+          visit={selectedVisit} staffList={filteredStaff} statuses={statuses} companySettings={companySettings}
           onClose={() => setSelectedVisit(null)} onUpdate={handleUpdateVisit} onDelete={handleDeleteVisit}
           onDuplicate={handleDuplicateVisit} onAiQuery={!isReadOnly ? (data) => { setSelectedVisit(null); setSuggestionState({ isOpen: true, initialValues: data }); } : undefined}
           isReadOnly={isReadOnly}
