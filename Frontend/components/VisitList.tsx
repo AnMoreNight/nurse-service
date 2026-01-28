@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { VisitWithStaff, CompanySettings } from '@/lib/types';
 import { AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { getColorStyles } from '@/lib/utils';
 
 interface VisitListProps {
   visits: VisitWithStaff[];
@@ -37,14 +38,15 @@ export const VisitList: React.FC<VisitListProps> = ({ visits, onSelectVisit, com
   const handlePrevPage = () => setCurrentPage(p => Math.max(1, p - 1));
   const handleNextPage = () => setCurrentPage(p => Math.min(totalPages, p + 1));
 
-  const getStatusStyle = (statusKey: string) => {
+  const getStatusStyleObj = (statusKey: string) => {
       const config = companySettings.visitStatuses.find(s => s.key === statusKey);
-      if (config) {
-          const color = config.color;
-          if (color === 'gray' || color === 'slate') return `bg-${color}-100 text-${color}-500 border-${color}-200`;
-          return `bg-${color}-50 text-${color}-600 border-${color}-100`;
-      }
-      return 'bg-blue-50 text-blue-600 border-blue-100';
+      const color = config ? config.color : 'blue';
+      const styles = getColorStyles(color);
+      return {
+          backgroundColor: styles.bgLight,
+          color: styles.text,
+          borderColor: styles.borderLight
+      };
   };
 
   const getStatusLabel = (statusKey: string) => {
@@ -92,9 +94,10 @@ export const VisitList: React.FC<VisitListProps> = ({ visits, onSelectVisit, com
                                             <>
                                                 <div className="flex -space-x-1.5">
                                                     {visit.staffMembers.map(s => (
-                                                        <div 
+                                                        <div
                                                             key={s.id}
-                                                            className={`w-6 h-6 rounded-full border border-white flex items-center justify-center text-[10px] font-bold text-white bg-${s.color}-500`}
+                                                            className="w-6 h-6 rounded-full border border-white flex items-center justify-center text-[10px] font-bold text-white"
+                                                            style={{ backgroundColor: getColorStyles(s.color).bg }}
                                                             title={s.name}
                                                         >
                                                             {s.avatar}
@@ -111,7 +114,10 @@ export const VisitList: React.FC<VisitListProps> = ({ visits, onSelectVisit, com
                                     </div>
                                 </td>
                                 <td className="py-3 px-4 text-sm">
-                                    <span className={`px-2 py-0.5 rounded text-xs font-medium border ${getStatusStyle(visit.status)}`}>
+                                    <span
+                                        className="px-2 py-0.5 rounded text-xs font-medium border"
+                                        style={getStatusStyleObj(visit.status)}
+                                    >
                                         {getStatusLabel(visit.status)}
                                     </span>
                                 </td>

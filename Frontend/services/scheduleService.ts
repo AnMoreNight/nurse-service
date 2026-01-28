@@ -4,7 +4,7 @@ import { User } from './userService';
 export interface RecurringRule {
   frequency: string;
   day_of_week?: number[];
-  week_of_month?: number;
+  week_of_month?: number[];  // Array to support multiple weeks (e.g., [1, 3] for 1st and 3rd week)
   day_of_week_monthly?: number;
   month_of_year?: number;
   day_of_month?: number;

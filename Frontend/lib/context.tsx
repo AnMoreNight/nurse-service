@@ -106,7 +106,10 @@ function scheduleToVisit(schedule: Schedule): Visit {
       frequency: schedule.recurring_rule.frequency as any,
       interval: schedule.recurring_rule.interval || 1,
       weekDays: schedule.recurring_rule.day_of_week || [],
-      weekNos: schedule.recurring_rule.week_of_month ? [schedule.recurring_rule.week_of_month] : [],
+      // Handle week_of_month as array (new format) or single value (legacy)
+      weekNos: Array.isArray(schedule.recurring_rule.week_of_month)
+        ? schedule.recurring_rule.week_of_month
+        : (schedule.recurring_rule.week_of_month ? [schedule.recurring_rule.week_of_month] : []),
       dayOfMonth: schedule.recurring_rule.day_of_month,
       endType: schedule.recurring_rule.end_date ? 'date' : 'never',
       endDate: schedule.recurring_rule.end_date,
@@ -427,6 +430,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           frequency: data.recurrenceRule.frequency,
           interval: data.recurrenceRule.interval,
           day_of_week: data.recurrenceRule.weekDays,
+          // Monthly by weekday fields - send full array for multiple week support
+          week_of_month: data.recurrenceRule.weekNos && data.recurrenceRule.weekNos.length > 0
+            ? data.recurrenceRule.weekNos : undefined,
+          day_of_week_monthly: data.recurrenceRule.frequency === 'monthly' &&
+            data.recurrenceRule.weekNos && data.recurrenceRule.weekNos.length > 0 &&
+            data.recurrenceRule.weekDays && data.recurrenceRule.weekDays.length > 0
+            ? data.recurrenceRule.weekDays[0] : undefined,
+          // Monthly by date field
+          day_of_month: data.recurrenceRule.dayOfMonth,
           start_date: data.date,
           end_date: data.recurrenceRule.endDate,
         } : undefined,
@@ -454,6 +466,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           frequency: data.recurrenceRule.frequency,
           interval: data.recurrenceRule.interval,
           day_of_week: data.recurrenceRule.weekDays,
+          // Monthly by weekday fields - send full array for multiple week support
+          week_of_month: data.recurrenceRule.weekNos && data.recurrenceRule.weekNos.length > 0
+            ? data.recurrenceRule.weekNos : undefined,
+          day_of_week_monthly: data.recurrenceRule.frequency === 'monthly' &&
+            data.recurrenceRule.weekNos && data.recurrenceRule.weekNos.length > 0 &&
+            data.recurrenceRule.weekDays && data.recurrenceRule.weekDays.length > 0
+            ? data.recurrenceRule.weekDays[0] : undefined,
+          // Monthly by date field
+          day_of_month: data.recurrenceRule.dayOfMonth,
           start_date: data.date,
           end_date: data.recurrenceRule.endDate,
         } : undefined,

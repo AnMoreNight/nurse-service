@@ -94,11 +94,11 @@ class ScheduleStatus(Base):
 
 class RecurringRule(Base):
     __tablename__ = "recurring_rules"
-    
+
     rule_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     frequency = Column(String(50), nullable=True)  # Weekly, Monthly, Yearly
     day_of_week = Column(ARRAY(Integer), nullable=True)
-    week_of_month = Column(Integer, nullable=True)
+    week_of_month = Column(ARRAY(Integer), nullable=True)  # Support multiple weeks: [1,3] for 1st and 3rd week
     day_of_week_monthly = Column(Integer, nullable=True)
     month_of_year = Column(Integer, nullable=True)
     day_of_month = Column(Integer, nullable=True)

@@ -5,6 +5,7 @@ import { VisitWithStaff, Staff, RecurrenceRule, RecurrenceScope, CompanySettings
 import { X, Save, User, Trash2, FileText, Repeat, Users, Check, MapPin, ExternalLink, Copy, Calendar, Sparkles, AlertTriangle } from 'lucide-react';
 import { RecurrenceScopeModal } from './RecurrenceScopeModal';
 import { useModal } from '@/contexts/ModalContext';
+import { getColorStyles } from '@/lib/utils';
 
 interface VisitModalProps {
     visit: VisitWithStaff;
@@ -231,13 +232,16 @@ export const VisitModal: React.FC<VisitModalProps> = ({
             const [y, m, d] = date.split('-').map(Number);
             const dateObj = new Date(y, m - 1, d);
             const dayOfWeek = dateObj.getDay();
+            const dayOfMonth = dateObj.getDate();
 
             setRecurrenceRule({
                 frequency: mode as 'daily' | 'weekly' | 'monthly' | 'yearly',
                 interval: 1,
                 weekDays: mode === 'weekly' ? [dayOfWeek] : [],
                 endType: 'never',
-                weekNos: []
+                weekNos: [],
+                // For monthly, default to "by date" mode
+                dayOfMonth: mode === 'monthly' ? dayOfMonth : undefined
             });
         }
     };
@@ -410,7 +414,10 @@ export const VisitModal: React.FC<VisitModalProps> = ({
                                             <div className={`w-5 h-5 border rounded flex items-center justify-center mr-3 transition-colors ${staffIds.includes(staff.id) ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
                                                 {staffIds.includes(staff.id) && <Check className="w-3.5 h-3.5 text-white" />}
                                             </div>
-                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white bg-${staff.color}-500 mr-2`}>
+                                            <div
+                                                className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white mr-2"
+                                                style={{ backgroundColor: getColorStyles(staff.color).bg }}
+                                            >
                                                 {staff.avatar}
                                             </div>
                                             <span className="text-sm text-gray-700">{staff.name}</span>
@@ -424,41 +431,31 @@ export const VisitModal: React.FC<VisitModalProps> = ({
                             <label className="block text-xs font-bold text-gray-500 mb-1">ステータス</label>
                             <select
                                 disabled={isReadOnly}
-                                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 cursor-pointer bg-white text-${getStatusColor(status)}-700 font-bold border-${getStatusColor(status)}-200`}
+                                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100 cursor-pointer font-bold"
                                 value={status}
                                 onChange={(e) => setStatus(e.target.value)}
+                                style={{
+                                    backgroundColor: getColorStyles(getStatusColor(status)).bgLight,
+                                    color: getColorStyles(getStatusColor(status)).text,
+                                    borderColor: getColorStyles(getStatusColor(status)).border
+                                }}
                             >
-                                {statuses.map(s => (
-                                    <option 
-                                        key={s.status_id} 
-                                        value={s.status_id}
-                                        className={`py-2 font-bold text-${s.color}-700 bg-${s.color}-50`}
-                                        style={{
-                                            backgroundColor: s.color === 'red' ? '#fef2f2' :
-                                                           s.color === 'blue' ? '#eff6ff' :
-                                                           s.color === 'green' ? '#f0fdf4' :
-                                                           s.color === 'emerald' ? '#ecfdf5' :
-                                                           s.color === 'yellow' ? '#fefce8' :
-                                                           s.color === 'purple' ? '#faf5ff' :
-                                                           s.color === 'orange' ? '#fff7ed' :
-                                                           s.color === 'gray' ? '#f9fafb' :
-                                                           s.color === 'teal' ? '#f0fdfa' :
-                                                           s.color === 'pink' ? '#fdf2f8' : '#ffffff',
-                                            color: s.color === 'red' ? '#b91c1c' :
-                                                   s.color === 'blue' ? '#1d4ed8' :
-                                                   s.color === 'green' ? '#15803d' :
-                                                   s.color === 'emerald' ? '#047857' :
-                                                   s.color === 'yellow' ? '#a16207' :
-                                                   s.color === 'purple' ? '#7e22ce' :
-                                                   s.color === 'orange' ? '#c2410c' :
-                                                   s.color === 'gray' ? '#374151' :
-                                                   s.color === 'teal' ? '#0f766e' :
-                                                   s.color === 'pink' ? '#be185d' : '#000000'
-                                        }}
-                                    >
-                                        {s.name}
-                                    </option>
-                                ))}
+                                {statuses.map(s => {
+                                    const styles = getColorStyles(s.color);
+                                    return (
+                                        <option
+                                            key={s.status_id}
+                                            value={s.status_id}
+                                            className="py-2 font-bold"
+                                            style={{
+                                                backgroundColor: styles.bgLight,
+                                                color: styles.text
+                                            }}
+                                        >
+                                            {s.name}
+                                        </option>
+                                    );
+                                })}
                             </select>
                         </div>
                     </div>
@@ -493,10 +490,13 @@ export const VisitModal: React.FC<VisitModalProps> = ({
                                                 className="text-blue-600 focus:ring-blue-500"
                                                 checked={(!recurrenceRule.weekNos || recurrenceRule.weekNos.length === 0)}
                                                 onChange={() => {
+                                                    const [y, m, d] = date.split('-').map(Number);
+                                                    const dateObj = new Date(y, m - 1, d);
                                                     setRecurrenceRule({
                                                         ...recurrenceRule,
                                                         weekNos: [],
-                                                        weekDays: []
+                                                        weekDays: [],
+                                                        dayOfMonth: dateObj.getDate()
                                                     });
                                                 }}
                                             />
@@ -516,7 +516,8 @@ export const VisitModal: React.FC<VisitModalProps> = ({
                                                     setRecurrenceRule({
                                                         ...recurrenceRule,
                                                         weekNos: [nth > 5 ? 5 : nth],
-                                                        weekDays: [dateObj.getDay()]
+                                                        weekDays: [dateObj.getDay()],
+                                                        dayOfMonth: undefined
                                                     });
                                                 }}
                                             />

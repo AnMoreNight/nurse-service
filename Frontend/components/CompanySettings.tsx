@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { CompanySettings } from '@/lib/types';
 import { Settings, Plus, Trash2, Save, Loader2 } from 'lucide-react';
 import { useModal } from '@/contexts/ModalContext';
+import { getColorStyles } from '@/lib/utils';
 
 interface CompanySettingsProps {
   settings: CompanySettings;
@@ -165,7 +166,14 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
                       </select>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className={`inline-block px-3 py-1 rounded text-xs font-bold border bg-${status.color}-100 text-${status.color}-700 border-${status.color}-300`}>
+                      <span
+                        className="inline-block px-3 py-1 rounded text-xs font-bold border"
+                        style={{
+                          backgroundColor: getColorStyles(status.color).bgLight,
+                          color: getColorStyles(status.color).text,
+                          borderColor: getColorStyles(status.color).border
+                        }}
+                      >
                         {status.label}
                       </span>
                     </td>
@@ -203,7 +211,14 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
                     </select>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <span className={`inline-block px-3 py-1 rounded text-xs font-bold border bg-${newStatusColor}-100 text-${newStatusColor}-700 border-${newStatusColor}-300 opacity-70`}>
+                    <span
+                      className="inline-block px-3 py-1 rounded text-xs font-bold border opacity-70"
+                      style={{
+                        backgroundColor: getColorStyles(newStatusColor).bgLight,
+                        color: getColorStyles(newStatusColor).text,
+                        borderColor: getColorStyles(newStatusColor).border
+                      }}
+                    >
                       {newStatusLabel || 'プレビュー'}
                     </span>
                   </td>

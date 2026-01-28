@@ -22,10 +22,15 @@ class ScheduleController:
         
         # Create recurring rule if provided
         if recurring_rule:
+            # Handle week_of_month - normalize to array format
+            week_of_month_val = recurring_rule.get('week_of_month')
+            if week_of_month_val is not None and not isinstance(week_of_month_val, list):
+                week_of_month_val = [week_of_month_val]
+
             rule = RecurringRule(
                 frequency=recurring_rule.get('frequency'),
                 day_of_week=recurring_rule.get('day_of_week'),
-                week_of_month=recurring_rule.get('week_of_month'),
+                week_of_month=week_of_month_val,
                 day_of_week_monthly=recurring_rule.get('day_of_week_monthly'),
                 month_of_year=recurring_rule.get('month_of_year'),
                 day_of_month=recurring_rule.get('day_of_month'),

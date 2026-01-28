@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { VisitWithStaff, Staff, CompanySettings } from '@/lib/types';
 import { X, Search, Calendar, User, Clock, MapPin, ArrowRight } from 'lucide-react';
 import { checkVisitVisibility, toLocalISOString } from '@/lib/constants';
+import { getColorStyles } from '@/lib/utils';
 
 interface SearchVisitsModalProps {
     onClose: () => void;
@@ -197,7 +198,14 @@ export const SearchVisitsModal: React.FC<SearchVisitsModalProps> = ({
                                                     {visit.startTime} - {visit.endTime}
                                                 </div>
                                             </div>
-                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border bg-${color}-50 text-${color}-600 border-${color}-100`}>
+                                            <span
+                                                className="px-2 py-0.5 rounded text-[10px] font-bold border"
+                                                style={{
+                                                    backgroundColor: getColorStyles(color).bgLight,
+                                                    color: getColorStyles(color).text,
+                                                    borderColor: getColorStyles(color).borderLight
+                                                }}
+                                            >
                                                 {getStatusLabel(visit.status)}
                                             </span>
                                         </div>
@@ -224,7 +232,8 @@ export const SearchVisitsModal: React.FC<SearchVisitsModalProps> = ({
                                                     {visit.staffMembers && visit.staffMembers.map(s => (
                                                         <div
                                                             key={s.id}
-                                                            className={`w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-xs font-bold text-white bg-${s.color}-500`}
+                                                            className="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-xs font-bold text-white"
+                                                            style={{ backgroundColor: getColorStyles(s.color).bg }}
                                                             title={s.name}
                                                         >
                                                             {s.avatar}

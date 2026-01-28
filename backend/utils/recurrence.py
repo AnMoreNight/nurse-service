@@ -123,43 +123,85 @@ def _expand_weekly(base_date: date, start: date, end: date, interval: int,
 
 
 def _expand_monthly(base_date: date, start: date, end: date, interval: int,
-                    week_of_month: Optional[int], day_of_week_monthly: Optional[int],
+                    week_of_month: Optional[List[int]], day_of_week_monthly: Optional[int],
                     day_of_month: Optional[int], excluded: set) -> List[date]:
     """
     Expand monthly recurrence.
-    - If week_of_month and day_of_week_monthly provided: e.g., 2nd Tuesday
+    - If week_of_month (array) and day_of_week_monthly provided: e.g., 1st and 3rd Tuesday
     - If day_of_month provided: e.g., 15th of each month
     - Otherwise: same day of month as base_date
+
+    week_of_month can be:
+    - A list of week numbers [1, 3] for "1st and 3rd week"
+    - A single value wrapped in list [2] for "2nd week only"
+    - None for day-of-month mode
     """
     occurrences = []
     current_year = base_date.year
     current_month = base_date.month
-    
+
+    # Normalize week_of_month to list if it's a single value (backward compatibility)
+    weeks_list = week_of_month if isinstance(week_of_month, list) else ([week_of_month] if week_of_month is not None else None)
+
     while True:
+        month_has_valid_date = False
+
         try:
-            if week_of_month is not None and day_of_week_monthly is not None:
-                # Find nth day-of-week in month (e.g., 2nd Tuesday)
-                occ_date = _get_nth_weekday(current_year, current_month, week_of_month, day_of_week_monthly)
+            if weeks_list is not None and day_of_week_monthly is not None:
+                # Find nth day-of-week in month for each week number (e.g., 1st and 3rd Tuesday)
+                for week_num in weeks_list:
+                    try:
+                        occ_date = _get_nth_weekday(current_year, current_month, week_num, day_of_week_monthly)
+
+                        if occ_date > end:
+                            continue
+
+                        if occ_date >= start and occ_date >= base_date and occ_date.isoformat() not in excluded:
+                            occurrences.append(occ_date)
+                            month_has_valid_date = True
+                    except ValueError:
+                        pass  # This week number doesn't exist in this month (e.g., 5th Tuesday)
             elif day_of_month is not None:
                 occ_date = date(current_year, current_month, min(day_of_month, _days_in_month(current_year, current_month)))
+
+                if occ_date > end:
+                    break
+
+                if occ_date >= start and occ_date >= base_date and occ_date.isoformat() not in excluded:
+                    occurrences.append(occ_date)
+                    month_has_valid_date = True
             else:
                 occ_date = date(current_year, current_month, min(base_date.day, _days_in_month(current_year, current_month)))
-            
-            if occ_date > end:
-                break
-            
-            if occ_date >= start and occ_date >= base_date and occ_date.isoformat() not in excluded:
-                occurrences.append(occ_date)
+
+                if occ_date > end:
+                    break
+
+                if occ_date >= start and occ_date >= base_date and occ_date.isoformat() not in excluded:
+                    occurrences.append(occ_date)
+                    month_has_valid_date = True
+
+            # Check if we've passed the end date for non-weekday modes
+            if weeks_list is None or day_of_week_monthly is None:
+                if not month_has_valid_date:
+                    # Check if the month itself is past the end
+                    last_day = date(current_year, current_month, _days_in_month(current_year, current_month))
+                    if last_day > end:
+                        break
+
         except ValueError:
             pass  # Invalid date, skip
-        
+
         # Move to next month
         current_month += interval
         while current_month > 12:
             current_month -= 12
             current_year += 1
-    
-    return occurrences
+
+        # Safety check - stop if we've gone too far past the end date
+        if date(current_year, current_month, 1) > end + timedelta(days=31):
+            break
+
+    return sorted(set(occurrences))
 
 
 def _expand_yearly(base_date: date, start: date, end: date, interval: int,

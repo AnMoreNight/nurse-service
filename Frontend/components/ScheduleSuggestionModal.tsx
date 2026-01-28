@@ -5,6 +5,7 @@ import { Staff, VisitWithStaff, ScheduleSuggestion } from '@/lib/types';
 import { X, Sparkles, MapPin, Clock, Calendar, Check, AlertCircle } from 'lucide-react';
 import { suggestSchedule } from '@/services/geminiService';
 import { toLocalISOString } from '@/lib/constants';
+import { getColorStyles } from '@/lib/utils';
 
 interface ScheduleSuggestionModalProps {
     onClose: () => void;
@@ -224,11 +225,20 @@ export const ScheduleSuggestionModal: React.FC<ScheduleSuggestionModalProps> = (
                                         key={staff.id}
                                         onClick={() => toggleStaff(staff.id)}
                                         className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${selectedStaffIds.includes(staff.id)
-                                                ? `bg-${staff.color}-50 border-${staff.color}-200 text-${staff.color}-700 ring-2 ring-${staff.color}-500 ring-offset-1`
+                                                ? 'ring-2 ring-offset-1'
                                                 : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
                                             }`}
+                                        style={selectedStaffIds.includes(staff.id) ? {
+                                            backgroundColor: getColorStyles(staff.color).bgLight,
+                                            borderColor: getColorStyles(staff.color).border,
+                                            color: getColorStyles(staff.color).text,
+                                            '--tw-ring-color': getColorStyles(staff.color).bg
+                                        } as React.CSSProperties : undefined}
                                     >
-                                        <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] text-white bg-${staff.color}-500`}>
+                                        <div
+                                            className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] text-white"
+                                            style={{ backgroundColor: getColorStyles(staff.color).bg }}
+                                        >
                                             {staff.avatar}
                                         </div>
                                         {staff.name}
@@ -294,7 +304,10 @@ export const ScheduleSuggestionModal: React.FC<ScheduleSuggestionModalProps> = (
                                                 </div>
 
                                                 <div className="flex items-center gap-2">
-                                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] text-white font-bold bg-${staff.color}-500`}>
+                                                    <div
+                                                        className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] text-white font-bold"
+                                                        style={{ backgroundColor: getColorStyles(staff.color).bg }}
+                                                    >
                                                         {staff.avatar}
                                                     </div>
                                                     <span className="font-bold text-gray-800 text-sm">{staff.name}</span>

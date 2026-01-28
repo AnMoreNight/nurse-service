@@ -5,6 +5,7 @@ import { Staff, ShiftAssignment, ShiftType, CompanySettings } from '@/lib/types'
 import { ChevronLeft, ChevronRight, Moon, Sun, Palmtree, Plus, Edit, Trash2, Copy, Check, Users } from 'lucide-react';
 import { getEffectiveShiftType, toLocalISOString } from '@/lib/constants';
 import { useModal } from '@/contexts/ModalContext';
+import { getColorStyles } from '@/lib/utils';
 
 interface ShiftManagerProps {
   staff: Staff[];
@@ -294,7 +295,13 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
               <tr key={member.id} className="hover:bg-gray-50/50 group">
                 <td className="py-2 px-3 border-r font-medium text-gray-800 bg-white sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                   <div className="flex items-center gap-2">
-                    <div className={`w-8 h-8 rounded-full bg-${member.color}-100 flex items-center justify-center text-${member.color}-700 font-bold text-xs shrink-0`}>
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0"
+                      style={{
+                        backgroundColor: getColorStyles(member.color).bgLight,
+                        color: getColorStyles(member.color).text
+                      }}
+                    >
                       {member.avatar}
                     </div>
                     <div className="flex-1 min-w-0 overflow-hidden">
