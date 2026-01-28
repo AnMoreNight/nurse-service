@@ -218,7 +218,7 @@ class StatusBulkUpdate(BaseModel):
 class RecurringRuleCreate(BaseModel):
     frequency: str  # Weekly, Monthly, Yearly
     day_of_week: Optional[list[int]] = None
-    week_of_month: Optional[int] = None
+    week_of_month: Optional[list[int]] = None
     day_of_week_monthly: Optional[int] = None
     month_of_year: Optional[int] = None
     day_of_month: Optional[int] = None
