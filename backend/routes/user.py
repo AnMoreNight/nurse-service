@@ -96,7 +96,7 @@ async def update_user(user_id: UUID, req: UserUpdate, request: Request, db: Asyn
 @router.delete("/{user_id}")
 async def delete_user(user_id: UUID, request: Request, db: AsyncSession = Depends(get_db)):
     user = await require_company_admin(request, db)  # Admin only
-    return await UserController.deactivate_user(db, user_id, user["company_id"])
+    return await UserController.delete_user(db, user_id, user["company_id"])
 
 # SUPER_ADMIN only endpoints
 @router.post("/admin/create")
