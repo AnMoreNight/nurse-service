@@ -264,6 +264,7 @@ class UserController:
     
     @staticmethod
     async def deactivate_user(db: AsyncSession, user_id: UUID, company_id: UUID):
+        """Soft delete - just deactivates the user (keeps data)"""
         result = await db.execute(
             select(User).where(User.user_id == user_id, User.company_id == company_id)
         )
@@ -277,6 +278,51 @@ class UserController:
         await db.commit()
         
         return {"message": "User deactivated"}
+    
+    @staticmethod
+    async def delete_user(db: AsyncSession, user_id: UUID, company_id: UUID):
+        """Hard delete - permanently removes user and related data from database"""
+        from models.orm import ScheduleAssignment, Shift, WeeklyOffRule, AuditLog, PasswordResetToken
+        
+        result = await db.execute(
+            select(User).where(User.user_id == user_id, User.company_id == company_id)
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        
+        # Delete related records first (due to foreign key constraints)
+        # Delete schedule assignments
+        await db.execute(
+            delete(ScheduleAssignment).where(ScheduleAssignment.user_id == user_id)
+        )
+        
+        # Delete shifts
+        await db.execute(
+            delete(Shift).where(Shift.user_id == user_id)
+        )
+        
+        # Delete weekly off rules
+        await db.execute(
+            delete(WeeklyOffRule).where(WeeklyOffRule.user_id == user_id)
+        )
+        
+        # Delete password reset tokens
+        await db.execute(
+            delete(PasswordResetToken).where(PasswordResetToken.user_id == user_id)
+        )
+        
+        # Delete audit logs
+        await db.execute(
+            delete(AuditLog).where(AuditLog.user_id == user_id)
+        )
+        
+        # Finally delete the user
+        await db.delete(user)
+        await db.commit()
+        
+        return {"message": "User deleted permanently"}
     
     @staticmethod
     async def create_user_by_admin(db: AsyncSession, company_id: UUID, email: str, password: str, 
