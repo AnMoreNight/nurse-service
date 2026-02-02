@@ -339,6 +339,38 @@ export const VisitModal: React.FC<VisitModalProps> = ({
                                     onChange={(e) => setEndTime(e.target.value)}
                                 />
                             </div>
+                            {!isReadOnly && (
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                    {[30, 40, 60, 90, 120].map(mins => {
+                                        const currentDuration = (() => {
+                                            if (!startTime || !endTime) return 0;
+                                            const [sh, sm] = startTime.split(':').map(Number);
+                                            const [eh, em] = endTime.split(':').map(Number);
+                                            let diff = (eh * 60 + em) - (sh * 60 + sm);
+                                            if (diff < 0) diff += 24 * 60;
+                                            return diff;
+                                        })();
+                                        const isActive = currentDuration === mins;
+                                        return (
+                                            <button
+                                                key={mins}
+                                                type="button"
+                                                onClick={() => {
+                                                    if (!startTime) return;
+                                                    const [h, m] = startTime.split(':').map(Number);
+                                                    const totalMins = h * 60 + m + mins;
+                                                    const newH = Math.floor(totalMins / 60) % 24;
+                                                    const newM = totalMins % 60;
+                                                    setEndTime(`${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`);
+                                                }}
+                                                className={`px-2 py-1 text-xs rounded-md border transition-colors ${isActive ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-100'}`}
+                                            >
+                                                {mins}分
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
                     </div>
 

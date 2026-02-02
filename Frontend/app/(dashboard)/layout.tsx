@@ -55,7 +55,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           <div className="size-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
             <Image src="/image.png" alt="Logo" width={32} height={32} className="object-contain" />
           </div>
-          NurseAssist
+          comorebi
         </div>
         <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 text-slate-300 hover:text-white rounded-lg active:bg-slate-800 cursor-pointer">
           <Menu size={24} />
@@ -81,7 +81,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
               <Image src="/image.png" alt="Logo" width={32} height={32} className="object-contain" />
             </div>
-            <span className="font-bold text-white text-lg">NurseAssist</span>
+            <span className="font-bold text-white text-lg">comorebi</span>
           </div>
           <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden text-slate-400 hover:text-white p-1 rounded-full hover:bg-slate-800 cursor-pointer">
             <X size={24} />
