@@ -23,6 +23,19 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
 }) => {
   console.log('[ShiftManager] Received props:', { staffCount: staff.length, shiftsCount: shifts.length, staff });
   const { showConfirm } = useModal();
+  const [deletingStaffId, setDeletingStaffId] = useState<string | null>(null);
+
+  const handleDeleteStaff = async (staffId: string, staffName: string) => {
+    const confirmed = await showConfirm(`${staffName}を完全に削除しますか？\n\n※この操作は取り消せません。スタッフのシフトや予定への割り当ても全て削除されます。`);
+    if (confirmed) {
+      setDeletingStaffId(staffId);
+      try {
+        await onDeleteStaff(staffId);
+      } finally {
+        setDeletingStaffId(null);
+      }
+    }
+  };
 
   const [viewDate, setViewDate] = useState(() => {
     // Try to restore the last viewed month from localStorage
@@ -286,29 +299,42 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
             </tr>
           </thead>
           <tbody>
-            {staff.map(member => (
-              <tr key={member.id} className="hover:bg-gray-50/50 group">
+            {staff.map(member => {
+              const isDeleting = deletingStaffId === member.id;
+              return (
+              <tr key={member.id} className={`hover:bg-gray-50/50 group ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}>
                 <td className="py-2 px-3 border-r font-medium text-gray-800 bg-white sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                   <div className="flex items-center gap-2">
-                    <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0"
-                      style={{
-                        backgroundColor: getColorStyles(member.color).bgLight,
-                        color: getColorStyles(member.color).text
-                      }}
-                    >
-                      {member.avatar}
-                    </div>
+                    {isDeleting ? (
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center bg-red-100 shrink-0">
+                        <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    ) : (
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0"
+                        style={{
+                          backgroundColor: getColorStyles(member.color).bgLight,
+                          color: getColorStyles(member.color).text
+                        }}
+                      >
+                        {member.avatar}
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0 overflow-hidden">
-                      <div className="truncate font-medium whitespace-nowrap" title={member.name}>{member.name.substring(0, 2)}</div>
-                      {member.jobTitle && <div className="text-[10px] text-gray-400 truncate whitespace-nowrap max-w-full" title={member.jobTitle}>{member.jobTitle}</div>}
+                      <div className={`truncate font-medium whitespace-nowrap ${isDeleting ? 'text-red-500 line-through' : ''}`} title={member.name}>
+                        {isDeleting ? '削除中...' : member.name.substring(0, 2)}
+                      </div>
+                      {member.jobTitle && !isDeleting && <div className="text-[10px] text-gray-400 truncate whitespace-nowrap max-w-full" title={member.jobTitle}>{member.jobTitle}</div>}
                     </div>
-                    {!isReadOnly && (
+                    {!isReadOnly && !isDeleting && (
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                         <button onClick={() => onOpenStaffForm(member)} className="p-1 hover:bg-gray-200 rounded text-gray-400 hover:text-gray-600">
                           <Edit className="w-3 h-3" />
                         </button>
-                        <button onClick={async () => { const confirmed = await showConfirm(`${member.name}を削除しますか？`); if (confirmed) onDeleteStaff(member.id); }} className="p-1 hover:bg-red-100 rounded text-gray-400 hover:text-red-600">
+                        <button 
+                          onClick={() => handleDeleteStaff(member.id, member.name)} 
+                          className="p-1 hover:bg-red-100 rounded text-gray-400 hover:text-red-600"
+                        >
                           <Trash2 className="w-3 h-3" />
                         </button>
                       </div>
@@ -335,7 +361,7 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
                 })
                 }
               </tr >
-            ))}
+            )})}
           </tbody >
         </table >
       </div >
