@@ -61,7 +61,7 @@ export interface VisitWithStaff extends Visit {
   staffMembers?: Staff[]; // Resolved staff objects
 }
 
-export type RecurrenceScope = 'this' | 'following' | 'all';
+export type RecurrenceScope = 'this' | 'future' | 'all';
 
 // Updated to include holiday+night combinations
 export type ShiftType = 'night1' | 'night2' | 'holiday' | 'work' | 'night1_holiday' | 'night2_holiday' | 'none' | null;

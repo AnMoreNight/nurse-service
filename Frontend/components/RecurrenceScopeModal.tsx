@@ -41,8 +41,8 @@ export const RecurrenceScopeModal: React.FC<RecurrenceScopeModalProps> = ({ mode
                 <input
                   type="radio"
                   name="scope"
-                  checked={scope === 'following'}
-                  onChange={() => setScope('following')}
+                  checked={scope === 'future'}
+                  onChange={() => setScope('future')}
                   className="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500"
                 />
               </div>
@@ -51,20 +51,6 @@ export const RecurrenceScopeModal: React.FC<RecurrenceScopeModalProps> = ({ mode
               </div>
             </label>
 
-            <label className="flex items-start gap-3 cursor-pointer group">
-              <div className="pt-1">
-                <input
-                  type="radio"
-                  name="scope"
-                  checked={scope === 'all'}
-                  onChange={() => setScope('all')}
-                  className="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <span className="block text-gray-800 text-base group-hover:text-blue-800">すべての予定</span>
-              </div>
-            </label>
           </div>
         </div>
 

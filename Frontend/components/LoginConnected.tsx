@@ -37,10 +37,10 @@ export const LoginConnected: React.FC<LoginProps> = ({ onLogin }) => {
         <div className="bg-teal-600 p-8 text-center relative overflow-hidden">
           <div className="relative z-10">
             <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm shadow-inner border border-white/10">
-              <span className="text-3xl font-bold text-white">N</span>
+              <span className="text-3xl font-bold text-white">C</span>
             </div>
             <h1 className="text-2xl font-bold text-white mb-2">
-              NurseAssist Pro
+              comorebi
             </h1>
             <p className="text-teal-100 text-sm">
               訪問看護スケジュール管理プラットフォーム

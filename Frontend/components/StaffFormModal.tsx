@@ -142,7 +142,7 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-500 mb-2">固定休み（デフォルト公休）</label>
+            <label className="block text-xs font-bold text-gray-500 mb-2">固定休み</label>
             <div className="flex justify-between">
               {weekDayLabels.map((label, idx) => {
                 const isSelected = defaultHolidays.includes(idx);

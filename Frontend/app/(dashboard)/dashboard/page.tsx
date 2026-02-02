@@ -53,12 +53,26 @@ function DashboardContent() {
   const searchParams = useSearchParams();
   const view = searchParams.get('view') || 'schedule';
 
-  const [currentDate, setCurrentDate] = useState<string>(toLocalISOString(new Date()));
+  const [currentDate, setCurrentDate] = useState<string>(() => {
+    // Restore date from localStorage, default to today
+    if (typeof window !== 'undefined') {
+      const savedDate = localStorage.getItem('dashboard_currentDate');
+      if (savedDate) {
+        return savedDate;
+      }
+    }
+    return toLocalISOString(new Date());
+  });
   const [selectedVisit, setSelectedVisit] = useState<VisitWithStaff | null>(null);
   const [staffFormState, setStaffFormState] = useState<{ isOpen: boolean, initialStaff?: Staff }>({ isOpen: false });
   const [suggestionState, setSuggestionState] = useState<{ isOpen: boolean; initialValues?: any }>({ isOpen: false });
   const [localToast, setLocalToast] = useState<string | null>(null);
   const { showConfirm } = useModal();
+
+  // Persist current date to localStorage
+  useEffect(() => {
+    localStorage.setItem('dashboard_currentDate', currentDate);
+  }, [currentDate]);
 
   const companyId = currentUser?.company_id;
 
@@ -207,6 +221,7 @@ function DashboardContent() {
           status: updated.status,
           notes: updated.notes,
           staffIds: updated.staffIds,
+          recurrenceRule: updated.recurrenceRule,
         }, scope);
       }
       setSelectedVisit(null);
@@ -229,8 +244,19 @@ function DashboardContent() {
   const handleDuplicateVisit = (visit: VisitWithStaff) => {
     if (isReadOnly) return;
     setSelectedVisit({
-      id: `dup_${Date.now()}`, companyId: visit.companyId, patientName: visit.patientName, address: visit.address,
-      status: visit.status, notes: visit.notes, date: '', startTime: '', endTime: '', staffIds: [], staffMembers: [], recurrence: 'none',
+      id: `dup_${Date.now()}`,
+      companyId: visit.companyId,
+      patientName: visit.patientName,
+      address: visit.address,
+      status: visit.status,
+      notes: visit.notes,
+      date: currentDate, // Use current date instead of empty
+      startTime: visit.startTime, // Copy time
+      endTime: visit.endTime, // Copy time
+      staffIds: [],
+      staffMembers: [],
+      recurrence: visit.recurrence, // Copy recurrence setting
+      recurrenceRule: visit.recurrenceRule, // Copy recurrence rule
     });
     showToast('複製しました');
   };

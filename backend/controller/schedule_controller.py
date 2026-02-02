@@ -119,6 +119,18 @@ class ScheduleController:
         
         expanded_schedules = []
         
+        # Collect exception dates by recurring_series_id
+        # Exceptions are schedules that have recurring_series_id but is_exception=True
+        exception_dates_by_series = {}
+        for s in base_schedules:
+            if s.is_exception and s.recurring_series_id:
+                series_id = str(s.recurring_series_id)
+                if series_id not in exception_dates_by_series:
+                    exception_dates_by_series[series_id] = []
+                # Get the date of this exception
+                exception_date = s.start_time.date() if isinstance(s.start_time, datetime) else s.start_time
+                exception_dates_by_series[series_id].append(exception_date.isoformat())
+        
         for s in base_schedules:
             # Build base schedule dict
             schedule_dict = {
@@ -157,9 +169,13 @@ class ScheduleController:
                 ]
             }
             
-            # Check if this is a recurring schedule
-            if s.recurring_rule_id and s.recurring_rule:
+            # Check if this is a recurring schedule (not an exception)
+            if s.recurring_rule_id and s.recurring_rule and not s.is_exception:
                 rule = s.recurring_rule
+                
+                # Get excluded dates for this series (exception dates)
+                series_id = str(s.recurring_series_id) if s.recurring_series_id else None
+                excluded_dates = exception_dates_by_series.get(series_id, []) if series_id else []
                 
                 # Build rule dict for expansion
                 rule_dict = {
@@ -183,7 +199,7 @@ class ScheduleController:
                         rule=rule_dict,
                         query_start=query_start,
                         query_end=query_end,
-                        excluded_dates=[]  # TODO: Add excluded_dates support when schema is updated
+                        excluded_dates=excluded_dates  # Exclude dates that have exceptions
                     )
                     
                     # Add each instance as a separate schedule
@@ -202,7 +218,7 @@ class ScheduleController:
                     schedule_dict['end_time'] = s.end_time.isoformat() if s.end_time else None
                     expanded_schedules.append(schedule_dict)
             else:
-                # Non-recurring schedule - add as-is if within date range
+                # Non-recurring schedule or exception - add as-is if within date range
                 schedule_dict['start_time'] = s.start_time.isoformat() if s.start_time else None
                 schedule_dict['end_time'] = s.end_time.isoformat() if s.end_time else None
                 
@@ -236,18 +252,59 @@ class ScheduleController:
         assigned_user_ids = updates.pop('assigned_user_ids', None)
         
         if update_scope == "this":
-            # Update only this occurrence
-            for key, value in updates.items():
-                if value is not None and hasattr(schedule, key):
-                    setattr(schedule, key, value)
+            # Check if this is a recurring schedule (not an exception) with a new occurrence date
+            occurrence_date = None
+            if 'start_time' in updates and updates['start_time']:
+                new_start_time = updates['start_time']
+                if isinstance(new_start_time, datetime):
+                    occurrence_date = new_start_time.date()
+                elif isinstance(new_start_time, str):
+                    occurrence_date = datetime.fromisoformat(new_start_time.replace('Z', '+00:00')).date()
             
-            if assigned_user_ids is not None:
-                # Remove existing assignments and add new ones
-                await db.execute(
-                    delete(ScheduleAssignment).where(ScheduleAssignment.schedule_id == schedule_id)
+            # If this is a recurring schedule (has rule), create an exception
+            if schedule.recurring_rule_id and not schedule.is_exception and occurrence_date:
+                # Create a new exception schedule for this specific occurrence
+                exception_schedule = Schedule(
+                    company_id=schedule.company_id,
+                    patient_id=schedule.patient_id,
+                    patient_name=updates.get('patient_name', schedule.patient_name),
+                    visit_address=updates.get('visit_address', schedule.visit_address),
+                    start_time=updates.get('start_time', schedule.start_time),
+                    end_time=updates.get('end_time', schedule.end_time),
+                    status_id=updates.get('status_id', schedule.status_id),
+                    memo=updates.get('memo', schedule.memo),
+                    recurring_rule_id=None,  # No recurring rule for exceptions
+                    recurring_series_id=schedule.recurring_series_id,  # Same series
+                    recurrence_index=0,
+                    is_exception=True  # Mark as exception
                 )
-                for user_id in assigned_user_ids:
-                    db.add(ScheduleAssignment(schedule_id=schedule_id, user_id=user_id))
+                db.add(exception_schedule)
+                await db.flush()
+                
+                # Add assignments to exception
+                if assigned_user_ids is not None:
+                    user_ids_to_assign = assigned_user_ids
+                else:
+                    user_ids_to_assign = [a.user_id for a in schedule.assignments]
+                
+                for user_id in user_ids_to_assign:
+                    db.add(ScheduleAssignment(schedule_id=exception_schedule.schedule_id, user_id=user_id))
+                
+                await db.commit()
+                return {"message": "Schedule updated", "schedule_id": str(exception_schedule.schedule_id)}
+            else:
+                # Non-recurring or already an exception - update directly
+                for key, value in updates.items():
+                    if value is not None and hasattr(schedule, key):
+                        setattr(schedule, key, value)
+                
+                if assigned_user_ids is not None:
+                    # Remove existing assignments and add new ones
+                    await db.execute(
+                        delete(ScheduleAssignment).where(ScheduleAssignment.schedule_id == schedule_id)
+                    )
+                    for user_id in assigned_user_ids:
+                        db.add(ScheduleAssignment(schedule_id=schedule_id, user_id=user_id))
         
         elif update_scope == "future" and schedule.recurring_series_id and schedule.recurring_rule_id:
             # Split the recurring series: end the old one and create a new one from this point forward

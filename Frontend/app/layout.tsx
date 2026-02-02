@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NurseAssist Pro",
+  title: "comorebi",
   description: "訪問看護スケジュール管理システム",
 };
 

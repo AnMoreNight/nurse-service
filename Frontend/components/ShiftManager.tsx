@@ -87,30 +87,29 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
   const renderCellIcon = (type: ShiftType | 'none') => {
     if (type === 'night1' || type === 'night2') {
       return (
-        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${type === 'night1' ? 'bg-slate-700 text-white' : 'bg-slate-500 text-white'}`}>
+        <div 
+          className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
+          style={{ backgroundColor: type === 'night1' ? '#da5597' : '#5383ec' }}
+        >
           <Moon className="w-3.5 h-3.5" />
         </div>
       );
     }
     if (type === 'holiday') {
       return (
-        <div className="w-7 h-7 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center">
-          <Palmtree className="w-3.5 h-3.5" />
-        </div>
-      );
-    }
-    if (type === 'work') {
-      return (
-        <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
-          <Sun className="w-3.5 h-3.5" />
+        <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ backgroundColor: '#9da3ae' }}>
+          <Palmtree className="w-3.5 h-3.5 text-white" />
         </div>
       );
     }
     if (type === 'night1_holiday' || type === 'night2_holiday') {
       return (
-        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold relative ${type === 'night1_holiday' ? 'bg-slate-700' : 'bg-slate-500'}`}>
+        <div 
+          className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold relative"
+          style={{ backgroundColor: type === 'night1_holiday' ? '#da5597' : '#5383ec' }}
+        >
           <Moon className="w-3.5 h-3.5 text-white" />
-          <Palmtree className="w-2.5 h-2.5 text-pink-400 absolute -bottom-0.5 -right-0.5" />
+          <Palmtree className="w-2.5 h-2.5 text-white absolute -bottom-0.5 -right-0.5" style={{ backgroundColor: '#9da3ae', borderRadius: '50%', padding: '1px' }} />
         </div>
       );
     }
@@ -247,20 +246,16 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
       {/* Legend */}
       <div className="px-4 py-2 border-b bg-slate-50 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600">
         <div className="flex items-center gap-1">
-          <div className="w-4 h-4 rounded-full bg-slate-700 flex items-center justify-center"><Moon className="w-2.5 h-2.5 text-white" /></div>
+          <div className="w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: '#da5597' }}><Moon className="w-2.5 h-2.5 text-white" /></div>
           <span>夜間待機1</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-4 h-4 rounded-full bg-slate-500 flex items-center justify-center"><Moon className="w-2.5 h-2.5 text-white" /></div>
+          <div className="w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: '#5383ec' }}><Moon className="w-2.5 h-2.5 text-white" /></div>
           <span>夜間待機2</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-4 h-4 rounded-full bg-pink-100 flex items-center justify-center"><Palmtree className="w-2.5 h-2.5 text-pink-600" /></div>
-          <span>公休</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center"><Sun className="w-2.5 h-2.5 text-emerald-600" /></div>
-          <span>出勤(公休解除)</span>
+          <div className="w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: '#9da3ae' }}><Palmtree className="w-2.5 h-2.5 text-white" /></div>
+          <span>休み</span>
         </div>
         <span className="text-gray-400">|</span>
         <span className="text-gray-400 italic">セルをクリックで切替</span>
@@ -374,28 +369,19 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
             <span className="text-gray-600">なし（デフォルト）</span>
           </button>
           <button
-            onClick={() => handleShiftSelect('work')}
-            className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-sm"
-          >
-            <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
-              <Sun className="w-3.5 h-3.5 text-emerald-600" />
-            </div>
-            <span className="text-gray-700">出勤</span>
-          </button>
-          <button
             onClick={() => handleShiftSelect('holiday')}
             className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-sm"
           >
-            <div className="w-6 h-6 rounded-full bg-pink-100 flex items-center justify-center">
-              <Palmtree className="w-3.5 h-3.5 text-pink-600" />
+            <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ backgroundColor: '#9da3ae' }}>
+              <Palmtree className="w-3.5 h-3.5 text-white" />
             </div>
-            <span className="text-gray-700">公休</span>
+            <span className="text-gray-700">休み</span>
           </button>
           <button
             onClick={() => handleShiftSelect('night1')}
             className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-sm"
           >
-            <div className="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center">
+            <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ backgroundColor: '#da5597' }}>
               <Moon className="w-3.5 h-3.5 text-white" />
             </div>
             <span className="text-gray-700">夜間待機1</span>
@@ -404,7 +390,7 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
             onClick={() => handleShiftSelect('night2')}
             className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-sm"
           >
-            <div className="w-6 h-6 rounded-full bg-slate-500 flex items-center justify-center">
+            <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ backgroundColor: '#5383ec' }}>
               <Moon className="w-3.5 h-3.5 text-white" />
             </div>
             <span className="text-gray-700">夜間待機2</span>
@@ -413,9 +399,9 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
             onClick={() => handleShiftSelect('night1_holiday')}
             className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-sm"
           >
-            <div className="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center relative">
+            <div className="w-6 h-6 rounded-full flex items-center justify-center relative" style={{ backgroundColor: '#da5597' }}>
               <Moon className="w-3.5 h-3.5 text-white" />
-              <Palmtree className="w-2.5 h-2.5 text-pink-400 absolute -bottom-0.5 -right-0.5" />
+              <Palmtree className="w-2.5 h-2.5 text-white absolute -bottom-0.5 -right-0.5" style={{ backgroundColor: '#9da3ae', borderRadius: '50%', padding: '1px' }} />
             </div>
             <span className="text-gray-700">夜間待機1（休）</span>
           </button>
@@ -423,9 +409,9 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
             onClick={() => handleShiftSelect('night2_holiday')}
             className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-sm"
           >
-            <div className="w-6 h-6 rounded-full bg-slate-500 flex items-center justify-center relative">
+            <div className="w-6 h-6 rounded-full flex items-center justify-center relative" style={{ backgroundColor: '#5383ec' }}>
               <Moon className="w-3.5 h-3.5 text-white" />
-              <Palmtree className="w-2.5 h-2.5 text-pink-400 absolute -bottom-0.5 -right-0.5" />
+              <Palmtree className="w-2.5 h-2.5 text-white absolute -bottom-0.5 -right-0.5" style={{ backgroundColor: '#9da3ae', borderRadius: '50%', padding: '1px' }} />
             </div>
             <span className="text-gray-700">夜間待機2（休）</span>
           </button>

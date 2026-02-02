@@ -26,5 +26,40 @@ export const colorStyles: Record<string, { text: string; bg: string; bgLight: st
 };
 
 export const getColorStyles = (color: string) => {
-  return colorStyles[color] || colorStyles.gray;
+  // If it's a named color, return the predefined styles
+  if (colorStyles[color]) {
+    return colorStyles[color];
+  }
+  
+  // If it's a hex color, generate styles dynamically
+  if (color && color.startsWith('#')) {
+    // Create lighter and darker variants
+    const lightenColor = (hex: string, percent: number) => {
+      const num = parseInt(hex.slice(1), 16);
+      const amt = Math.round(2.55 * percent);
+      const R = Math.min(255, (num >> 16) + amt);
+      const G = Math.min(255, ((num >> 8) & 0x00FF) + amt);
+      const B = Math.min(255, (num & 0x0000FF) + amt);
+      return `#${(1 << 24 | R << 16 | G << 8 | B).toString(16).slice(1)}`;
+    };
+    
+    const darkenColor = (hex: string, percent: number) => {
+      const num = parseInt(hex.slice(1), 16);
+      const amt = Math.round(2.55 * percent);
+      const R = Math.max(0, (num >> 16) - amt);
+      const G = Math.max(0, ((num >> 8) & 0x00FF) - amt);
+      const B = Math.max(0, (num & 0x0000FF) - amt);
+      return `#${(1 << 24 | R << 16 | G << 8 | B).toString(16).slice(1)}`;
+    };
+    
+    return {
+      text: darkenColor(color, 30),
+      bg: color,
+      bgLight: lightenColor(color, 80),
+      border: lightenColor(color, 40),
+      borderLight: lightenColor(color, 60),
+    };
+  }
+  
+  return colorStyles.gray;
 };

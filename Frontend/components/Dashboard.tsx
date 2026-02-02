@@ -31,6 +31,10 @@ const SLOT_HEIGHT = 50;
 const MINUTE_HEIGHT = SLOT_HEIGHT / 60;
 
 const getColorValue = (color: string) => {
+    // If it's already a hex color, return it directly
+    if (color && color.startsWith('#')) {
+        return color;
+    }
     const colorMap: Record<string, string> = {
         'blue': '#3b82f6',
         'red': '#ef4444',
@@ -390,22 +394,30 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                                 <select
                                                     disabled={isReadOnly}
                                                     className={`appearance-none w-7 h-7 rounded-md text-xs font-bold text-center border-2 focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-blue-400 transition-all ${isReadOnly ? 'cursor-default opacity-80' : 'cursor-pointer'} 
-                                            ${effectiveType === 'night1' ? 'bg-indigo-500 text-white border-indigo-600 shadow-sm' : ''} 
-                                            ${effectiveType === 'night2' ? 'bg-pink-500 text-white border-pink-600 shadow-sm' : ''} 
-                                            ${effectiveType === 'night1_holiday' ? 'bg-indigo-500 text-white border-indigo-600 ring-2 ring-gray-300 shadow-sm' : ''} 
-                                            ${effectiveType === 'night2_holiday' ? 'bg-pink-500 text-white border-pink-600 ring-2 ring-gray-300 shadow-sm' : ''} 
-                                            ${effectiveType === 'holiday' ? 'bg-gray-500 text-white border-gray-600 shadow-sm' : ''} 
+                                            ${effectiveType === 'night1' ? 'text-white shadow-sm' : ''} 
+                                            ${effectiveType === 'night2' ? 'text-white shadow-sm' : ''} 
+                                            ${effectiveType === 'night1_holiday' ? 'text-white ring-2 ring-gray-300 shadow-sm' : ''} 
+                                            ${effectiveType === 'night2_holiday' ? 'text-white ring-2 ring-gray-300 shadow-sm' : ''} 
+                                            ${effectiveType === 'holiday' ? 'text-white shadow-sm' : ''} 
                                             ${effectiveType === 'none' || effectiveType === 'work' ? 'bg-white text-gray-600 border-gray-300 hover:border-gray-400 hover:bg-gray-50' : ''}`}
+                                                    style={{
+                                                        backgroundColor: effectiveType === 'night1' || effectiveType === 'night1_holiday' ? '#da5597' :
+                                                                        effectiveType === 'night2' || effectiveType === 'night2_holiday' ? '#5383ec' :
+                                                                        effectiveType === 'holiday' ? '#9da3ae' : undefined,
+                                                        borderColor: effectiveType === 'night1' || effectiveType === 'night1_holiday' ? '#c74485' :
+                                                                    effectiveType === 'night2' || effectiveType === 'night2_holiday' ? '#4271d9' :
+                                                                    effectiveType === 'holiday' ? '#8a909a' : undefined
+                                                    }}
                                                     value={effectiveType === 'none' || effectiveType === null ? 'work' : effectiveType}
                                                     onChange={(e) => { e.stopPropagation(); onUpdateShift(staff.id, currentDate, e.target.value as ShiftType); }}
                                                     onMouseDown={(e) => e.stopPropagation()}
                                                 >
-                                                    <option value="work" style={{ backgroundColor: '#ffffff', color: '#4b5563' }}>出勤</option>
-                                                    <option value="holiday" style={{ backgroundColor: '#6b7280', color: '#ffffff' }}>休</option>
-                                                    <option value="night1" style={{ backgroundColor: '#6366f1', color: '#ffffff' }}>1</option>
-                                                    <option value="night2" style={{ backgroundColor: '#ec4899', color: '#ffffff' }}>2</option>
-                                                    <option value="night1_holiday" style={{ backgroundColor: '#6366f1', color: '#ffffff' }}>1(休)</option>
-                                                    <option value="night2_holiday" style={{ backgroundColor: '#ec4899', color: '#ffffff' }}>2(休)</option>
+                                                    <option value="work" style={{ backgroundColor: '#ffffff', color: '#4b5563' }}>-</option>
+                                                    <option value="holiday" style={{ backgroundColor: '#9da3ae', color: '#ffffff' }}>休</option>
+                                                    <option value="night1" style={{ backgroundColor: '#da5597', color: '#ffffff' }}>1</option>
+                                                    <option value="night2" style={{ backgroundColor: '#5383ec', color: '#ffffff' }}>2</option>
+                                                    <option value="night1_holiday" style={{ backgroundColor: '#da5597', color: '#ffffff' }}>1(休)</option>
+                                                    <option value="night2_holiday" style={{ backgroundColor: '#5383ec', color: '#ffffff' }}>2(休)</option>
                                                 </select>
                                             </div>
                                         </div>

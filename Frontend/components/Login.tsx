@@ -56,17 +56,17 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm shadow-lg border border-white/10 p-2">
               <Image
                 src="/image.png"
-                alt="NurseAssist Pro Logo"
+                alt="comorebi Logo"
                 width={80}
                 height={80}
                 className="object-contain"
               />
             </div>
             <h1 className="text-2xl font-bold text-white mb-2">
-              NurseAssist Pro
+              comorebi
             </h1>
             <p className="text-teal-100 text-sm">
-              訪問看護スケジュール管理プラット フォーム
+              訪問看護スケジュール管理プラットフォーム
             </p>
           </div>
 

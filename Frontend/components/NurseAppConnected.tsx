@@ -45,12 +45,26 @@ export default function NurseAppConnected() {
   const [statuses, setStatuses] = useState<ScheduleStatus[]>([]);
   const [jobTitles, setJobTitles] = useState<string[]>([]);
 
-  const [currentDate, setCurrentDate] = useState<string>(toLocalISOString(new Date()));
+  const [currentDate, setCurrentDate] = useState<string>(() => {
+    // Restore date from localStorage, default to today
+    if (typeof window !== 'undefined') {
+      const savedDate = localStorage.getItem('dashboard_currentDate');
+      if (savedDate) {
+        return savedDate;
+      }
+    }
+    return toLocalISOString(new Date());
+  });
   const [selectedVisit, setSelectedVisit] = useState<any>(null);
   const [staffFormState, setStaffFormState] = useState<{ isOpen: boolean, initialStaff?: any }>({ isOpen: false });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Persist current date to localStorage
+  useEffect(() => {
+    localStorage.setItem('dashboard_currentDate', currentDate);
+  }, [currentDate]);
 
   // Debounce timer ref for shift updates
   const shiftUpdateTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -150,7 +164,18 @@ export default function NurseAppConnected() {
         startTime: `${startDateTime.getHours().toString().padStart(2, '0')}:${startDateTime.getMinutes().toString().padStart(2, '0')}`,
         endTime: `${endDateTime.getHours().toString().padStart(2, '0')}:${endDateTime.getMinutes().toString().padStart(2, '0')}`,
         status: sch.status_id,
-        recurrence: 'none' as const,
+        recurrence: sch.recurring_series_id ? 'custom' as const : 'none' as const,
+        recurrenceRule: sch.recurring_rule ? {
+          frequency: sch.recurring_rule.frequency as 'daily' | 'weekly' | 'monthly' | 'yearly',
+          interval: sch.recurring_rule.interval || 1,
+          weekDays: sch.recurring_rule.day_of_week || [],
+          weekNos: Array.isArray(sch.recurring_rule.week_of_month)
+            ? sch.recurring_rule.week_of_month
+            : (sch.recurring_rule.week_of_month ? [sch.recurring_rule.week_of_month] : []),
+          dayOfMonth: sch.recurring_rule.day_of_month,
+          endType: sch.recurring_rule.end_date ? 'date' as const : 'never' as const,
+          endDate: sch.recurring_rule.end_date,
+        } : undefined,
         notes: sch.memo || '',
         staffMembers: sch.assigned_users.map(u => ({
           id: u.user_id,
@@ -193,6 +218,20 @@ export default function NurseAppConnected() {
         status_id: visitData.status,
         memo: visitData.notes,
         assigned_user_ids: visitData.staffIds,
+        recurring_rule: visitData.recurrenceRule ? {
+          frequency: visitData.recurrenceRule.frequency,
+          interval: visitData.recurrenceRule.interval,
+          day_of_week: visitData.recurrenceRule.weekDays,
+          week_of_month: visitData.recurrenceRule.weekNos && visitData.recurrenceRule.weekNos.length > 0
+            ? visitData.recurrenceRule.weekNos : undefined,
+          day_of_week_monthly: visitData.recurrenceRule.frequency === 'monthly' &&
+            visitData.recurrenceRule.weekNos && visitData.recurrenceRule.weekNos.length > 0 &&
+            visitData.recurrenceRule.weekDays && visitData.recurrenceRule.weekDays.length > 0
+            ? visitData.recurrenceRule.weekDays[0] : undefined,
+          day_of_month: visitData.recurrenceRule.dayOfMonth,
+          start_date: visitData.date,
+          end_date: visitData.recurrenceRule.endDate,
+        } : undefined,
       });
 
       await loadData();
@@ -210,6 +249,7 @@ export default function NurseAppConnected() {
       if (updates.status) updateData.status_id = updates.status;
       if (updates.notes !== undefined) updateData.memo = updates.notes;
       if (updates.staffIds) updateData.assigned_user_ids = updates.staffIds;
+      if (updates.scope) updateData.update_scope = updates.scope;
 
       if (updates.date || updates.startTime || updates.endTime) {
         const visit = visits.find(v => v.id === visitId);
@@ -218,6 +258,24 @@ export default function NurseAppConnected() {
         const endTime = updates.endTime || visit?.endTime;
         updateData.start_time = createDateTime(date, startTime);
         updateData.end_time = createDateTime(date, endTime);
+      }
+
+      // Handle recurring rule
+      if (updates.recurrenceRule) {
+        updateData.recurring_rule = {
+          frequency: updates.recurrenceRule.frequency,
+          interval: updates.recurrenceRule.interval,
+          day_of_week: updates.recurrenceRule.weekDays,
+          week_of_month: updates.recurrenceRule.weekNos && updates.recurrenceRule.weekNos.length > 0
+            ? updates.recurrenceRule.weekNos : undefined,
+          day_of_week_monthly: updates.recurrenceRule.frequency === 'monthly' &&
+            updates.recurrenceRule.weekNos && updates.recurrenceRule.weekNos.length > 0 &&
+            updates.recurrenceRule.weekDays && updates.recurrenceRule.weekDays.length > 0
+            ? updates.recurrenceRule.weekDays[0] : undefined,
+          day_of_month: updates.recurrenceRule.dayOfMonth,
+          start_date: updates.date,
+          end_date: updates.recurrenceRule.endDate,
+        };
       }
 
       await scheduleService.update(visitId, updateData);
@@ -422,10 +480,10 @@ export default function NurseAppConnected() {
         <div className="p-6 border-b border-slate-700 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-teal-600 rounded-xl flex items-center justify-center">
-              <span className="text-xl font-bold">N</span>
+              <span className="text-xl font-bold">C</span>
             </div>
             <div>
-              <h1 className="font-bold text-lg">NurseAssist</h1>
+              <h1 className="font-bold text-lg">comorebi</h1>
               <p className="text-xs text-slate-400">{currentUser.name}</p>
             </div>
           </div>
@@ -637,6 +695,7 @@ export default function NurseAppConnected() {
             endTime: selectedVisit.endTime,
             status: selectedVisit.status || (statuses[0]?.status_id) || '',
             recurrence: selectedVisit.recurrence || 'none',
+            recurrenceRule: selectedVisit.recurrenceRule,
             notes: selectedVisit.notes || '',
             staffMembers: selectedVisit.staffMembers,
           }}
