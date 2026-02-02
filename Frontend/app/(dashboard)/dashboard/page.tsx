@@ -67,7 +67,6 @@ function DashboardContent() {
   const [staffFormState, setStaffFormState] = useState<{ isOpen: boolean, initialStaff?: Staff }>({ isOpen: false });
   const [suggestionState, setSuggestionState] = useState<{ isOpen: boolean; initialValues?: any }>({ isOpen: false });
   const [localToast, setLocalToast] = useState<string | null>(null);
-  const { showConfirm } = useModal();
 
   // Persist current date to localStorage
   useEffect(() => {
@@ -335,13 +334,10 @@ function DashboardContent() {
   };
 
   const handleDeleteStaff = async (staffId: string) => {
-    const confirmed = await showConfirm('このスタッフを削除（退職処理）しますか？');
-    if (confirmed) {
-      try {
-        await deleteStaff(staffId);
-      } catch (err) {
-        console.error('Failed to delete staff:', err);
-      }
+    try {
+      await deleteStaff(staffId);
+    } catch (err) {
+      console.error('Failed to delete staff:', err);
     }
   };
 
