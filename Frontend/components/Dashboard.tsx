@@ -498,8 +498,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                                 style={{
                                                     top: `${top}px`,
                                                     height: `${Math.max(height, 30)}px`,
-                                                    left: `calc(${layout.left} + 2px)`,
-                                                    width: `calc(${layout.width} - 4px)`
+                                                    left: '4px',
+                                                    right: '4px',
+                                                    width: 'auto'
                                                 }}
                                             >
                                                 <div className="flex justify-between items-start gap-1 pointer-events-none">
