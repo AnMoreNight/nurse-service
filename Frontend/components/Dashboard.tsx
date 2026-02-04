@@ -223,12 +223,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }, []);
 
     const calculateVisualLayout = (staffVisits: VisitWithStaff[]) => {
-        const sorted = [...staffVisits].sort((a, b) => {
+        // Create unique keys for each visit (handle recurring schedules with same ID)
+        const visitsWithKeys = staffVisits.map((visit, idx) => ({
+            ...visit,
+            uniqueKey: `${visit.id}-${visit.date}-${idx}`
+        }));
+        
+        const sorted = [...visitsWithKeys].sort((a, b) => {
             const startDiff = timeToMinutes(a.startTime) - timeToMinutes(b.startTime);
             if (startDiff !== 0) return startDiff;
             return timeToMinutes(b.endTime) - timeToMinutes(a.endTime);
         });
-        const lanes: VisitWithStaff[][] = [];
+        
+        const lanes: (typeof visitsWithKeys)[] = [];
         sorted.forEach(visit => {
             let placed = false;
             for (const lane of lanes) {
@@ -243,10 +250,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
             }
             if (!placed) lanes.push([visit]);
         });
+        
         const layoutMap = new Map<string, { left: string, width: string }>();
         const totalLanes = lanes.length;
         lanes.forEach((lane, laneIndex) => {
             lane.forEach(visit => {
+                // Use visit.id for lookup (since that's what we have when rendering)
                 layoutMap.set(visit.id, {
                     left: `${(laneIndex / totalLanes) * 100}%`,
                     width: `${(1 / totalLanes) * 100}%`
@@ -358,10 +367,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     {staffList.map((staff, colIndex) => {
                         const effectiveType = getEffectiveShiftType(staff, currentDate, shifts);
                         const isHoliday = effectiveType === 'holiday' || effectiveType === 'night1_holiday' || effectiveType === 'night2_holiday';
-                        const staffVisits = visits.filter(v => v.staffIds.includes(staff.id));
+                        // Filter visits for this staff AND current date only
+                        const staffVisits = visits.filter(v => v.staffIds.includes(staff.id) && v.date === currentDate);
                         const layoutMap = calculateVisualLayout(staffVisits);
-                        // Only count visits for the current date, not all visits in the array
-                        const visitCount = staffVisits.filter(v => v.date === currentDate).length;
+                        const visitCount = staffVisits.length;
                         const monthTotal = monthlyStats[staff.id] || 0;
                         const isDragOver = dragOverColumnIndex === colIndex;
 
@@ -498,9 +507,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                                 style={{
                                                     top: `${top}px`,
                                                     height: `${Math.max(height, 30)}px`,
-                                                    left: '4px',
-                                                    right: '4px',
-                                                    width: 'auto'
+                                                    left: `calc(${layout.left} + 2px)`,
+                                                    width: `calc(${layout.width} - 4px)`
                                                 }}
                                             >
                                                 <div className="flex justify-between items-start gap-1 pointer-events-none">
