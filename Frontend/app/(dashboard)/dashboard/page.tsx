@@ -42,6 +42,7 @@ function DashboardContent() {
     addStaff,
     updateStaff,
     deleteStaff,
+    resignStaff,
     addStatus,
     updateStatus,
     deleteStatus,
@@ -91,17 +92,29 @@ function DashboardContent() {
   }, [view, currentUser, router]);
 
   // Filter staff by company (for non-system admins)
+  // For NORMAL_USER, put their own column at the far left
   const filteredStaff = useMemo(() => {
     if (!companyId) return staffList;
-    const filtered = staffList.filter(s => s.companyId === companyId && !s.leftDate);
+    let filtered = staffList.filter(s => s.companyId === companyId && !s.leftDate);
+    
+    // If current user is NORMAL_USER, sort to put them first
+    if (currentUser?.role === 'NORMAL_USER' && currentUser?.user_id) {
+      filtered = filtered.sort((a, b) => {
+        if (a.id === currentUser.user_id) return -1;
+        if (b.id === currentUser.user_id) return 1;
+        return 0; // Keep original order for others
+      });
+    }
+    
     console.log('[Dashboard] Staff filtering:', {
       companyId,
       totalStaff: staffList.length,
       filtered: filtered.length,
+      currentUserId: currentUser?.user_id,
       staffList: staffList.map(s => ({ id: s.id, name: s.name, companyId: s.companyId, leftDate: s.leftDate }))
     });
     return filtered;
-  }, [staffList, companyId]);
+  }, [staffList, companyId, currentUser]);
 
   // Filter visits by company
   const filteredVisits = useMemo(() => {
@@ -341,6 +354,14 @@ function DashboardContent() {
     }
   };
 
+  const handleResignStaff = async (staffId: string) => {
+    try {
+      await resignStaff(staffId);
+    } catch (err) {
+      console.error('Failed to resign staff:', err);
+    }
+  };
+
   const handleApplySuggestion = (suggestion: ScheduleSuggestion, pName: string, addr: string) => {
     const firstStatus = companySettings.visitStatuses[0];
     if (!firstStatus || firstStatus.key.length < 30) {
@@ -404,7 +425,8 @@ function DashboardContent() {
           <ShiftManager
             staff={filteredStaff} shifts={filteredShifts} currentDate={currentDate}
             onUpdateShift={handleUpdateShift} onOpenStaffForm={(staff) => setStaffFormState({ isOpen: true, initialStaff: staff })}
-            onDeleteStaff={handleDeleteStaff} isReadOnly={isReadOnly} companySettings={companySettings}
+            onDeleteStaff={handleDeleteStaff} onResignStaff={handleResignStaff} 
+            isReadOnly={isReadOnly} companySettings={companySettings}
           />
         )}
 

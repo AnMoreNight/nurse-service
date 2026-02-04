@@ -47,6 +47,7 @@ interface AppContextType {
   addStaff: (data: Partial<Staff>) => Promise<void>;
   updateStaff: (id: string, data: Partial<Staff>) => Promise<void>;
   deleteStaff: (id: string) => Promise<void>;
+  resignStaff: (id: string) => Promise<void>;
   reorderStaff: (sortOrders: { userId: string; sortOrder: number }[]) => Promise<void>;
 
   // Schedule operations
@@ -338,6 +339,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentUser, refreshData]);
 
+  // Auto-refresh for real-time sync (every 30 seconds)
+  useEffect(() => {
+    if (!currentUser || !localStorage.getItem('token')) {
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      // Only refresh if page is visible
+      if (document.visibilityState === 'visible') {
+        console.log('[Context] Auto-refresh triggered');
+        refreshData();
+      }
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(intervalId);
+  }, [currentUser, refreshData]);
+
   // Staff operations
   const addStaff = useCallback(async (data: Partial<Staff>) => {
     try {
@@ -379,13 +397,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const deleteStaff = useCallback(async (id: string) => {
     try {
-      // Soft delete by setting left_date
-      await userService.update(id, {
-        left_date: new Date().toISOString().split('T')[0],
-        is_active: false,
-      });
+      // Permanent delete - removes user and all related data
+      await userService.delete(id);
       await refreshData();
-      showToast('スタッフを削除しました');
+      showToast('スタッフを完全に削除しました');
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
+    }
+  }, [refreshData, showToast]);
+
+  const resignStaff = useCallback(async (id: string) => {
+    try {
+      // Soft delete for resignation - preserves employment schedules
+      await userService.resign(id);
+      await refreshData();
+      showToast('退職処理が完了しました');
     } catch (err: any) {
       setError(err.message);
       throw err;
@@ -643,6 +670,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addStaff,
       updateStaff,
       deleteStaff,
+      resignStaff,
       reorderStaff,
       addSchedule,
       updateSchedule,

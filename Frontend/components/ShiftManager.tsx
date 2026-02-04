@@ -15,20 +15,42 @@ interface ShiftManagerProps {
   onUpdateShift: (staffId: string, date: string, type: ShiftType) => void;
   onOpenStaffForm: (staff?: Staff) => void;
   onDeleteStaff: (staffId: string) => void;
+  onResignStaff?: (staffId: string) => void;
   isReadOnly?: boolean;
 }
 
 export const ShiftManager: React.FC<ShiftManagerProps> = ({
-  staff, shifts, currentDate, companySettings, onUpdateShift, onOpenStaffForm, onDeleteStaff, isReadOnly = false
+  staff, shifts, currentDate, companySettings, onUpdateShift, onOpenStaffForm, onDeleteStaff, onResignStaff, isReadOnly = false
 }) => {
   console.log('[ShiftManager] Received props:', { staffCount: staff.length, shiftsCount: shifts.length, staff });
-  const { showConfirm } = useModal();
+  const { showConfirm, showAlert } = useModal();
   const [deletingStaffId, setDeletingStaffId] = useState<string | null>(null);
+  const [showDeleteMenu, setShowDeleteMenu] = useState<string | null>(null);
 
-  const handleDeleteStaff = async (staffId: string, staffName: string) => {
-    const confirmed = await showConfirm(`${staffName}を完全に削除しますか？\n\n※この操作は取り消せません。スタッフのシフトや予定への割り当ても全て削除されます。`);
+  const handleResignStaff = async (staffId: string, staffName: string) => {
+    if (!onResignStaff) {
+      // Fallback to delete if resign not available
+      await handleDeleteStaff(staffId, staffName);
+      return;
+    }
+    
+    const confirmed = await showConfirm(`${staffName}を退職処理しますか？\n\n・雇用期間中のスケジュールは保持されます\n・今日以降の予定やシフトのみ削除されます`);
     if (confirmed) {
       setDeletingStaffId(staffId);
+      setShowDeleteMenu(null);
+      try {
+        await onResignStaff(staffId);
+      } finally {
+        setDeletingStaffId(null);
+      }
+    }
+  };
+
+  const handleDeleteStaff = async (staffId: string, staffName: string) => {
+    const confirmed = await showConfirm(`${staffName}を完全に削除しますか？\n\n※この操作は取り消せません。\n※すべてのシフトや予定への割り当ても完全に削除されます。`);
+    if (confirmed) {
+      setDeletingStaffId(staffId);
+      setShowDeleteMenu(null);
       try {
         await onDeleteStaff(staffId);
       } finally {
@@ -203,17 +225,8 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
           </div>
           <h3 className="text-xl font-bold text-gray-800 mb-2">スタッフが登録されていません</h3>
           <p className="text-gray-500 mb-6">
-            シフトを管理するには、まずスタッフを追加してください。
+            ユーザー管理でユーザーを登録すると、自動的にシフト管理に表示されます。
           </p>
-          {!isReadOnly && (
-            <button
-              onClick={() => onOpenStaffForm()}
-              className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-full hover:bg-blue-700 transition-colors font-bold shadow-sm mx-auto"
-            >
-              <Plus className="w-5 h-5" />
-              スタッフを追加
-            </button>
-          )}
         </div>
       </div>
     );
@@ -236,22 +249,13 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           {!isReadOnly && (
-            <>
-              <button
-                onClick={handleCopyLastMonth}
-                className="flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-full hover:bg-gray-700 transition-colors text-sm font-bold shadow-sm"
-              >
-                <Copy className="w-4 h-4" />
-                前月からコピー
-              </button>
-              <button
-                onClick={() => onOpenStaffForm()}
-                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition-colors text-sm font-bold shadow-sm"
-              >
-                <Plus className="w-4 h-4" />
-                スタッフ追加
-              </button>
-            </>
+            <button
+              onClick={handleCopyLastMonth}
+              className="flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-full hover:bg-gray-700 transition-colors text-sm font-bold shadow-sm"
+            >
+              <Copy className="w-4 h-4" />
+              前月からコピー
+            </button>
           )}
         </div>
       </div>
@@ -327,16 +331,36 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
                       {member.jobTitle && !isDeleting && <div className="text-[10px] text-gray-400 truncate whitespace-nowrap max-w-full" title={member.jobTitle}>{member.jobTitle}</div>}
                     </div>
                     {!isReadOnly && !isDeleting && (
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 relative">
                         <button onClick={() => onOpenStaffForm(member)} className="p-1 hover:bg-gray-200 rounded text-gray-400 hover:text-gray-600">
                           <Edit className="w-3 h-3" />
                         </button>
                         <button 
-                          onClick={() => handleDeleteStaff(member.id, member.name)} 
+                          onClick={() => setShowDeleteMenu(showDeleteMenu === member.id ? null : member.id)} 
                           className="p-1 hover:bg-red-100 rounded text-gray-400 hover:text-red-600"
                         >
                           <Trash2 className="w-3 h-3" />
                         </button>
+                        {showDeleteMenu === member.id && (
+                          <div className="absolute top-full right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[140px]">
+                            {onResignStaff && (
+                              <button
+                                onClick={() => handleResignStaff(member.id, member.name)}
+                                className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                              >
+                                <Users className="w-4 h-4 text-orange-500" />
+                                退職処理
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDeleteStaff(member.id, member.name)}
+                              className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              完全削除
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

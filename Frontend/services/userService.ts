@@ -121,6 +121,10 @@ export const userService = {
 
   delete: (id: string) => apiClient.delete(`/users/${id}`),
 
+  // Soft delete for resignation - preserves employment schedules
+  resign: (id: string, resignationDate?: string) => 
+    apiClient.post(`/users/${id}/resign`, resignationDate ? { resignation_date: resignationDate } : {}),
+
   // Admin-only endpoints
   createByAdmin: (data: UserCreateByAdmin) => apiClient.post<User>('/users/admin/create', data),
 
