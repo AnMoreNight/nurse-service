@@ -71,9 +71,9 @@ class UserController:
         if filter_by_user:
             query = query.where(User.user_id == filter_by_user)
         
-        # Exclude SUPER_ADMIN and COMPANY_ADMIN from user lists (they shouldn't appear in schedules/shifts)
-        # Only return NORMAL_USER role users for scheduling purposes
-        query = query.where(User.role == 'NORMAL_USER')
+        # Include both NORMAL_USER and COMPANY_ADMIN in user lists for scheduling purposes
+        # Only SUPER_ADMIN is excluded (they are platform admins, not company staff)
+        query = query.where(User.role.in_(['NORMAL_USER', 'COMPANY_ADMIN']))
         
         result = await db.execute(query.order_by(User.sort_order, User.name))
         users = result.scalars().all()
@@ -263,8 +263,10 @@ class UserController:
         return {"message": "Sort orders updated"}
     
     @staticmethod
-    async def deactivate_user(db: AsyncSession, user_id: UUID, company_id: UUID):
-        """Soft delete - just deactivates the user (keeps data)"""
+    async def resign_user(db: AsyncSession, user_id: UUID, company_id: UUID, resignation_date: str = None):
+        """Soft delete for resignation - preserves employment schedules, removes only future ones"""
+        from models.orm import ScheduleAssignment, Shift, Schedule
+        
         result = await db.execute(
             select(User).where(User.user_id == user_id, User.company_id == company_id)
         )
@@ -273,11 +275,44 @@ class UserController:
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
         
+        # Use provided resignation date or today
+        if resignation_date:
+            left_date = datetime.strptime(resignation_date, "%Y-%m-%d").date()
+        else:
+            left_date = datetime.utcnow().date()
+        
         user.is_active = False
-        user.left_date = datetime.utcnow().date()
+        user.left_date = left_date
+        
+        # Delete only future schedule assignments (after resignation date)
+        # Find schedules that start after the resignation date
+        future_schedules = await db.execute(
+            select(Schedule.schedule_id).where(
+                Schedule.company_id == company_id,
+                Schedule.start_time > datetime.combine(left_date, datetime.max.time())
+            )
+        )
+        future_schedule_ids = [s.schedule_id for s in future_schedules.scalars().all()]
+        
+        if future_schedule_ids:
+            await db.execute(
+                delete(ScheduleAssignment).where(
+                    ScheduleAssignment.user_id == user_id,
+                    ScheduleAssignment.schedule_id.in_(future_schedule_ids)
+                )
+            )
+        
+        # Delete only future shifts (after resignation date)
+        await db.execute(
+            delete(Shift).where(
+                Shift.user_id == user_id,
+                Shift.date > left_date
+            )
+        )
+        
         await db.commit()
         
-        return {"message": "User deactivated"}
+        return {"message": "User resigned - employment schedules preserved"}
     
     @staticmethod
     async def delete_user(db: AsyncSession, user_id: UUID, company_id: UUID):

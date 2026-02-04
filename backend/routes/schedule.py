@@ -33,10 +33,9 @@ async def get_schedules(
     # SUPER_ADMIN can specify company_id for impersonation, others use their own
     effective_company_id = company_id if (user["role"] == "SUPER_ADMIN" and company_id) else user["company_id"]
     
-    # NORMAL_USER can only see schedules they're assigned to
-    filter_by_user = user["user_id"] if user["role"] == "NORMAL_USER" else None
-    
-    return await ScheduleController.get_schedules(db, effective_company_id, start_date, end_date, patient_name, filter_by_user)
+    # All users can see all schedules (team collaboration requirement)
+    # Read-only restrictions are enforced in the frontend
+    return await ScheduleController.get_schedules(db, effective_company_id, start_date, end_date, patient_name, None)
 
 @router.put("/{schedule_id}")
 async def update_schedule(schedule_id: UUID, req: ScheduleUpdate, request: Request, db: AsyncSession = Depends(get_db)):

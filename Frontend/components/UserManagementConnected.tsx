@@ -11,7 +11,7 @@ interface UserManagementConnectedProps {
 }
 
 export const UserManagementConnected: React.FC<UserManagementConnectedProps> = ({ companyId }) => {
-  const { currentUser } = useApp();
+  const { currentUser, companySettings } = useApp();
   const { showAlert, showConfirm } = useModal();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -387,13 +387,16 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
                 <label className="block text-sm font-bold text-gray-600 mb-2">職種</label>
                 <div className="relative">
                   <Briefcase className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
+                  <select
                     value={formData.profession}
                     onChange={(e) => setFormData({ ...formData, profession: e.target.value })}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
-                    placeholder="例: 看護師"
-                  />
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none appearance-none bg-white"
+                  >
+                    <option value="">選択してください</option>
+                    {companySettings.jobTitles.map(title => (
+                      <option key={title} value={title}>{title}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

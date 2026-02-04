@@ -67,10 +67,8 @@ async def get_users(request: Request, company_id: Optional[UUID] = Query(None), 
     else:
         effective_company_id = user["company_id"]
     
-    # NORMAL_USER can only see themselves
-    filter_by_user = user["user_id"] if user["role"] == "NORMAL_USER" else None
-    
-    return await UserController.get_users(db, effective_company_id, filter_by_user)
+    # All users can see all staff in their company (team collaboration requirement)
+    return await UserController.get_users(db, effective_company_id, None)
 
 @router.put("/sort-order")
 async def update_sort_orders(orders: list[UserSortOrder], request: Request, db: AsyncSession = Depends(get_db)):
@@ -97,6 +95,14 @@ async def update_user(user_id: UUID, req: UserUpdate, request: Request, db: Asyn
 async def delete_user(user_id: UUID, request: Request, db: AsyncSession = Depends(get_db)):
     user = await require_company_admin(request, db)  # Admin only
     return await UserController.delete_user(db, user_id, user["company_id"])
+
+@router.post("/{user_id}/resign")
+async def resign_user(user_id: UUID, request: Request, db: AsyncSession = Depends(get_db)):
+    """Soft delete for resignation - preserves employment schedules, removes only future ones"""
+    user = await require_company_admin(request, db)  # Admin only
+    body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    resignation_date = body.get("resignation_date")
+    return await UserController.resign_user(db, user_id, user["company_id"], resignation_date)
 
 # SUPER_ADMIN only endpoints
 @router.post("/admin/create")
