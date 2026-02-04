@@ -247,6 +247,7 @@ class ScheduleUpdate(BaseModel):
     status_id: Optional[UUID] = None
     memo: Optional[str] = None
     assigned_user_ids: Optional[list[UUID]] = None
+    recurring_rule: Optional[RecurringRuleCreate] = None
     update_scope: Optional[str] = "this"  # this, future, all
 
 class ScheduleCopy(BaseModel):

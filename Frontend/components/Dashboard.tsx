@@ -286,7 +286,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         }
 
         if (isHoliday) {
-            opacity = 'opacity-50 grayscale';
+            opacity = 'opacity-90'; // Keep original color on days off, just slightly faded
         }
 
         const bgClass = `${colors.bg} ${colors.border} ${colors.text} ${colors.hover} ${extraClasses}`;
@@ -403,17 +403,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                                     style={{
                                                         backgroundColor: effectiveType === 'night1' || effectiveType === 'night1_holiday' ? '#da5597' :
                                                                         effectiveType === 'night2' || effectiveType === 'night2_holiday' ? '#5383ec' :
-                                                                        effectiveType === 'holiday' ? '#9da3ae' : undefined,
+                                                                        effectiveType === 'holiday' ? '#8f8f8f' : undefined,
                                                         borderColor: effectiveType === 'night1' || effectiveType === 'night1_holiday' ? '#c74485' :
                                                                     effectiveType === 'night2' || effectiveType === 'night2_holiday' ? '#4271d9' :
-                                                                    effectiveType === 'holiday' ? '#8a909a' : undefined
+                                                                    effectiveType === 'holiday' ? '#7a7a7a' : undefined
                                                     }}
                                                     value={effectiveType === 'none' || effectiveType === null ? 'work' : effectiveType}
                                                     onChange={(e) => { e.stopPropagation(); onUpdateShift(staff.id, currentDate, e.target.value as ShiftType); }}
                                                     onMouseDown={(e) => e.stopPropagation()}
                                                 >
                                                     <option value="work" style={{ backgroundColor: '#ffffff', color: '#4b5563' }}>-</option>
-                                                    <option value="holiday" style={{ backgroundColor: '#9da3ae', color: '#ffffff' }}>休</option>
+                                                    <option value="holiday" style={{ backgroundColor: '#8f8f8f', color: '#ffffff' }}>休</option>
                                                     <option value="night1" style={{ backgroundColor: '#da5597', color: '#ffffff' }}>1</option>
                                                     <option value="night2" style={{ backgroundColor: '#5383ec', color: '#ffffff' }}>2</option>
                                                     <option value="night1_holiday" style={{ backgroundColor: '#da5597', color: '#ffffff' }}>1(休)</option>
