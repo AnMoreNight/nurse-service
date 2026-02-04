@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 import secrets
 
+
 class UserController:
     @staticmethod
     async def create_user(db: AsyncSession, company_id: UUID, email: str, password: str, role: str, 
