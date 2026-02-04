@@ -277,15 +277,25 @@ function DashboardContent() {
     if (isReadOnly) return;
 
     try {
-      const targetVisit = filteredVisits.find(v => v.id === visitId);
-      if (!targetVisit) return;
+      // Look for visit in all available sources
+      const targetVisit = filteredVisits.find(v => v.id === visitId) 
+        || companyVisits.find(v => v.id === visitId);
+      
+      if (!targetVisit) {
+        console.error('Visit not found:', visitId);
+        return;
+      }
 
       const timeToMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
       const minutesToTime = (tm: number) => `${String(Math.floor(tm / 60)).padStart(2, '0')}:${String(tm % 60).padStart(2, '0')}`;
       const duration = timeToMinutes(targetVisit.endTime) - timeToMinutes(targetVisit.startTime);
       const newEndTime = minutesToTime(timeToMinutes(newStartTime) + duration);
 
-      const newStaffIds = targetVisit.staffIds.filter(id => id !== sourceStaffId).concat([targetStaffId]).filter((id, i, self) => self.indexOf(id) === i);
+      // Build new staff list: remove from source, add to target (no duplicates)
+      const newStaffIds = targetVisit.staffIds
+        .filter(id => id !== sourceStaffId)
+        .concat([targetStaffId])
+        .filter((id, i, self) => self.indexOf(id) === i);
 
       await updateSchedule(visitId, {
         startTime: newStartTime,
