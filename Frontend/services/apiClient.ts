@@ -9,17 +9,18 @@ class ApiClient {
     };
   }
 
-  async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers: {
-        ...this.getHeaders(),
-        ...options.headers,
-      },
-    });
+  async request<T>(endpoint: string, options: RequestInit = {}, retryCount = 0): Promise<T> {
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        ...options,
+        headers: {
+          ...this.getHeaders(),
+          ...options.headers,
+        },
+      });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: 'Request failed' }));
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }));
 
       // Handle 401 Unauthorized - auto logout
       if (response.status === 401) {
@@ -63,9 +64,18 @@ class ApiClient {
       }
 
       throw new Error(errorMessage);
-    }
+      }
 
-    return response.json();
+      return response.json();
+    } catch (error: any) {
+      // Network error or fetch failed - retry once
+      if (retryCount < 1 && (error.name === 'TypeError' || error.message?.includes('fetch'))) {
+        console.log(`[ApiClient] Request failed, retrying... (attempt ${retryCount + 1})`);
+        await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms before retry
+        return this.request<T>(endpoint, options, retryCount + 1);
+      }
+      throw error;
+    }
   }
 
   async get<T>(endpoint: string): Promise<T> {

@@ -132,7 +132,7 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
     }
     if (type === 'holiday') {
       return (
-        <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ backgroundColor: '#9da3ae' }}>
+        <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ backgroundColor: '#8f8f8f' }}>
           <Palmtree className="w-3.5 h-3.5 text-white" />
         </div>
       );
@@ -144,7 +144,7 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
           style={{ backgroundColor: type === 'night1_holiday' ? '#da5597' : '#5383ec' }}
         >
           <Moon className="w-3.5 h-3.5 text-white" />
-          <Palmtree className="w-2.5 h-2.5 text-white absolute -bottom-0.5 -right-0.5" style={{ backgroundColor: '#9da3ae', borderRadius: '50%', padding: '1px' }} />
+          <Palmtree className="w-2.5 h-2.5 text-white absolute -bottom-0.5 -right-0.5" style={{ backgroundColor: '#8f8f8f', borderRadius: '50%', padding: '1px' }} />
         </div>
       );
     }
@@ -271,7 +271,7 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
           <span>夜間待機2</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: '#9da3ae' }}><Palmtree className="w-2.5 h-2.5 text-white" /></div>
+          <div className="w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: '#8f8f8f' }}><Palmtree className="w-2.5 h-2.5 text-white" /></div>
           <span>休み</span>
         </div>
         <span className="text-gray-400">|</span>
@@ -422,7 +422,7 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
             onClick={() => handleShiftSelect('holiday')}
             className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-3 text-sm"
           >
-            <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ backgroundColor: '#9da3ae' }}>
+            <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ backgroundColor: '#8f8f8f' }}>
               <Palmtree className="w-3.5 h-3.5 text-white" />
             </div>
             <span className="text-gray-700">休み</span>
@@ -451,7 +451,7 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
           >
             <div className="w-6 h-6 rounded-full flex items-center justify-center relative" style={{ backgroundColor: '#da5597' }}>
               <Moon className="w-3.5 h-3.5 text-white" />
-              <Palmtree className="w-2.5 h-2.5 text-white absolute -bottom-0.5 -right-0.5" style={{ backgroundColor: '#9da3ae', borderRadius: '50%', padding: '1px' }} />
+              <Palmtree className="w-2.5 h-2.5 text-white absolute -bottom-0.5 -right-0.5" style={{ backgroundColor: '#8f8f8f', borderRadius: '50%', padding: '1px' }} />
             </div>
             <span className="text-gray-700">夜間待機1（休）</span>
           </button>
@@ -461,7 +461,7 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
           >
             <div className="w-6 h-6 rounded-full flex items-center justify-center relative" style={{ backgroundColor: '#5383ec' }}>
               <Moon className="w-3.5 h-3.5 text-white" />
-              <Palmtree className="w-2.5 h-2.5 text-white absolute -bottom-0.5 -right-0.5" style={{ backgroundColor: '#9da3ae', borderRadius: '50%', padding: '1px' }} />
+              <Palmtree className="w-2.5 h-2.5 text-white absolute -bottom-0.5 -right-0.5" style={{ backgroundColor: '#8f8f8f', borderRadius: '50%', padding: '1px' }} />
             </div>
             <span className="text-gray-700">夜間待機2（休）</span>
           </button>
