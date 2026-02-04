@@ -138,23 +138,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
         e.preventDefault();
         e.stopPropagation();
         e.dataTransfer.dropEffect = 'move';
-        if (!dragState) return;
+        if (!dragState || !dragState.visit) return;
+        
+        // Show preview following cursor for visual feedback
         const containerId = `staff-container-${targetStaffId}`;
         const container = document.getElementById(containerId);
         if (!container) return;
         const rect = container.getBoundingClientRect();
         let offsetY = e.clientY - rect.top + (container.scrollTop || 0);
         if (dragState.clickOffsetY) offsetY -= dragState.clickOffsetY;
-        const minutes = Math.floor((offsetY / SLOT_HEIGHT) * 60);
-        const roundedMinutes = Math.round(minutes / 15) * 15;
-        let finalHour = Math.floor(roundedMinutes / 60);
-        let finalMinutes = roundedMinutes % 60;
-        if (finalHour >= 24) finalHour = 0;
-        if (finalHour < 0) finalHour = 0;
-        if (finalMinutes < 0) finalMinutes = 0;
-        const timeString = `${finalHour.toString().padStart(2, '0')}:${finalMinutes.toString().padStart(2, '0')}`;
-        const topPosition = (roundedMinutes / 60) * SLOT_HEIGHT;
-        setDropPreview({ staffId: targetStaffId, time: timeString, top: topPosition });
+        const topPosition = Math.max(0, offsetY);
+        
+        // Preview shows at cursor position, but actual time won't change on drop
+        setDropPreview({ staffId: targetStaffId, time: dragState.visit.startTime, top: topPosition });
     };
 
     const handleContainerDrop = (e: React.DragEvent, targetStaffId: string) => {
@@ -163,18 +159,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
         e.stopPropagation();
         const type = e.dataTransfer.getData('type');
         if (type !== 'visit') return;
-        const visitId = e.dataTransfer.getData('text/plain');
 
-        if (dragState && dragState.id === visitId && dropPreview && dropPreview.staffId === targetStaffId) {
-            if (dragState.visit && dragState.visit.recurrence === 'custom') {
+        // Process the move if we have valid drag state
+        if (dragState && dragState.visit) {
+            const visitId = dragState.id;
+            const originalTime = dragState.visit.startTime;
+            
+            if (dragState.visit.recurrence === 'custom') {
                 setMoveRequest({
                     visitId,
                     sourceStaffId: dragState.sourceStaffId,
                     targetStaffId,
-                    newStartTime: dropPreview.time
+                    newStartTime: originalTime
                 });
             } else {
-                onMoveVisit(visitId, dragState.sourceStaffId, targetStaffId, dropPreview.time);
+                onMoveVisit(visitId, dragState.sourceStaffId, targetStaffId, originalTime);
             }
         }
         setDragState(null);
@@ -222,46 +221,67 @@ export const Dashboard: React.FC<DashboardProps> = ({
         return () => clearTimeout(timer);
     }, []);
 
+    // Calculate side-by-side layout for overlapping visits
+    // Returns a map from visit index to {left, width} for positioning
     const calculateVisualLayout = (staffVisits: VisitWithStaff[]) => {
-        // Create unique keys for each visit (handle recurring schedules with same ID)
-        const visitsWithKeys = staffVisits.map((visit, idx) => ({
-            ...visit,
-            uniqueKey: `${visit.id}-${visit.date}-${idx}`
-        }));
+        const layoutMap = new Map<number, { left: string, width: string }>();
         
-        const sorted = [...visitsWithKeys].sort((a, b) => {
-            const startDiff = timeToMinutes(a.startTime) - timeToMinutes(b.startTime);
-            if (startDiff !== 0) return startDiff;
-            return timeToMinutes(b.endTime) - timeToMinutes(a.endTime);
-        });
+        if (staffVisits.length === 0) return layoutMap;
         
-        const lanes: (typeof visitsWithKeys)[] = [];
-        sorted.forEach(visit => {
-            let placed = false;
-            for (const lane of lanes) {
-                const lastInLane = lane[lane.length - 1];
-                const visitStart = timeToMinutes(visit.startTime);
-                const lastEnd = timeToMinutes(lastInLane.endTime);
-                if (visitStart >= lastEnd) {
-                    lane.push(visit);
-                    placed = true;
-                    break;
+        // For each visit, find how many visits it overlaps with
+        const overlaps: number[][] = staffVisits.map(() => []);
+        
+        for (let i = 0; i < staffVisits.length; i++) {
+            const a = staffVisits[i];
+            const aStart = timeToMinutes(a.startTime);
+            const aEnd = timeToMinutes(a.endTime);
+            
+            for (let j = i + 1; j < staffVisits.length; j++) {
+                const b = staffVisits[j];
+                const bStart = timeToMinutes(b.startTime);
+                const bEnd = timeToMinutes(b.endTime);
+                
+                // Check if they overlap (not just touch)
+                if (aStart < bEnd && bStart < aEnd) {
+                    overlaps[i].push(j);
+                    overlaps[j].push(i);
                 }
             }
-            if (!placed) lanes.push([visit]);
-        });
+        }
         
-        const layoutMap = new Map<string, { left: string, width: string }>();
-        const totalLanes = lanes.length;
-        lanes.forEach((lane, laneIndex) => {
-            lane.forEach(visit => {
-                // Use visit.id for lookup (since that's what we have when rendering)
-                layoutMap.set(visit.id, {
-                    left: `${(laneIndex / totalLanes) * 100}%`,
-                    width: `${(1 / totalLanes) * 100}%`
-                });
+        // Assign columns to each visit using greedy coloring
+        const columns: number[] = new Array(staffVisits.length).fill(-1);
+        
+        // Sort indices by start time for consistent ordering
+        const sortedIndices = staffVisits
+            .map((_, idx) => idx)
+            .sort((a, b) => {
+                const diff = timeToMinutes(staffVisits[a].startTime) - timeToMinutes(staffVisits[b].startTime);
+                if (diff !== 0) return diff;
+                return timeToMinutes(staffVisits[b].endTime) - timeToMinutes(staffVisits[a].endTime);
             });
-        });
+        
+        for (const idx of sortedIndices) {
+            // Find the smallest column not used by overlapping visits
+            const usedColumns = new Set(overlaps[idx].map(j => columns[j]).filter(c => c >= 0));
+            let col = 0;
+            while (usedColumns.has(col)) col++;
+            columns[idx] = col;
+        }
+        
+        // For each visit, determine max columns needed among its overlap group
+        for (let i = 0; i < staffVisits.length; i++) {
+            // Get all visits in this overlap cluster (including self)
+            const cluster = [i, ...overlaps[i]];
+            const maxCol = Math.max(...cluster.map(j => columns[j])) + 1;
+            const myCol = columns[i];
+            
+            layoutMap.set(i, {
+                left: `${(myCol / maxCol) * 100}%`,
+                width: `${(1 / maxCol) * 100}%`
+            });
+        }
+        
         return layoutMap;
     };
 
@@ -489,7 +509,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                     {staffVisits.map((visit, visitIndex) => {
                                         const top = getPosition(visit.startTime);
                                         const height = getHeight(visit.startTime, visit.endTime);
-                                        const layout = layoutMap.get(visit.id) || { left: '0%', width: '100%' };
+                                        // Get layout for side-by-side display of overlapping schedules
+                                        const layout = layoutMap.get(visitIndex) || { left: '0%', width: '100%' };
                                         const { bgClass, opacity } = getVisitStyles(visit, isHoliday);
                                         const isBeingDragged = dragState?.id === visit.id;
                                         const uniqueKey = `${visit.id}-${currentDate}-${staff.id}-${visitIndex}`;
