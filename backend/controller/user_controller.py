@@ -161,6 +161,7 @@ class UserController:
                         "is_active": u.is_active,
                         "join_date": str(u.join_date) if u.join_date else None,
                         "left_date": str(u.left_date) if u.left_date else None,
+                        "default_holiday_weekdays": u.default_holiday_weekdays or [],
                         "created_at": u.created_at.isoformat() if u.created_at else None
                     }
                     for u in users
@@ -190,6 +191,7 @@ class UserController:
                     "is_active": u.is_active,
                     "join_date": str(u.join_date) if u.join_date else None,
                     "left_date": str(u.left_date) if u.left_date else None,
+                    "default_holiday_weekdays": u.default_holiday_weekdays or [],
                     "created_at": u.created_at.isoformat() if u.created_at else None
                 }
                 for u in users
@@ -219,6 +221,7 @@ class UserController:
             "is_active": user.is_active,
             "join_date": str(user.join_date) if user.join_date else None,
             "left_date": str(user.left_date) if user.left_date else None,
+            "default_holiday_weekdays": user.default_holiday_weekdays or [],
             "created_at": user.created_at.isoformat() if user.created_at else None
         }
     

@@ -250,6 +250,48 @@ class ScheduleController:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schedule not found")
         
         assigned_user_ids = updates.pop('assigned_user_ids', None)
+        recurring_rule_data = updates.pop('recurring_rule', None)
+        
+        # Handle adding recurrence to a non-recurring schedule
+        if recurring_rule_data and not schedule.recurring_rule_id:
+            # Create new recurring rule
+            week_of_month_val = recurring_rule_data.get('week_of_month')
+            if isinstance(week_of_month_val, int):
+                week_of_month_val = [week_of_month_val]
+            
+            rule = RecurringRule(
+                frequency=recurring_rule_data.get('frequency'),
+                day_of_week=recurring_rule_data.get('day_of_week'),
+                week_of_month=week_of_month_val,
+                day_of_week_monthly=recurring_rule_data.get('day_of_week_monthly'),
+                month_of_year=recurring_rule_data.get('month_of_year'),
+                day_of_month=recurring_rule_data.get('day_of_month'),
+                interval=recurring_rule_data.get('interval', 1),
+                start_date=datetime.strptime(recurring_rule_data.get('start_date'), "%Y-%m-%d").date() if recurring_rule_data.get('start_date') else None,
+                end_date=datetime.strptime(recurring_rule_data.get('end_date'), "%Y-%m-%d").date() if recurring_rule_data.get('end_date') else None
+            )
+            db.add(rule)
+            await db.flush()
+            
+            # Update schedule with new recurring rule
+            schedule.recurring_rule_id = rule.rule_id
+            schedule.recurring_series_id = uuid4()
+            schedule.is_exception = False
+            
+            # Also update other fields
+            for key, value in updates.items():
+                if value is not None and hasattr(schedule, key):
+                    setattr(schedule, key, value)
+            
+            if assigned_user_ids is not None:
+                await db.execute(
+                    delete(ScheduleAssignment).where(ScheduleAssignment.schedule_id == schedule_id)
+                )
+                for user_id in assigned_user_ids:
+                    db.add(ScheduleAssignment(schedule_id=schedule_id, user_id=user_id))
+            
+            await db.commit()
+            return {"message": "Schedule updated with recurrence", "schedule_id": str(schedule_id)}
         
         if update_scope == "this":
             # Check if this is a recurring schedule (not an exception) with a new occurrence date
