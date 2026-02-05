@@ -60,6 +60,7 @@ export default function NurseAppConnected() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   // Persist current date to localStorage
   useEffect(() => {
@@ -77,12 +78,14 @@ export default function NurseAppConnected() {
     const user = authService.getStoredUser();
     if (user) {
       setCurrentUser(user);
-      loadData();
+      loadData(true);
     }
   }, []);
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (isInitial = false) => {
+    if (isInitial) {
+      setInitialLoading(true);
+    }
     try {
       const [usersData, schedulesData, shiftsData, statusesData] = await Promise.all([
         userService.getAll(),
@@ -114,7 +117,9 @@ export default function NurseAppConnected() {
     } catch (error: any) {
       showToast(error.message || 'データの読み込みに失敗しました');
     } finally {
-      setLoading(false);
+      if (isInitial) {
+        setInitialLoading(false);
+      }
     }
   };
 
@@ -537,7 +542,7 @@ export default function NurseAppConnected() {
         </header>
 
         <div className="flex-1 overflow-auto">
-          {loading ? (
+          {initialLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 <div className="w-16 h-16 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
