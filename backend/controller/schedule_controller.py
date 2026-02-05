@@ -260,10 +260,28 @@ class ScheduleController:
                 else:
                     expanded_schedules.append(schedule_dict)
         
+        # Deduplicate expanded schedules by (date, start_time, patient_name, assigned_user_ids)
+        # This prevents visual duplicates when multiple base schedules have the same pattern
+        seen_occurrences = set()
+        deduplicated_schedules = []
+        for schedule in expanded_schedules:
+            # Create a key based on date, time, patient, and staff
+            schedule_date = schedule.get('date') or (schedule.get('start_time', '')[:10] if schedule.get('start_time') else '')
+            start_time = schedule.get('start_time', '')
+            patient_name = schedule.get('patient_name', '')
+            # Include assigned users in the key to allow same time/patient with different staff
+            assigned_user_ids = tuple(sorted([u['user_id'] for u in schedule.get('assigned_users', [])]))
+
+            dedup_key = (schedule_date, start_time, patient_name, assigned_user_ids)
+
+            if dedup_key not in seen_occurrences:
+                seen_occurrences.add(dedup_key)
+                deduplicated_schedules.append(schedule)
+
         # Sort by start time
-        expanded_schedules.sort(key=lambda x: x['start_time'] if x['start_time'] else '')
-        
-        return expanded_schedules
+        deduplicated_schedules.sort(key=lambda x: x['start_time'] if x['start_time'] else '')
+
+        return deduplicated_schedules
     
     @staticmethod
     async def update_schedule(db: AsyncSession, schedule_id: UUID, company_id: UUID, 
