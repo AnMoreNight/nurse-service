@@ -112,16 +112,21 @@ def _expand_weekly(base_date: date, start: date, end: date, interval: int,
     # Find the start of the week containing base_date
     base_week_start = base_date - timedelta(days=(base_date.weekday() + 1) % 7)  # Sunday
     current_week_start = base_week_start
-    
-    while current_week_start <= end:
+
+    # Safety limit: max 520 iterations (10 years of weekly schedules)
+    max_iterations = 520
+    iteration_count = 0
+
+    while current_week_start <= end and iteration_count < max_iterations:
         for dow in days_of_week:
             # Convert JS day of week (0=Sun) to date
             occ_date = current_week_start + timedelta(days=dow)
             if start <= occ_date <= end and occ_date >= base_date and occ_date.isoformat() not in excluded:
                 occurrences.append(occ_date)
-        
+
         current_week_start += timedelta(weeks=interval)
-    
+        iteration_count += 1
+
     return sorted(set(occurrences))
 
 
@@ -152,7 +157,11 @@ def _expand_monthly(base_date: date, start: date, end: date, interval: int,
         else:
             weeks_list = [week_of_month]
 
-    while True:
+    # Safety limit: max 120 iterations (10 years of monthly schedules)
+    max_iterations = 120
+    iteration_count = 0
+
+    while iteration_count < max_iterations:
         month_has_valid_date = False
         all_occurrences_past_end = True  # Track if all occurrences in this month are past end date
 
@@ -215,6 +224,8 @@ def _expand_monthly(base_date: date, start: date, end: date, interval: int,
         while current_month > 12:
             current_month -= 12
             current_year += 1
+
+        iteration_count += 1
 
         # Safety check - stop if we've gone too far past the end date
         if date(current_year, current_month, 1) > end + timedelta(days=31):
