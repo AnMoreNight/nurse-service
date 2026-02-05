@@ -151,11 +151,10 @@ def _expand_monthly(base_date: date, start: date, end: date, interval: int,
             weeks_list = week_of_month if len(week_of_month) > 0 else None
         else:
             weeks_list = [week_of_month]
-    
-    print(f"[DEBUG] Monthly expansion - base_date: {base_date}, weeks_list: {weeks_list}, day_of_week_monthly: {day_of_week_monthly}, day_of_month: {day_of_month}")
 
     while True:
         month_has_valid_date = False
+        all_occurrences_past_end = True  # Track if all occurrences in this month are past end date
 
         try:
             if weeks_list is not None and day_of_week_monthly is not None:
@@ -167,11 +166,20 @@ def _expand_monthly(base_date: date, start: date, end: date, interval: int,
                         if occ_date > end:
                             continue
 
+                        # At least one occurrence is not past the end date
+                        all_occurrences_past_end = False
+
                         if occ_date >= start and occ_date >= base_date and occ_date.isoformat() not in excluded:
                             occurrences.append(occ_date)
                             month_has_valid_date = True
                     except ValueError:
                         pass  # This week number doesn't exist in this month (e.g., 5th Tuesday)
+
+                # For weekday mode: check if we should stop
+                if all_occurrences_past_end:
+                    # All occurrences in this month are past end date, stop expanding
+                    break
+
             elif day_of_month is not None:
                 occ_date = date(current_year, current_month, min(day_of_month, _days_in_month(current_year, current_month)))
 
@@ -179,7 +187,6 @@ def _expand_monthly(base_date: date, start: date, end: date, interval: int,
                     break
 
                 if occ_date >= start and occ_date >= base_date and occ_date.isoformat() not in excluded:
-                    print(f"[DEBUG] Adding monthly occurrence (by day_of_month): {occ_date}")
                     occurrences.append(occ_date)
                     month_has_valid_date = True
             else:
@@ -189,7 +196,6 @@ def _expand_monthly(base_date: date, start: date, end: date, interval: int,
                     break
 
                 if occ_date >= start and occ_date >= base_date and occ_date.isoformat() not in excluded:
-                    print(f"[DEBUG] Adding monthly occurrence (by base date): {occ_date}")
                     occurrences.append(occ_date)
                     month_has_valid_date = True
 
@@ -205,19 +211,15 @@ def _expand_monthly(base_date: date, start: date, end: date, interval: int,
             pass  # Invalid date, skip
 
         # Move to next month
-        print(f"[DEBUG] Moving from {current_year}-{current_month} by interval {interval}")
         current_month += interval
         while current_month > 12:
             current_month -= 12
             current_year += 1
-        print(f"[DEBUG] Moved to {current_year}-{current_month}")
 
         # Safety check - stop if we've gone too far past the end date
         if date(current_year, current_month, 1) > end + timedelta(days=31):
-            print(f"[DEBUG] Stopping expansion - reached end date")
             break
 
-    print(f"[DEBUG] Total monthly occurrences generated: {len(occurrences)}")
     return sorted(set(occurrences))
 
 
