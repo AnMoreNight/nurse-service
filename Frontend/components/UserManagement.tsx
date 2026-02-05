@@ -26,8 +26,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
         email: '',
         password: '',
         role: 'NORMAL_USER' as 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'NORMAL_USER',
-        profession: '',
-        job_title: ''
+        profession: ''
     });
 
     const handleSave = () => {
@@ -42,7 +41,6 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                 email: formData.email,
                 role: formData.role,
                 profession: formData.profession || undefined,
-                job_title: formData.job_title || undefined,
                 is_active: true,
                 sort_order: users.length,
             };
@@ -58,8 +56,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
             email: '',
             password: '',
             role: 'NORMAL_USER',
-            profession: '',
-            job_title: ''
+            profession: ''
         });
     };
 
@@ -70,8 +67,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
             email: user.email,
             password: '',
             role: user.role as 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'NORMAL_USER',
-            profession: user.profession || '',
-            job_title: user.job_title || ''
+            profession: user.profession || ''
         });
     };
 
@@ -138,13 +134,6 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                             onChange={(e) => setFormData({ ...formData, profession: e.target.value })}
                             className="px-3 py-2 border rounded-lg"
                         />
-                        <input
-                            type="text"
-                            placeholder="役職"
-                            value={formData.job_title}
-                            onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
-                            className="px-3 py-2 border rounded-lg"
-                        />
                     </div>
                     <div className="flex gap-2 mt-4">
                         <button
@@ -171,7 +160,6 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                         <tr className="border-b">
                             <th className="text-left py-2 px-4">名前</th>
                             <th className="text-left py-2 px-4">メール</th>
-                            <th className="text-left py-2 px-4">役職</th>
                             <th className="text-left py-2 px-4">職種</th>
                             <th className="text-left py-2 px-4">権限</th>
                             <th className="text-right py-2 px-4">操作</th>
@@ -182,7 +170,6 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                             <tr key={user.user_id} className="border-b hover:bg-gray-50">
                                 <td className="py-2 px-4">{user.name}</td>
                                 <td className="py-2 px-4">{user.email}</td>
-                                <td className="py-2 px-4">{user.job_title || '-'}</td>
                                 <td className="py-2 px-4">{user.profession || '-'}</td>
                                 <td className="py-2 px-4">
                                     <span className={`px-2 py-1 rounded text-xs ${user.role === 'COMPANY_ADMIN' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
