@@ -22,14 +22,25 @@ class ScheduleController:
         
         # Create recurring rule if provided
         if recurring_rule:
-            # Handle week_of_month - normalize to array format
+            # Handle week_of_month - normalize to array format or None
             week_of_month_val = recurring_rule.get('week_of_month')
-            if week_of_month_val is not None and not isinstance(week_of_month_val, list):
-                week_of_month_val = [week_of_month_val]
+            if week_of_month_val is not None:
+                if isinstance(week_of_month_val, list):
+                    # Empty list should be None for day-of-month mode
+                    week_of_month_val = week_of_month_val if len(week_of_month_val) > 0 else None
+                else:
+                    week_of_month_val = [week_of_month_val]
+            
+            # Handle day_of_week - empty arrays should be None
+            day_of_week_val = recurring_rule.get('day_of_week')
+            if day_of_week_val is not None and isinstance(day_of_week_val, list) and len(day_of_week_val) == 0:
+                day_of_week_val = None
+
+            print(f"[DEBUG] Creating recurring rule - frequency: {recurring_rule.get('frequency')}, week_of_month: {week_of_month_val}, day_of_month: {recurring_rule.get('day_of_month')}")
 
             rule = RecurringRule(
                 frequency=recurring_rule.get('frequency'),
-                day_of_week=recurring_rule.get('day_of_week'),
+                day_of_week=day_of_week_val,
                 week_of_month=week_of_month_val,
                 day_of_week_monthly=recurring_rule.get('day_of_week_monthly'),
                 month_of_year=recurring_rule.get('month_of_year'),
@@ -97,7 +108,24 @@ class ScheduleController:
         # and expand them, not filter by date at query level
         query = query.order_by(Schedule.start_time)
         result = await db.execute(query)
-        base_schedules = result.unique().scalars().all()
+        all_schedules = result.unique().scalars().all()
+        
+        # Filter to get only base schedules for recurring series
+        # For recurring schedules: only keep those with recurrence_index=0 (the base schedule)
+        # For non-recurring or exceptions: keep all
+        seen_series = set()
+        base_schedules = []
+        for s in all_schedules:
+            # If it has a recurring_rule_id and recurring_series_id and is not an exception
+            # Only keep the first one we see for each recurring_series_id (the base schedule)
+            if s.recurring_rule_id and s.recurring_series_id and not s.is_exception:
+                series_key = str(s.recurring_series_id)
+                if series_key not in seen_series:
+                    seen_series.add(series_key)
+                    base_schedules.append(s)
+            else:
+                # Non-recurring schedules or exceptions - keep all
+                base_schedules.append(s)
         
         # Parse date range for expansion
         if start_date and end_date:
@@ -203,11 +231,13 @@ class ScheduleController:
                     )
                     
                     # Add each instance as a separate schedule
-                    for instance in instances:
+                    for idx, instance in enumerate(instances):
                         instance_dict = schedule_dict.copy()
                         instance_dict['start_time'] = instance['start_time'].isoformat()
                         instance_dict['end_time'] = instance['end_time'].isoformat()
                         instance_dict['date'] = instance['date'].isoformat()
+                        # Add unique identifier for each occurrence
+                        instance_dict['occurrence_index'] = idx
                         expanded_schedules.append(instance_dict)
                 
                 except Exception as e:
@@ -256,12 +286,20 @@ class ScheduleController:
         if recurring_rule_data and not schedule.recurring_rule_id:
             # Create new recurring rule
             week_of_month_val = recurring_rule_data.get('week_of_month')
-            if isinstance(week_of_month_val, int):
-                week_of_month_val = [week_of_month_val]
+            if week_of_month_val is not None:
+                if isinstance(week_of_month_val, list):
+                    week_of_month_val = week_of_month_val if len(week_of_month_val) > 0 else None
+                else:
+                    week_of_month_val = [week_of_month_val]
+            
+            # Handle day_of_week - empty arrays should be None
+            day_of_week_val = recurring_rule_data.get('day_of_week')
+            if day_of_week_val is not None and isinstance(day_of_week_val, list) and len(day_of_week_val) == 0:
+                day_of_week_val = None
             
             rule = RecurringRule(
                 frequency=recurring_rule_data.get('frequency'),
-                day_of_week=recurring_rule_data.get('day_of_week'),
+                day_of_week=day_of_week_val,
                 week_of_month=week_of_month_val,
                 day_of_week_monthly=recurring_rule_data.get('day_of_week_monthly'),
                 month_of_year=recurring_rule_data.get('month_of_year'),

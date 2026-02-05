@@ -66,9 +66,12 @@ def expand_recurring_schedule(
         occurrences = _expand_yearly(base_date, effective_start, query_end, interval, month_of_year, excluded)
     
     # Add time information to each occurrence
+    # Remove duplicates by converting to set and back (occurrences should already be unique, but safety check)
+    unique_occurrences = sorted(set(occurrences))
+    
     time_delta = end_time - start_time
     result = []
-    for occ_date in occurrences:
+    for occ_date in unique_occurrences:
         result.append({
             'date': occ_date,
             'start_time': datetime.combine(occ_date, start_time.time()) if hasattr(start_time, 'time') else start_time,
@@ -134,17 +137,24 @@ def _expand_monthly(base_date: date, start: date, end: date, interval: int,
     week_of_month can be:
     - A list of week numbers [1, 3] for "1st and 3rd week"
     - A single value wrapped in list [2] for "2nd week only"
-    - None for day-of-month mode
+    - None or empty list for day-of-month mode
     """
     occurrences = []
     current_year = base_date.year
     current_month = base_date.month
 
     # Normalize week_of_month to list if it's a single value (backward compatibility)
-    weeks_list = week_of_month if isinstance(week_of_month, list) else ([week_of_month] if week_of_month is not None else None)
+    # Empty list should be treated as None (day-of-month mode)
+    weeks_list = None
+    if week_of_month is not None:
+        if isinstance(week_of_month, list):
+            weeks_list = week_of_month if len(week_of_month) > 0 else None
+        else:
+            weeks_list = [week_of_month]
 
     while True:
         month_has_valid_date = False
+        all_occurrences_past_end = True  # Track if all occurrences in this month are past end date
 
         try:
             if weeks_list is not None and day_of_week_monthly is not None:
@@ -156,11 +166,20 @@ def _expand_monthly(base_date: date, start: date, end: date, interval: int,
                         if occ_date > end:
                             continue
 
+                        # At least one occurrence is not past the end date
+                        all_occurrences_past_end = False
+
                         if occ_date >= start and occ_date >= base_date and occ_date.isoformat() not in excluded:
                             occurrences.append(occ_date)
                             month_has_valid_date = True
                     except ValueError:
                         pass  # This week number doesn't exist in this month (e.g., 5th Tuesday)
+
+                # For weekday mode: check if we should stop
+                if all_occurrences_past_end:
+                    # All occurrences in this month are past end date, stop expanding
+                    break
+
             elif day_of_month is not None:
                 occ_date = date(current_year, current_month, min(day_of_month, _days_in_month(current_year, current_month)))
 
