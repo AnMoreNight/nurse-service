@@ -140,17 +140,24 @@ export const Dashboard: React.FC<DashboardProps> = ({
         e.dataTransfer.dropEffect = 'move';
         if (!dragState || !dragState.visit) return;
         
-        // Show preview following cursor for visual feedback
+        // Calculate time based on cursor position
         const containerId = `staff-container-${targetStaffId}`;
         const container = document.getElementById(containerId);
         if (!container) return;
         const rect = container.getBoundingClientRect();
         let offsetY = e.clientY - rect.top + (container.scrollTop || 0);
         if (dragState.clickOffsetY) offsetY -= dragState.clickOffsetY;
-        const topPosition = Math.max(0, offsetY);
         
-        // Preview shows at cursor position, but actual time won't change on drop
-        setDropPreview({ staffId: targetStaffId, time: dragState.visit.startTime, top: topPosition });
+        // Calculate time from position (snap to 15-min intervals)
+        const minutes = Math.floor((offsetY / SLOT_HEIGHT) * 60);
+        const roundedMinutes = Math.round(minutes / 15) * 15;
+        const clampedMinutes = Math.max(0, Math.min(roundedMinutes, 23 * 60 + 45));
+        const hour = Math.floor(clampedMinutes / 60);
+        const min = clampedMinutes % 60;
+        const timeString = `${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
+        const topPosition = (clampedMinutes / 60) * SLOT_HEIGHT;
+        
+        setDropPreview({ staffId: targetStaffId, time: timeString, top: topPosition });
     };
 
     const handleContainerDrop = (e: React.DragEvent, targetStaffId: string) => {
@@ -160,20 +167,39 @@ export const Dashboard: React.FC<DashboardProps> = ({
         const type = e.dataTransfer.getData('type');
         if (type !== 'visit') return;
 
-        // Process the move if we have valid drag state
+        // Process the move with the time from preview (or calculate from event)
         if (dragState && dragState.visit) {
             const visitId = dragState.id;
-            const originalTime = dragState.visit.startTime;
+            
+            // Use preview time if available, otherwise calculate from drop position
+            let newTime = dropPreview?.time;
+            if (!newTime) {
+                const containerId = `staff-container-${targetStaffId}`;
+                const container = document.getElementById(containerId);
+                if (container) {
+                    const rect = container.getBoundingClientRect();
+                    let offsetY = e.clientY - rect.top + (container.scrollTop || 0);
+                    if (dragState.clickOffsetY) offsetY -= dragState.clickOffsetY;
+                    const minutes = Math.floor((offsetY / SLOT_HEIGHT) * 60);
+                    const roundedMinutes = Math.round(minutes / 15) * 15;
+                    const clampedMinutes = Math.max(0, Math.min(roundedMinutes, 23 * 60 + 45));
+                    const hour = Math.floor(clampedMinutes / 60);
+                    const min = clampedMinutes % 60;
+                    newTime = `${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
+                } else {
+                    newTime = dragState.visit.startTime; // Fallback to original time
+                }
+            }
             
             if (dragState.visit.recurrence === 'custom') {
                 setMoveRequest({
                     visitId,
                     sourceStaffId: dragState.sourceStaffId,
                     targetStaffId,
-                    newStartTime: originalTime
+                    newStartTime: newTime
                 });
             } else {
-                onMoveVisit(visitId, dragState.sourceStaffId, targetStaffId, originalTime);
+                onMoveVisit(visitId, dragState.sourceStaffId, targetStaffId, newTime);
             }
         }
         setDragState(null);
