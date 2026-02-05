@@ -70,6 +70,10 @@ export default function NurseAppConnected() {
   // Debounce timer ref for shift updates
   const shiftUpdateTimerRef = useRef<NodeJS.Timeout | null>(null);
   const pendingShiftUpdatesRef = useRef<Map<string, any>>(new Map());
+  
+  // Ref to track if data refresh is in progress to prevent multiple simultaneous refreshes
+  const refreshInProgressRef = useRef(false);
+  const refreshQueuedRef = useRef(false);
 
   const isReadOnly = currentUser?.role === 'NORMAL_USER';
   const isAdmin = currentUser?.role === 'COMPANY_ADMIN';
@@ -82,17 +86,36 @@ export default function NurseAppConnected() {
     }
   }, []);
 
-  const loadData = async (isInitial = false) => {
+  const loadData = async (isInitial = false, silent = false) => {
+    // If a refresh is already in progress, queue another one
+    if (refreshInProgressRef.current && !isInitial) {
+      refreshQueuedRef.current = true;
+      return;
+    }
+
+    refreshInProgressRef.current = true;
+
     if (isInitial) {
       setInitialLoading(true);
     }
+    
     try {
+      // Calculate date range for schedule fetch: current month -1 to +3 months
+      const today = new Date();
+      const startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const endDate = new Date(today.getFullYear(), today.getMonth() + 4, 0); // Last day of +3 months
+      
+      const startDateStr = startDate.toISOString().split('T')[0];
+      const endDateStr = endDate.toISOString().split('T')[0];
+      
       const [usersData, schedulesData, shiftsData, statusesData] = await Promise.all([
         userService.getAll(),
-        scheduleService.getAll(),
+        scheduleService.getAll(startDateStr, endDateStr),
         shiftService.getAll(),
         statusService.getAll(),
       ]);
+      
+      // Use batch state update to minimize re-renders
       setStaff(usersData);
       setSchedules(schedulesData);
       setShifts(shiftsData);
@@ -115,17 +138,28 @@ export default function NurseAppConnected() {
         }
       }
     } catch (error: any) {
-      showToast(error.message || 'データの読み込みに失敗しました');
+      if (!silent) {
+        showToast(error.message || 'データの読み込みに失敗しました');
+      }
     } finally {
       if (isInitial) {
         setInitialLoading(false);
+      }
+      
+      refreshInProgressRef.current = false;
+      
+      // If another refresh was queued while this one was running, execute it
+      if (refreshQueuedRef.current) {
+        refreshQueuedRef.current = false;
+        // Use setTimeout to prevent immediate re-execution
+        setTimeout(() => loadData(false, true), 300);
       }
     }
   };
 
   const handleLogin = (token: string, user: any) => {
     setCurrentUser(user);
-    loadData();
+    loadData(true); // Initial load after login
   };
 
   const handleLogout = () => {
@@ -239,8 +273,9 @@ export default function NurseAppConnected() {
         } : undefined,
       });
 
-      await loadData();
       showToast('スケジュールを追加しました');
+      // Silent background refresh - won't interrupt user
+      loadData(false, true);
     } catch (error: any) {
       showToast(error.message || '追加に失敗しました');
     }
@@ -284,8 +319,9 @@ export default function NurseAppConnected() {
       }
 
       await scheduleService.update(visitId, updateData);
-      await loadData();
       showToast('スケジュールを更新しました');
+      // Silent background refresh - won't interrupt user
+      loadData(false, true);
     } catch (error: any) {
       showToast(error.message || '更新に失敗しました');
     }
@@ -294,8 +330,9 @@ export default function NurseAppConnected() {
   const handleDeleteVisit = async (visitId: string) => {
     try {
       await scheduleService.delete(visitId);
-      await loadData();
       showToast('スケジュールを削除しました');
+      // Silent background refresh - won't interrupt user
+      loadData(false, true);
     } catch (error: any) {
       showToast(error.message || '削除に失敗しました');
     }
@@ -317,8 +354,9 @@ export default function NurseAppConnected() {
         update_scope: scope || 'this',
       });
 
-      await loadData();
       showToast('スケジュールを移動しました');
+      // Silent background refresh - won't interrupt user
+      loadData(false, true);
     } catch (error: any) {
       showToast(error.message || '移動に失敗しました');
     }
@@ -374,18 +412,18 @@ export default function NurseAppConnected() {
                 await shiftService.create({ user_id: update.staffId, shift_date: update.date, shift_type: update.type });
               }
             }
-            // Refresh from server after all updates complete
-            await loadData();
+            // Refresh from server after all updates complete - silently
+            loadData(false, true);
           })().catch((error: any) => {
             // On error, revert by reloading
             showToast(error.message || 'シフト更新に失敗しました');
-            loadData();
+            loadData(false, true);
           });
           return currentShifts;
         });
       } catch (error: any) {
         showToast(error.message || 'シフト更新に失敗しました');
-        await loadData();
+        loadData(false, true);
       }
     }, 500);
   }, [loadData, currentUser]);
@@ -404,8 +442,9 @@ export default function NurseAppConnected() {
         default_holiday_weekdays: staffData.defaultHolidays,
       });
 
-      await loadData();
       showToast('スタッフを追加しました');
+      // Silent background refresh - won't interrupt user
+      loadData(false, true);
     } catch (error: any) {
       showToast(error.message || '追加に失敗しました');
     }
@@ -421,8 +460,9 @@ export default function NurseAppConnected() {
         default_holiday_weekdays: updates.defaultHolidays,
       });
 
-      await loadData();
       showToast('スタッフを更新しました');
+      // Silent background refresh - won't interrupt user
+      loadData(false, true);
     } catch (error: any) {
       showToast(error.message || '更新に失敗しました');
     }
@@ -440,7 +480,8 @@ export default function NurseAppConnected() {
       }));
 
       await userService.updateSortOrders(sortOrders);
-      await loadData();
+      // Silent background refresh - won't interrupt user
+      loadData(false, true);
     } catch (error: any) {
       showToast(error.message || '並び替えに失敗しました');
     }
@@ -599,8 +640,9 @@ export default function NurseAppConnected() {
                     const confirmed = await showConfirm('このスタッフを削除しますか？');
                     if (confirmed) {
                       await userService.delete(id);
-                      await loadData();
                       showToast('スタッフを削除しました');
+                      // Silent background refresh
+                      loadData(false, true);
                     }
                   }}
                   isReadOnly={isReadOnly}
@@ -625,21 +667,24 @@ export default function NurseAppConnected() {
                       role: user.role === 'admin' ? 'CompanyAdmin' : 'NormalUser',
                       name: user.name,
                     });
-                    await loadData();
                     showToast('ユーザーを追加しました');
+                    // Silent background refresh
+                    loadData(false, true);
                   }}
                   onUpdateUser={async (user: any) => {
                     await userService.update(user.id, {
                       name: user.name,
                       role: user.role === 'admin' ? 'CompanyAdmin' : 'NormalUser',
                     });
-                    await loadData();
                     showToast('ユーザーを更新しました');
+                    // Silent background refresh
+                    loadData(false, true);
                   }}
                   onDeleteUser={async (id) => {
                     await userService.delete(id);
-                    await loadData();
                     showToast('ユーザーを削除しました');
+                    // Silent background refresh
+                    loadData(false, true);
                   }}
                 />
               )}
@@ -670,9 +715,9 @@ export default function NurseAppConnected() {
                         updatedSettings.jobTitles
                       );
 
-                      // Reload data to reflect changes
-                      await loadData();
                       showToast('設定を保存しました');
+                      // Reload data to reflect changes - silently
+                      loadData(false, true);
                     } catch (error: any) {
                       showToast(error.message || '設定の保存に失敗しました');
                     } finally {
