@@ -41,7 +41,7 @@ interface AppContextType {
   setShifts: React.Dispatch<React.SetStateAction<ShiftAssignment[]>>;
 
   // Data loading
-  refreshData: () => Promise<void>;
+  refreshData: (silent?: boolean) => Promise<void>;
 
   // Staff operations
   addStaff: (data: Partial<Staff>) => Promise<void>;
@@ -217,8 +217,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [currentUser, isImpersonating]);
 
   // Fetch data when user is authenticated
-  const refreshData = useCallback(async () => {
-    console.log('[Context] refreshData called, currentUser:', currentUser, 'token:', localStorage.getItem('token') ? 'exists' : 'missing', 'isImpersonating:', isImpersonating);
+  // silent: if true, don't show loading indicator (for background refreshes)
+  const refreshData = useCallback(async (silent = false) => {
+    console.log('[Context] refreshData called, silent:', silent, 'currentUser:', currentUser?.user_id?.slice(0, 8));
 
     if (!currentUser || !localStorage.getItem('token')) {
       console.log('[Context] No user or token, clearing data');
@@ -230,7 +231,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      setIsLoading(true);
+      // Only show loading for explicit refreshes, not background updates
+      if (!silent) setIsLoading(true);
       console.log('[Context] Fetching data from API...');
 
       // Fetch all data in parallel
@@ -346,12 +348,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     const intervalId = setInterval(() => {
-      // Only refresh if page is visible
+      // Only refresh if page is visible - use silent mode to avoid showing loading indicator
       if (document.visibilityState === 'visible') {
-        console.log('[Context] Auto-refresh triggered');
-        refreshData();
+        console.log('[Context] Auto-refresh triggered (silent)');
+        refreshData(true); // silent refresh
       }
-    }, 30000); // 30 seconds
+    }, 60000); // 60 seconds - increased to reduce operational stress
 
     return () => clearInterval(intervalId);
   }, [currentUser, refreshData]);

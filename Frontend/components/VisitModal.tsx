@@ -51,6 +51,7 @@ export const VisitModal: React.FC<VisitModalProps> = ({
     const [showScopeModal, setShowScopeModal] = useState<'update' | 'delete' | null>(null);
     const [showUnsavedConfirm, setShowUnsavedConfirm] = useState(false);
     const [isStaffDropdownOpen, setIsStaffDropdownOpen] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     const weekDayLabels = ['日', '月', '火', '水', '木', '金', '土'];
@@ -135,6 +136,8 @@ export const VisitModal: React.FC<VisitModalProps> = ({
     };
 
     const handleSave = async () => {
+        if (isSaving) return; // Prevent double submission
+        
         if (!date || !startTime || !endTime) {
             await showAlert('日付と時間は必須です', 'error');
             return;
@@ -153,6 +156,9 @@ export const VisitModal: React.FC<VisitModalProps> = ({
     };
 
     const executeSave = (scope: RecurrenceScope) => {
+        if (isSaving) return; // Prevent double submission
+        setIsSaving(true);
+        
         const updatedVisit: VisitWithStaff = {
             ...visit,
             date,
@@ -657,10 +663,20 @@ export const VisitModal: React.FC<VisitModalProps> = ({
                         </button>
                         <button
                             onClick={handleSave}
-                            className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-md flex items-center gap-2 text-sm font-bold"
+                            disabled={isSaving}
+                            className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors shadow-md flex items-center gap-2 text-sm font-bold"
                         >
-                            <Save className="w-4 h-4" />
-                            保存
+                            {isSaving ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    保存中...
+                                </>
+                            ) : (
+                                <>
+                                    <Save className="w-4 h-4" />
+                                    保存
+                                </>
+                            )}
                         </button>
                     </div>
                 </div>

@@ -401,17 +401,6 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-600 mb-2">役職</label>
-                <input
-                  type="text"
-                  value={formData.job_title}
-                  onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
-                  placeholder="例: 主任"
-                />
-              </div>
-
-              <div>
                 <label className="block text-sm font-bold text-gray-600 mb-2">表示色</label>
                 <div className="flex items-center gap-3">
                   <input
