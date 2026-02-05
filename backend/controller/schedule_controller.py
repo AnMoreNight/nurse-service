@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, and_
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 from models.orm import Schedule, ScheduleAssignment, RecurringRule, User
 from fastapi import HTTPException, status
 from uuid import UUID, uuid4
@@ -550,4 +550,90 @@ class ScheduleController:
             ])
         
         return output.getvalue()
+
+    @staticmethod
+    async def cleanup_duplicate_schedules(db: AsyncSession, company_id: UUID):
+        """
+        Remove duplicate recurring base schedules that have the same pattern.
+        Keeps the oldest schedule and removes newer duplicates.
+        """
+
+        # Get all recurring schedules (base schedules only)
+        query = select(Schedule).options(
+            joinedload(Schedule.assignments).joinedload(ScheduleAssignment.user),
+            joinedload(Schedule.recurring_rule)
+        ).where(
+            Schedule.company_id == company_id,
+            Schedule.recurring_rule_id.isnot(None),
+            Schedule.is_exception == False
+        ).order_by(Schedule.created_at)
+
+        result = await db.execute(query)
+        all_schedules = result.unique().scalars().all()
+
+        # Group schedules by their effective pattern
+        seen_patterns = {}
+        duplicates_to_delete = []
+
+        for s in all_schedules:
+            if not s.recurring_rule:
+                continue
+
+            # Create a pattern key based on the schedule's effective recurrence pattern
+            rule = s.recurring_rule
+            time_str = s.start_time.strftime('%H:%M') if s.start_time else ''
+            end_time_str = s.end_time.strftime('%H:%M') if s.end_time else ''
+
+            # Get assigned user IDs
+            assigned_ids = tuple(sorted([str(a.user_id) for a in s.assignments]))
+
+            pattern_key = (
+                s.patient_name,
+                time_str,
+                end_time_str,
+                assigned_ids,
+                rule.frequency,
+                tuple(sorted(rule.day_of_week or [])),
+                tuple(sorted(rule.week_of_month or [])) if rule.week_of_month else None,
+                rule.day_of_week_monthly,
+                rule.day_of_month,
+                rule.interval
+            )
+
+            if pattern_key in seen_patterns:
+                # This is a duplicate
+                duplicates_to_delete.append(s)
+            else:
+                seen_patterns[pattern_key] = s
+
+        # Delete duplicates
+        deleted_count = 0
+        for dup in duplicates_to_delete:
+            # Delete assignments first
+            await db.execute(
+                delete(ScheduleAssignment).where(ScheduleAssignment.schedule_id == dup.schedule_id)
+            )
+            # Delete the recurring rule if no other schedule uses it
+            if dup.recurring_rule_id:
+                other_schedules = await db.execute(
+                    select(Schedule).where(
+                        Schedule.recurring_rule_id == dup.recurring_rule_id,
+                        Schedule.schedule_id != dup.schedule_id
+                    )
+                )
+                if not other_schedules.scalars().first():
+                    await db.execute(
+                        delete(RecurringRule).where(RecurringRule.rule_id == dup.recurring_rule_id)
+                    )
+            # Delete the schedule
+            await db.delete(dup)
+            deleted_count += 1
+
+        await db.commit()
+
+        return {
+            "message": f"Cleanup complete. Removed {deleted_count} duplicate schedules.",
+            "deleted_count": deleted_count,
+            "kept_count": len(seen_patterns)
+        }
 

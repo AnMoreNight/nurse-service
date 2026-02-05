@@ -268,7 +268,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (schedulesRes.status === 'fulfilled') {
         const schedules = schedulesRes.value;
         console.log('[Context] Raw schedules:', schedules);
-        setVisits(schedules.map(scheduleToVisit));
+
+        // Convert to visits and deduplicate by (date, startTime, patientName, staffIds)
+        const allVisits = schedules.map(scheduleToVisit);
+        const seen = new Set<string>();
+        const deduplicatedVisits = allVisits.filter(visit => {
+          const staffKey = [...visit.staffIds].sort().join(',');
+          const key = `${visit.date}|${visit.startTime}|${visit.patientName}|${staffKey}`;
+          if (seen.has(key)) {
+            console.log('[Context] Duplicate visit filtered:', key);
+            return false;
+          }
+          seen.add(key);
+          return true;
+        });
+
+        console.log('[Context] Visits after dedup:', deduplicatedVisits.length, 'from', allVisits.length);
+        setVisits(deduplicatedVisits);
       } else {
         console.error('[Context] Schedules fetch failed:', schedulesRes.reason);
       }

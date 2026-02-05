@@ -190,7 +190,7 @@ export default function NurseAppConnected() {
   }, [staff]);
 
   const visits = useMemo(() => {
-    return schedules.map(sch => {
+    const allVisits = schedules.map(sch => {
       const startDateTime = new Date(sch.start_time);
       const endDateTime = new Date(sch.end_time);
       return {
@@ -225,6 +225,18 @@ export default function NurseAppConnected() {
           joinedDate: u.created_at.split('T')[0],
         })),
       };
+    });
+
+    // Deduplicate visits by (date, startTime, patientName, staffIds)
+    const seen = new Set<string>();
+    return allVisits.filter(visit => {
+      const staffKey = [...visit.staffIds].sort().join(',');
+      const key = `${visit.date}|${visit.startTime}|${visit.patientName}|${staffKey}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
     });
   }, [schedules]);
 

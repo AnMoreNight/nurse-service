@@ -71,3 +71,9 @@ async def export_schedules_csv(
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=schedules.csv"}
     )
+
+@router.post("/cleanup-duplicates")
+async def cleanup_duplicate_schedules(request: Request, db: AsyncSession = Depends(get_db)):
+    """Remove duplicate recurring schedules from the database."""
+    user = await require_company_admin(request, db)  # Admin only
+    return await ScheduleController.cleanup_duplicate_schedules(db, user["company_id"])
