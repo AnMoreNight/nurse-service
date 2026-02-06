@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, and_
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy import select, update, delete, and_, or_
+from sqlalchemy.orm import selectinload
 from models.orm import Schedule, ScheduleAssignment, RecurringRule, User
 from fastapi import HTTPException, status
 from uuid import UUID, uuid4
@@ -87,48 +87,69 @@ class ScheduleController:
         }
     
     @staticmethod
-    async def get_schedules(db: AsyncSession, company_id: UUID, start_date: str = None, 
+    async def get_schedules(db: AsyncSession, company_id: UUID, start_date: str = None,
                            end_date: str = None, patient_name: str = None, filter_by_user: UUID = None):
-        from sqlalchemy.orm import joinedload
-        
+        # Parse date range early for DB-level filtering
+        if start_date and end_date:
+            try:
+                query_start = datetime.strptime(start_date, "%Y-%m-%d").date()
+                query_end = datetime.strptime(end_date, "%Y-%m-%d").date()
+            except ValueError:
+                query_start = date.today() - timedelta(days=30)
+                query_end = date.today() + timedelta(days=365)
+        else:
+            query_start = date.today() - timedelta(days=30)
+            query_end = date.today() + timedelta(days=365)
+
+        # Safety limit: cap at 1 year expansion
+        if (query_end - query_start).days > 365:
+            query_end = query_start + timedelta(days=365)
+
+        # Use selectinload instead of joinedload to avoid cartesian product
+        # selectinload issues separate IN queries which is faster for 1-to-many
         query = select(Schedule).options(
-            joinedload(Schedule.assignments).joinedload(ScheduleAssignment.user),
-            joinedload(Schedule.recurring_rule)
+            selectinload(Schedule.assignments).selectinload(ScheduleAssignment.user),
+            selectinload(Schedule.recurring_rule)
         ).where(Schedule.company_id == company_id)
-        
+
         # Apply patient name filter to base schedules
         if patient_name:
             query = query.where(Schedule.patient_name.ilike(f"%{patient_name}%"))
-        
+
         # For NORMAL_USER, only show schedules they're assigned to
         if filter_by_user:
             query = query.join(Schedule.assignments).where(ScheduleAssignment.user_id == filter_by_user)
-        
-        # For recurring schedules, we need to query ALL base schedules
-        # and expand them, not filter by date at query level
+
+        # DB-level date filtering:
+        # - Recurring base schedules (has recurring_rule_id, not exception): always load for expansion
+        # - Non-recurring and exceptions: filter by date range at DB level
+        query = query.where(
+            or_(
+                and_(Schedule.recurring_rule_id.isnot(None), Schedule.is_exception == False),
+                and_(
+                    Schedule.start_time >= datetime.combine(query_start, datetime.min.time()),
+                    Schedule.start_time <= datetime.combine(query_end, datetime.max.time())
+                )
+            )
+        )
+
         query = query.order_by(Schedule.start_time)
         result = await db.execute(query)
-        all_schedules = result.unique().scalars().all()
-        
+        all_schedules = result.scalars().all()
+
         # Filter to get only base schedules for recurring series
-        # For recurring schedules: only keep those with recurrence_index=0 (the base schedule)
-        # For non-recurring or exceptions: keep all
         seen_series = set()
         pre_dedup = []
         for s in all_schedules:
-            # If it has a recurring_rule_id and recurring_series_id and is not an exception
-            # Only keep the first one we see for each recurring_series_id (the base schedule)
             if s.recurring_rule_id and s.recurring_series_id and not s.is_exception:
                 series_key = str(s.recurring_series_id)
                 if series_key not in seen_series:
                     seen_series.add(series_key)
                     pre_dedup.append(s)
             else:
-                # Non-recurring schedules or exceptions - keep all
                 pre_dedup.append(s)
 
         # Second pass: deduplicate recurring bases by their effective pattern
-        # This catches duplicates created from separate user actions (different series_id but same pattern)
         seen_patterns = set()
         base_schedules = []
         for s in pre_dedup:
@@ -153,41 +174,20 @@ class ScheduleController:
                     continue  # Skip duplicate pattern
                 seen_patterns.add(pattern_key)
             base_schedules.append(s)
-        
-        # Parse date range for expansion
-        if start_date and end_date:
-            try:
-                query_start = datetime.strptime(start_date, "%Y-%m-%d").date()
-                query_end = datetime.strptime(end_date, "%Y-%m-%d").date()
-            except ValueError:
-                # If parsing fails, default to reasonable range
-                query_start = date.today() - timedelta(days=30)
-                query_end = date.today() + timedelta(days=365)
-        else:
-            # Default: 1 month before to 1 year ahead
-            query_start = date.today() - timedelta(days=30)
-            query_end = date.today() + timedelta(days=365)
-        
-        # Safety limit: cap at 1 year expansion
-        if (query_end - query_start).days > 365:
-            query_end = query_start + timedelta(days=365)
-        
+
         expanded_schedules = []
-        
+
         # Collect exception dates by recurring_series_id
-        # Exceptions are schedules that have recurring_series_id but is_exception=True
         exception_dates_by_series = {}
         for s in base_schedules:
             if s.is_exception and s.recurring_series_id:
                 series_id = str(s.recurring_series_id)
                 if series_id not in exception_dates_by_series:
                     exception_dates_by_series[series_id] = []
-                # Get the date of this exception
                 exception_date = s.start_time.date() if isinstance(s.start_time, datetime) else s.start_time
                 exception_dates_by_series[series_id].append(exception_date.isoformat())
-        
+
         for s in base_schedules:
-            # Build base schedule dict
             schedule_dict = {
                 "schedule_id": str(s.schedule_id),
                 "company_id": str(s.company_id),
@@ -223,16 +223,13 @@ class ScheduleController:
                     for a in s.assignments if a.user
                 ]
             }
-            
-            # Check if this is a recurring schedule (not an exception)
+
             if s.recurring_rule_id and s.recurring_rule and not s.is_exception:
                 rule = s.recurring_rule
-                
-                # Get excluded dates for this series (exception dates)
+
                 series_id = str(s.recurring_series_id) if s.recurring_series_id else None
                 excluded_dates = exception_dates_by_series.get(series_id, []) if series_id else []
-                
-                # Build rule dict for expansion
+
                 rule_dict = {
                     'frequency': rule.frequency,
                     'day_of_week': rule.day_of_week,
@@ -244,8 +241,7 @@ class ScheduleController:
                     'start_date': rule.start_date.isoformat() if rule.start_date else None,
                     'end_date': rule.end_date.isoformat() if rule.end_date else None
                 }
-                
-                # Expand recurring schedule into instances
+
                 try:
                     instances = expand_recurring_schedule(
                         base_date=s.start_time.date() if isinstance(s.start_time, datetime) else s.start_time,
@@ -254,58 +250,44 @@ class ScheduleController:
                         rule=rule_dict,
                         query_start=query_start,
                         query_end=query_end,
-                        excluded_dates=excluded_dates  # Exclude dates that have exceptions
+                        excluded_dates=excluded_dates
                     )
-                    
-                    # Add each instance as a separate schedule
+
                     for idx, instance in enumerate(instances):
                         instance_dict = schedule_dict.copy()
                         instance_dict['start_time'] = instance['start_time'].isoformat()
                         instance_dict['end_time'] = instance['end_time'].isoformat()
                         instance_dict['date'] = instance['date'].isoformat()
-                        # Add unique identifier for each occurrence
                         instance_dict['occurrence_index'] = idx
                         expanded_schedules.append(instance_dict)
-                
+
                 except Exception as e:
-                    # If expansion fails, log and include base schedule
                     print(f"Recurrence expansion error for schedule {s.schedule_id}: {e}")
-                    # Fall back to base schedule
                     schedule_dict['start_time'] = s.start_time.isoformat() if s.start_time else None
                     schedule_dict['end_time'] = s.end_time.isoformat() if s.end_time else None
                     expanded_schedules.append(schedule_dict)
             else:
-                # Non-recurring schedule or exception - add as-is if within date range
+                # Non-recurring or exception - already filtered by DB, add directly
                 schedule_dict['start_time'] = s.start_time.isoformat() if s.start_time else None
                 schedule_dict['end_time'] = s.end_time.isoformat() if s.end_time else None
-                
-                # Filter by date range if specified
-                if start_date and end_date:
-                    schedule_date = s.start_time.date() if isinstance(s.start_time, datetime) else s.start_time
-                    if query_start <= schedule_date <= query_end:
-                        expanded_schedules.append(schedule_dict)
-                else:
-                    expanded_schedules.append(schedule_dict)
-        
-        # Deduplicate expanded schedules by (date, time_HH:MM, patient_name, assigned_user_ids)
-        # Using only HH:MM (not full ISO) to be robust against microsecond/timezone differences
+                expanded_schedules.append(schedule_dict)
+
+        # Deduplicate expanded schedules
         seen_occurrences = set()
         deduplicated_schedules = []
         for schedule in expanded_schedules:
             raw_start = schedule.get('start_time', '') or ''
             schedule_date = schedule.get('date') or (raw_start[:10] if raw_start else '')
-            # Extract HH:MM from ISO datetime (e.g. "2026-02-06T02:00:00" → "02:00")
             start_hhmm = raw_start[11:16] if len(raw_start) >= 16 else raw_start
-            patient_name = (schedule.get('patient_name', '') or '').strip()
-            assigned_user_ids = tuple(sorted([u['user_id'] for u in schedule.get('assigned_users', [])]))
+            p_name = (schedule.get('patient_name', '') or '').strip()
+            a_user_ids = tuple(sorted([u['user_id'] for u in schedule.get('assigned_users', [])]))
 
-            dedup_key = (schedule_date, start_hhmm, patient_name, assigned_user_ids)
+            dedup_key = (schedule_date, start_hhmm, p_name, a_user_ids)
 
             if dedup_key not in seen_occurrences:
                 seen_occurrences.add(dedup_key)
                 deduplicated_schedules.append(schedule)
 
-        # Sort by start time
         deduplicated_schedules.sort(key=lambda x: x['start_time'] if x['start_time'] else '')
 
         return deduplicated_schedules
@@ -587,8 +569,8 @@ class ScheduleController:
 
         # Get all recurring schedules (base schedules only)
         query = select(Schedule).options(
-            joinedload(Schedule.assignments).joinedload(ScheduleAssignment.user),
-            joinedload(Schedule.recurring_rule)
+            selectinload(Schedule.assignments).selectinload(ScheduleAssignment.user),
+            selectinload(Schedule.recurring_rule)
         ).where(
             Schedule.company_id == company_id,
             Schedule.recurring_rule_id.isnot(None),

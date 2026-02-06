@@ -29,14 +29,17 @@ def get_database_url():
 def get_engine():
     global _engine
     if _engine is None:
+        db_url = get_database_url()
+        is_local = any(h in db_url for h in ['localhost', '127.0.0.1', '::1'])
         _engine = create_async_engine(
-            get_database_url(),
+            db_url,
             echo=False,
-            pool_pre_ping=True,  # Verify connections before using
-            pool_size=10,  # Number of connections to maintain
-            max_overflow=20,  # Additional connections when needed
-            pool_recycle=3600,  # Recycle connections after 1 hour
-            pool_timeout=30,  # Timeout for getting connection from pool
+            pool_pre_ping=not is_local,  # Skip health check for local DB (saves 1 round-trip)
+            pool_size=10,
+            max_overflow=20,
+            pool_recycle=1800 if is_local else 3600,  # Recycle faster for local
+            pool_timeout=10 if is_local else 30,  # Shorter timeout for local
+            connect_args={"server_settings": {"jit": "off"}} if is_local else {},  # Disable JIT for small queries
         )
     return _engine
 

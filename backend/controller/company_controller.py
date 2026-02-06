@@ -10,8 +10,8 @@ class CompanyController:
     async def create_company(db: AsyncSession, name: str):
         company = Company(name=name, is_active=True)
         db.add(company)
+        await db.flush()
         await db.commit()
-        await db.refresh(company)
         return company
 
     @staticmethod
@@ -43,7 +43,6 @@ class CompanyController:
         company.updated_at = datetime.utcnow()
         
         await db.commit()
-        await db.refresh(company)
         return company
 
     @staticmethod
@@ -107,7 +106,6 @@ class CompanyController:
             db.add(setting)
         
         await db.commit()
-        await db.refresh(setting)
         return {"key": setting.setting_key, "value": setting.setting_value}
 
     @staticmethod

@@ -74,12 +74,13 @@ async def create_first_admin(
         company_id = None
     
     db.add(user)
+    await db.flush()
+    user_id = str(user.user_id)
     await db.commit()
-    await db.refresh(user)
-    
+
     return {
         "message": f"{user.role} created successfully",
-        "user_id": str(user.user_id),
+        "user_id": user_id,
         "company_id": company_id,
         "email": user.email,
         "role": user.role

@@ -14,10 +14,8 @@ class StatusController:
             color=color
         )
         db.add(new_status)
-        await db.commit()
-        await db.refresh(new_status)
-        
-        return {
+        await db.flush()
+        result_data = {
             "status_id": str(new_status.status_id),
             "company_id": str(new_status.company_id),
             "name": new_status.name,
@@ -26,6 +24,9 @@ class StatusController:
             "is_default": new_status.is_default,
             "sort_order": new_status.sort_order
         }
+        await db.commit()
+
+        return result_data
     
     @staticmethod
     async def get_statuses(db: AsyncSession, company_id: UUID):
@@ -135,20 +136,25 @@ class StatusController:
             if status_id not in updated_status_ids and not status_obj.is_default:
                 await db.delete(status_obj)
         
+        # Flush to get IDs for newly created statuses without extra refresh queries
+        await db.flush()
         await db.commit()
-        
-        # Refresh created statuses to get their IDs
-        for status in created_statuses:
-            await db.refresh(status)
-        
-        # Return all current statuses
-        result = await db.execute(
-            select(ScheduleStatus)
-            .where(ScheduleStatus.company_id == company_id)
-            .order_by(ScheduleStatus.sort_order, ScheduleStatus.name)
-        )
-        all_statuses = result.scalars().all()
-        
+
+        # Build result from in-memory objects instead of re-querying
+        all_statuses_list = []
+        # Add updated existing statuses
+        for status_id, status_obj in existing_statuses.items():
+            if status_id in updated_status_ids:
+                all_statuses_list.append(status_obj)
+            # Default statuses that weren't in the update are also kept
+            elif status_obj.is_default:
+                all_statuses_list.append(status_obj)
+        # Add newly created statuses
+        all_statuses_list.extend(created_statuses)
+
+        # Sort by sort_order, then name
+        all_statuses_list.sort(key=lambda s: (s.sort_order or 0, s.name or ''))
+
         return [
             {
                 "status_id": str(s.status_id),
@@ -159,5 +165,5 @@ class StatusController:
                 "is_default": s.is_default,
                 "sort_order": s.sort_order
             }
-            for s in all_statuses
+            for s in all_statuses_list
         ]

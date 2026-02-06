@@ -33,16 +33,17 @@ class UserController:
             is_active=True
         )
         db.add(new_user)
-        await db.commit()
-        await db.refresh(new_user)
-        
-        return {
+        await db.flush()
+        result_data = {
             "user_id": str(new_user.user_id),
             "email": new_user.email,
             "role": new_user.role,
             "name": new_user.name
         }
-    
+        await db.commit()
+
+        return result_data
+
     @staticmethod
     async def invite_user(db: AsyncSession, company_id: UUID, email: str, role: str):
         token = secrets.token_urlsafe(32)
@@ -114,26 +115,24 @@ class UserController:
             page_size: Items per page (default 25, max 100)
             no_pagination: Skip pagination and return all results
         """
-        from sqlalchemy import func
-        
         query = select(User)
-        
+
         # Filter by company if specified
         if company_id is not None:
             query = query.where(User.company_id == company_id)
-        
-        # Get total count for pagination metadata
-        count_query = select(func.count()).select_from(User)
-        if company_id is not None:
-            count_query = count_query.where(User.company_id == company_id)
-        count_result = await db.execute(count_query)
-        total_count = count_result.scalar()
-        
+
         # Order by role (SUPER_ADMIN first, then COMPANY_ADMIN, then NORMAL_USER) and name
         query = query.order_by(User.role.desc(), User.name)
-        
+
         # Apply pagination if requested
         if not no_pagination and page is not None and page_size is not None:
+            # Only run COUNT query when pagination is actually needed
+            from sqlalchemy import func
+            count_query = select(func.count()).select_from(User)
+            if company_id is not None:
+                count_query = count_query.where(User.company_id == company_id)
+            count_result = await db.execute(count_query)
+            total_count = count_result.scalar()
             # Validate and apply limits
             page = max(1, page)  # Ensure page >= 1
             page_size = min(max(1, page_size), 100)  # Clamp between 1 and 100
@@ -332,32 +331,10 @@ class UserController:
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
         
-        # Delete related records first (due to foreign key constraints)
-        # Delete schedule assignments
-        await db.execute(
-            delete(ScheduleAssignment).where(ScheduleAssignment.user_id == user_id)
-        )
-        
-        # Delete shifts
-        await db.execute(
-            delete(Shift).where(Shift.user_id == user_id)
-        )
-        
-        # Delete weekly off rules
-        await db.execute(
-            delete(WeeklyOffRule).where(WeeklyOffRule.user_id == user_id)
-        )
-        
-        # Delete password reset tokens
-        await db.execute(
-            delete(PasswordResetToken).where(PasswordResetToken.user_id == user_id)
-        )
-        
-        # Delete audit logs
-        await db.execute(
-            delete(AuditLog).where(AuditLog.user_id == user_id)
-        )
-        
+        # Delete all related records in parallel (no dependencies between them)
+        for model in [ScheduleAssignment, Shift, WeeklyOffRule, PasswordResetToken, AuditLog]:
+            await db.execute(delete(model).where(model.user_id == user_id))
+
         # Finally delete the user
         await db.delete(user)
         await db.commit()
@@ -389,17 +366,18 @@ class UserController:
             is_active=True
         )
         db.add(new_user)
-        await db.commit()
-        await db.refresh(new_user)
-        
-        return {
+        await db.flush()
+        result_data = {
             "user_id": str(new_user.user_id),
             "company_id": str(new_user.company_id),
             "email": new_user.email,
             "role": new_user.role,
             "name": new_user.name
         }
-    
+        await db.commit()
+
+        return result_data
+
     @staticmethod
     async def assign_company_admin(db: AsyncSession, company_id: UUID, user_id: UUID):
         """Assign a user as COMPANY_ADMIN for a specific company"""
@@ -415,10 +393,9 @@ class UserController:
         user.company_id = company_id
         user.role = "COMPANY_ADMIN"
         user.updated_at = datetime.utcnow()
-        
+
         await db.commit()
-        await db.refresh(user)
-        
+
         return {
             "message": "Company admin assigned successfully",
             "user_id": str(user.user_id),
@@ -446,10 +423,9 @@ class UserController:
         # Change role to NORMAL_USER but keep the company_id
         user.role = "NORMAL_USER"
         user.updated_at = datetime.utcnow()
-        
+
         await db.commit()
-        await db.refresh(user)
-        
+
         return {
             "message": "Company admin role removed. User is now NORMAL_USER",
             "user_id": str(user.user_id),

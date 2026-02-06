@@ -17,10 +17,8 @@ class PatientController:
             notes=notes
         )
         db.add(patient)
-        await db.commit()
-        await db.refresh(patient)
-        
-        return {
+        await db.flush()
+        result_data = {
             "patient_id": str(patient.patient_id),
             "company_id": str(patient.company_id),
             "name": patient.name,
@@ -30,6 +28,9 @@ class PatientController:
             "is_active": patient.is_active,
             "created_at": patient.created_at.isoformat() if patient.created_at else None
         }
+        await db.commit()
+
+        return result_data
     
     @staticmethod
     async def get_patients(db: AsyncSession, company_id: UUID, search: str = None):

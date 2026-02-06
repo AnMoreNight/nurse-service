@@ -34,10 +34,11 @@ class ShiftController:
             shift_type=normalized_type
         )
         db.add(shift)
+        await db.flush()
+        shift_id = str(shift.shift_id)
         await db.commit()
-        await db.refresh(shift)
-        
-        return {"shift_id": str(shift.shift_id), "message": "Shift created"}
+
+        return {"shift_id": shift_id, "message": "Shift created"}
     
     @staticmethod
     async def get_shifts(db: AsyncSession, company_id: UUID, start_date: str = None, 
@@ -100,18 +101,18 @@ class ShiftController:
     
     @staticmethod
     async def bulk_create_shifts(db: AsyncSession, company_id: UUID, user_id: UUID, shifts: list):
-        created_ids = []
-        for shift_data in shifts:
-            shift = Shift(
+        new_shifts = [
+            Shift(
                 company_id=company_id,
                 user_id=user_id,
                 shift_date=datetime.strptime(shift_data['shift_date'], "%Y-%m-%d").date(),
                 shift_type=shift_data['shift_type']
             )
-            db.add(shift)
-            await db.flush()
-            created_ids.append(str(shift.shift_id))
-        
+            for shift_data in shifts
+        ]
+        db.add_all(new_shifts)
+        await db.flush()  # Single flush to get all IDs
+        created_ids = [str(s.shift_id) for s in new_shifts]
         await db.commit()
         return {"message": f"Created {len(created_ids)} shifts", "shift_ids": created_ids}
     
@@ -125,10 +126,11 @@ class ShiftController:
             shift_type=shift_type
         )
         db.add(rule)
+        await db.flush()
+        rule_id = str(rule.rule_id)
         await db.commit()
-        await db.refresh(rule)
-        
-        return {"rule_id": str(rule.rule_id), "message": "Weekly off rule created"}
+
+        return {"rule_id": rule_id, "message": "Weekly off rule created"}
     
     @staticmethod
     async def get_weekly_off_rules(db: AsyncSession, company_id: UUID, user_id: UUID = None):
@@ -157,57 +159,72 @@ class ShiftController:
             select(WeeklyOffRule).where(WeeklyOffRule.company_id == company_id)
         )
         rules = rules_result.scalars().all()
-        
+
         if not rules:
             return {"message": "No rules to apply"}
-        
-        # Calculate all dates in the month
+
         from calendar import monthrange
         days_in_month = monthrange(year, month)[1]
-        
-        created_count = 0
+        month_start = date(year, month, 1)
+        month_end = date(year, month, days_in_month)
+
+        # Batch-query all existing shifts for this month in one query
+        # instead of querying per day per rule (N+1 problem)
+        user_ids = list({rule.user_id for rule in rules})
+        existing_result = await db.execute(
+            select(Shift.user_id, Shift.shift_date).where(
+                Shift.company_id == company_id,
+                Shift.user_id.in_(user_ids),
+                Shift.shift_date >= month_start,
+                Shift.shift_date <= month_end
+            )
+        )
+        existing_shifts = {(row.user_id, row.shift_date) for row in existing_result.all()}
+
+        # Build all new shifts in memory, then add in batch
+        new_shifts = []
         for day in range(1, days_in_month + 1):
             current_date = date(year, month, day)
-            weekday = current_date.weekday()  # 0=Monday, 6=Sunday
-            
+            weekday = current_date.weekday()
+
             for rule in rules:
                 if rule.day_of_week == weekday:
-                    # Create shift if not exists
-                    existing = await db.execute(
-                        select(Shift).where(
-                            Shift.user_id == rule.user_id,
-                            Shift.shift_date == current_date
-                        )
-                    )
-                    if not existing.scalar_one_or_none():
-                        shift = Shift(
+                    if (rule.user_id, current_date) not in existing_shifts:
+                        new_shifts.append(Shift(
                             company_id=company_id,
                             user_id=rule.user_id,
                             shift_date=current_date,
                             shift_type=rule.shift_type,
                             is_auto_reflected=True
-                        )
-                        db.add(shift)
-                        created_count += 1
-        
+                        ))
+
+        if new_shifts:
+            db.add_all(new_shifts)
         await db.commit()
-        return {"message": f"Applied {created_count} shifts from weekly rules"}
+        return {"message": f"Applied {len(new_shifts)} shifts from weekly rules"}
     
     @staticmethod
     async def export_shifts_csv(db: AsyncSession, company_id: UUID, start_date: str, end_date: str):
-        shifts = await ShiftController.get_shifts(db, company_id, start_date, end_date)
-        
-        # Get user names
-        user_result = await db.execute(
-            select(User).where(User.company_id == company_id)
-        )
-        users = {str(u.user_id): u.name for u in user_result.scalars().all()}
-        
+        from sqlalchemy.orm import selectinload
+
+        # Single query: fetch shifts with user data joined
+        query = select(Shift).options(
+            selectinload(Shift.user)
+        ).where(Shift.company_id == company_id)
+
+        if start_date:
+            query = query.where(Shift.shift_date >= datetime.strptime(start_date, "%Y-%m-%d").date())
+        if end_date:
+            query = query.where(Shift.shift_date <= datetime.strptime(end_date, "%Y-%m-%d").date())
+
+        query = query.order_by(Shift.shift_date)
+        result = await db.execute(query)
+        shifts = result.scalars().all()
+
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow(['日付', 'スタッフ', 'シフト種別'])
-        
-        # Map shift types to Japanese
+
         shift_type_japanese = {
             'Workday': '出勤',
             'ScheduledDayOff': '公休',
@@ -216,13 +233,13 @@ class ShiftController:
             'NightDuty1DayOff': '夜間待機1（休）',
             'NightDuty2DayOff': '夜間待機2（休）',
         }
-        
+
         for s in shifts:
-            user_name = users.get(s['user_id'], 'Unknown')
-            shift_type_jp = shift_type_japanese.get(s['shift_type'], s['shift_type'])
-            # Format date in Japanese style (YYYY年MM月DD日)
-            date_parts = s['shift_date'].split('-')
+            user_name = s.user.name if s.user else 'Unknown'
+            shift_type_jp = shift_type_japanese.get(s.shift_type, s.shift_type)
+            date_str = str(s.shift_date)
+            date_parts = date_str.split('-')
             date_jp = f"{date_parts[0]}年{int(date_parts[1])}月{int(date_parts[2])}日"
             writer.writerow([date_jp, user_name, shift_type_jp])
-        
+
         return output.getvalue()

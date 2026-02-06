@@ -11,25 +11,21 @@ import secrets
 class AuthController:
     @staticmethod
     async def login(db: AsyncSession, email: str, password: str):
+        # Single query: fetch user with company eagerly loaded
         result = await db.execute(
-            select(User).where(User.email == email)
+            select(User).options(
+                selectinload(User.company)
+            ).where(User.email == email)
         )
         user = result.scalar_one_or_none()
-        
+
         if not user or not verify_password(password, user.password_hash):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-        
+
         if not user.is_active:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is inactive")
-        
-        # Get company name if user has a company
-        company_name = None
-        if user.company_id:
-            company_result = await db.execute(
-                select(Company).where(Company.company_id == user.company_id)
-            )
-            company = company_result.scalar_one_or_none()
-            company_name = company.name if company else None
+
+        company_name = user.company.name if user.company else None
         
         token = create_access_token({
             "user_id": str(user.user_id),
@@ -142,10 +138,13 @@ class AuthController:
         db.add(new_user)
         
         invite.accepted_at = datetime.utcnow()
+        await db.flush()
+        user_id = str(new_user.user_id)
         await db.commit()
-        await db.refresh(new_user)
-        
-        return {"message": "Account created successfully", "user_id": str(new_user.user_id)}    
+
+        return {"message": "Account created successfully", "user_id": user_id}
+
+
     @staticmethod
     async def get_profile(db: AsyncSession, user_id: UUID):
         """Get user profile"""
