@@ -88,7 +88,8 @@ async def update_user(user_id: UUID, req: UserUpdate, request: Request, db: Asyn
         db, user_id, user["company_id"],
         name=req.name, profession=req.profession, job_title=req.job_title,
         display_color=req.display_color, avatar_url=req.avatar_url, role=req.role,
-        is_active=req.is_active, join_date=req.join_date, left_date=req.left_date
+        is_active=req.is_active, join_date=req.join_date, left_date=req.left_date,
+        default_holiday_weekdays=req.default_holiday_weekdays
     )
 
 @router.delete("/{user_id}")

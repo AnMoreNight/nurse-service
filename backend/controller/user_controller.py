@@ -94,6 +94,7 @@ class UserController:
                 "is_active": u.is_active,
                 "join_date": str(u.join_date) if u.join_date else None,
                 "left_date": str(u.left_date) if u.left_date else None,
+                "default_holiday_weekdays": u.default_holiday_weekdays or [],
                 "created_at": u.created_at.isoformat() if u.created_at else None
             }
             for u in users
