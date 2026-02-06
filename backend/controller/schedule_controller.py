@@ -114,7 +114,7 @@ class ScheduleController:
         # For recurring schedules: only keep those with recurrence_index=0 (the base schedule)
         # For non-recurring or exceptions: keep all
         seen_series = set()
-        base_schedules = []
+        pre_dedup = []
         for s in all_schedules:
             # If it has a recurring_rule_id and recurring_series_id and is not an exception
             # Only keep the first one we see for each recurring_series_id (the base schedule)
@@ -122,10 +122,37 @@ class ScheduleController:
                 series_key = str(s.recurring_series_id)
                 if series_key not in seen_series:
                     seen_series.add(series_key)
-                    base_schedules.append(s)
+                    pre_dedup.append(s)
             else:
                 # Non-recurring schedules or exceptions - keep all
-                base_schedules.append(s)
+                pre_dedup.append(s)
+
+        # Second pass: deduplicate recurring bases by their effective pattern
+        # This catches duplicates created from separate user actions (different series_id but same pattern)
+        seen_patterns = set()
+        base_schedules = []
+        for s in pre_dedup:
+            if s.recurring_rule_id and s.recurring_rule and not s.is_exception:
+                rule = s.recurring_rule
+                time_hhmm = s.start_time.strftime('%H:%M') if s.start_time else ''
+                end_hhmm = s.end_time.strftime('%H:%M') if s.end_time else ''
+                assigned_ids = tuple(sorted([str(a.user_id) for a in s.assignments]))
+                pattern_key = (
+                    (s.patient_name or '').strip(),
+                    time_hhmm,
+                    end_hhmm,
+                    assigned_ids,
+                    rule.frequency,
+                    tuple(sorted(rule.day_of_week or [])),
+                    tuple(sorted(rule.week_of_month or [])) if rule.week_of_month else None,
+                    rule.day_of_week_monthly,
+                    rule.day_of_month,
+                    rule.interval,
+                )
+                if pattern_key in seen_patterns:
+                    continue  # Skip duplicate pattern
+                seen_patterns.add(pattern_key)
+            base_schedules.append(s)
         
         # Parse date range for expansion
         if start_date and end_date:
@@ -260,19 +287,19 @@ class ScheduleController:
                 else:
                     expanded_schedules.append(schedule_dict)
         
-        # Deduplicate expanded schedules by (date, start_time, patient_name, assigned_user_ids)
-        # This prevents visual duplicates when multiple base schedules have the same pattern
+        # Deduplicate expanded schedules by (date, time_HH:MM, patient_name, assigned_user_ids)
+        # Using only HH:MM (not full ISO) to be robust against microsecond/timezone differences
         seen_occurrences = set()
         deduplicated_schedules = []
         for schedule in expanded_schedules:
-            # Create a key based on date, time, patient, and staff
-            schedule_date = schedule.get('date') or (schedule.get('start_time', '')[:10] if schedule.get('start_time') else '')
-            start_time = schedule.get('start_time', '')
-            patient_name = schedule.get('patient_name', '')
-            # Include assigned users in the key to allow same time/patient with different staff
+            raw_start = schedule.get('start_time', '') or ''
+            schedule_date = schedule.get('date') or (raw_start[:10] if raw_start else '')
+            # Extract HH:MM from ISO datetime (e.g. "2026-02-06T02:00:00" → "02:00")
+            start_hhmm = raw_start[11:16] if len(raw_start) >= 16 else raw_start
+            patient_name = (schedule.get('patient_name', '') or '').strip()
             assigned_user_ids = tuple(sorted([u['user_id'] for u in schedule.get('assigned_users', [])]))
 
-            dedup_key = (schedule_date, start_time, patient_name, assigned_user_ids)
+            dedup_key = (schedule_date, start_hhmm, patient_name, assigned_user_ids)
 
             if dedup_key not in seen_occurrences:
                 seen_occurrences.add(dedup_key)
