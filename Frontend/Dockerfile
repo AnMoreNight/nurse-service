@@ -1,4 +1,4 @@
-FROM oven/bun:latest AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -7,13 +7,13 @@ ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 COPY package.json ./
-RUN bun install
+RUN npm install
 
 COPY . .
 
-RUN bun run build
+RUN npm run build
 
-FROM oven/bun:latest
+FROM node:20-alpine
 
 WORKDIR /app
 
@@ -23,4 +23,4 @@ COPY --from=builder /app/public ./public
 
 EXPOSE 3000
 
-CMD ["bun", "server.js"]
+CMD ["node", "server.js"]

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { AuthUser, UserAccount, Staff, Visit, ShiftAssignment, CompanySettings, UserRole } from '@/lib/types';
 import { authService } from '@/services/authService';
 import { userService, User } from '@/services/userService';
@@ -155,6 +155,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [shifts, setShifts] = useState<ShiftAssignment[]>([]);
   const [statuses, setStatuses] = useState<ScheduleStatus[]>([]);
   const [companySettings, setCompanySettings] = useState<CompanySettings>(DEFAULT_SETTINGS);
+  const cleanupDoneRef = useRef(false);
 
   // Error & toast state
   const [error, setError] = useState<string | null>(null);
@@ -269,14 +270,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const schedules = schedulesRes.value;
         console.log('[Context] Raw schedules:', schedules);
 
-        // Convert to visits and deduplicate by (date, startTime, patientName, staffIds)
+        // Convert to visits and deduplicate by (date, startTime HH:MM, trimmed patientName, sorted staffIds)
         const allVisits = schedules.map(scheduleToVisit);
         const seen = new Set<string>();
         const deduplicatedVisits = allVisits.filter(visit => {
           const staffKey = [...visit.staffIds].sort().join(',');
-          const key = `${visit.date}|${visit.startTime}|${visit.patientName}|${staffKey}`;
+          // Use only HH:MM for time comparison (robust against seconds/ms differences)
+          const timeKey = visit.startTime.slice(0, 5);
+          const key = `${visit.date}|${timeKey}|${(visit.patientName || '').trim()}|${staffKey}`;
           if (seen.has(key)) {
-            console.log('[Context] Duplicate visit filtered:', key);
             return false;
           }
           seen.add(key);
@@ -340,6 +342,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             console.log('[Context] No company_id, skipping jobTitles load');
           }
         }
+      }
+
+      // One-time cleanup of duplicate recurring schedules (admin only, fire-and-forget)
+      if (!cleanupDoneRef.current && (currentUser?.role === 'COMPANY_ADMIN' || currentUser?.role === 'SUPER_ADMIN')) {
+        cleanupDoneRef.current = true;
+        scheduleService.cleanupDuplicates().catch(() => {});
       }
 
     } catch (err: any) {

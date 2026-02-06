@@ -84,4 +84,6 @@ export const scheduleService = {
     if (endDate) params.append('end_date', endDate);
     return apiClient.downloadCSV(`/schedules/export/csv?${params.toString()}`);
   },
+
+  cleanupDuplicates: () => apiClient.post<{ deleted_count: number; kept_count: number }>('/schedules/cleanup-duplicates', {}),
 };

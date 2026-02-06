@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '@/lib/context';
 import { userService, User, UserCreate, UserUpdate, PaginatedResponse } from '@/services';
-import { Plus, Pencil, Trash2, X, Save, Mail, Briefcase, Users as UsersIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Save, Mail, Users as UsersIcon } from 'lucide-react';
 import { useModal } from '@/contexts/ModalContext';
 
 interface UserManagementConnectedProps {
@@ -11,7 +11,7 @@ interface UserManagementConnectedProps {
 }
 
 export const UserManagementConnected: React.FC<UserManagementConnectedProps> = ({ companyId }) => {
-  const { currentUser, companySettings } = useApp();
+  const { currentUser } = useApp();
   const { showAlert, showConfirm } = useModal();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,8 +27,6 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
     email: '',
     password: '',
     role: 'NORMAL_USER' as 'COMPANY_ADMIN' | 'NORMAL_USER',
-    profession: '',
-    job_title: '',
     display_color: '#3B82F6'
   });
 
@@ -72,8 +70,6 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
         email: user.email,
         password: '',
         role: user.role as any,
-        profession: user.profession || '',
-        job_title: user.job_title || '',
         display_color: user.display_color || '#3B82F6'
       });
     } else {
@@ -83,8 +79,6 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
         email: '',
         password: '',
         role: 'NORMAL_USER',
-        profession: '',
-        job_title: '',
         display_color: '#3B82F6'
       });
     }
@@ -105,8 +99,6 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
         const updateData: UserUpdate = {
           name: formData.name,
           role: formData.role,
-          profession: formData.profession || undefined,
-          job_title: formData.job_title || undefined,
           display_color: formData.display_color || undefined,
         };
         await userService.update(editingUser.user_id, updateData);
@@ -121,8 +113,6 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
           password: formData.password,
           name: formData.name,
           role: formData.role,
-          profession: formData.profession || undefined,
-          job_title: formData.job_title || undefined,
           display_color: formData.display_color || undefined,
         };
         await userService.create(createData);
@@ -221,7 +211,7 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
                   </div>
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{user.profession || '-'}</td>
+                <td className="px-6 py-4 text-sm text-gray-600">{user.job_title || '-'}</td>
                 <td className="px-6 py-4">{getRoleBadge(user.role)}</td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 rounded text-xs font-medium ${user.is_active ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
@@ -381,23 +371,6 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
                   <option value="NORMAL_USER">一般ユーザー</option>
                   <option value="COMPANY_ADMIN">管理者</option>
                 </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-gray-600 mb-2">職種</label>
-                <div className="relative">
-                  <Briefcase className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                  <select
-                    value={formData.profession}
-                    onChange={(e) => setFormData({ ...formData, profession: e.target.value })}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none appearance-none bg-white"
-                  >
-                    <option value="">選択してください</option>
-                    {companySettings.jobTitles.map(title => (
-                      <option key={title} value={title}>{title}</option>
-                    ))}
-                  </select>
-                </div>
               </div>
 
               <div>

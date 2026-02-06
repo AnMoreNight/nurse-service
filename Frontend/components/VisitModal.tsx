@@ -13,7 +13,7 @@ interface VisitModalProps {
     statuses: { status_id: string; name: string; color: string; }[];
     companySettings: CompanySettings;
     onClose: () => void;
-    onUpdate: (updatedVisit: VisitWithStaff, scope?: RecurrenceScope) => void;
+    onUpdate: (updatedVisit: VisitWithStaff, scope?: RecurrenceScope) => void | Promise<void>;
     onDelete: (visitId: string, scope?: RecurrenceScope) => void;
     onDuplicate?: (visit: VisitWithStaff) => void;
     onAiQuery?: (data: { patientName: string; address: string; date: string; staffIds: string[] }) => void;
@@ -151,29 +151,34 @@ export const VisitModal: React.FC<VisitModalProps> = ({
         if (!isNew && isRecurring) {
             setShowScopeModal('update');
         } else {
-            executeSave('this');
+            await executeSave('this');
         }
     };
 
-    const executeSave = (scope: RecurrenceScope) => {
+    const executeSave = async (scope: RecurrenceScope) => {
         if (isSaving) return; // Prevent double submission
         setIsSaving(true);
-        
-        const updatedVisit: VisitWithStaff = {
-            ...visit,
-            date,
-            patientName,
-            address,
-            staffIds,
-            startTime,
-            endTime,
-            recurrence,
-            recurrenceRule: recurrence === 'custom' ? recurrenceRule : undefined,
-            notes,
-            status,
-        };
-        onUpdate(updatedVisit, scope);
-        onClose();
+
+        try {
+            const updatedVisit: VisitWithStaff = {
+                ...visit,
+                date,
+                patientName,
+                address,
+                staffIds,
+                startTime,
+                endTime,
+                recurrence,
+                recurrenceRule: recurrence === 'custom' ? recurrenceRule : undefined,
+                notes,
+                status,
+            };
+            await onUpdate(updatedVisit, scope);
+            onClose();
+        } catch (err) {
+            console.error('Failed to save:', err);
+            setIsSaving(false);
+        }
     };
 
     const handleDelete = async () => {
@@ -714,8 +719,8 @@ export const VisitModal: React.FC<VisitModalProps> = ({
             {showScopeModal && (
                 <RecurrenceScopeModal
                     mode={showScopeModal}
-                    onSelect={(scope) => {
-                        if (showScopeModal === 'update') executeSave(scope);
+                    onSelect={async (scope) => {
+                        if (showScopeModal === 'update') await executeSave(scope);
                         if (showScopeModal === 'delete') executeDelete(scope);
                         setShowScopeModal(null);
                     }}
