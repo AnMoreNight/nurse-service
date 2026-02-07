@@ -106,13 +106,6 @@ function DashboardContent() {
       });
     }
     
-    console.log('[Dashboard] Staff filtering:', {
-      companyId,
-      totalStaff: staffList.length,
-      filtered: filtered.length,
-      currentUserId: currentUser?.user_id,
-      staffList: staffList.map(s => ({ id: s.id, name: s.name, companyId: s.companyId, leftDate: s.leftDate }))
-    });
     return filtered;
   }, [staffList, companyId, currentUser]);
 
@@ -148,22 +141,17 @@ function DashboardContent() {
   const monthlyStats = useMemo(() => {
     const stats: Record<string, number> = {};
     if (!currentDate) return stats;
-    const currentD = new Date(currentDate);
-    const year = currentD.getFullYear();
-    const month = currentD.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const [year, month] = currentDate.split('-').map(Number);
+    const monthPrefix = `${year}-${String(month).padStart(2, '0')}-`;
 
-    for (let day = 1; day <= daysInMonth; day++) {
-      const checkDate = new Date(year, month, day);
-      const checkDateStr = toLocalISOString(checkDate);
-      filteredVisits.forEach(visit => {
-        if (checkVisitVisibility(visit, checkDateStr)) {
-          visit.staffIds.forEach(staffId => {
-            stats[staffId] = (stats[staffId] || 0) + 1;
-          });
-        }
-      });
-    }
+    // Single pass: filter visits by month prefix instead of iterating 31 days
+    filteredVisits.forEach(visit => {
+      if (visit.date.startsWith(monthPrefix)) {
+        visit.staffIds.forEach(staffId => {
+          stats[staffId] = (stats[staffId] || 0) + 1;
+        });
+      }
+    });
     return stats;
   }, [filteredVisits, currentDate]);
 
@@ -288,8 +276,9 @@ function DashboardContent() {
       }
 
       const timeToMinutes = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
-      const minutesToTime = (tm: number) => `${String(Math.floor(tm / 60)).padStart(2, '0')}:${String(tm % 60).padStart(2, '0')}`;
-      const duration = timeToMinutes(targetVisit.endTime) - timeToMinutes(targetVisit.startTime);
+      const minutesToTime = (tm: number) => { const wrapped = ((tm % 1440) + 1440) % 1440; return `${String(Math.floor(wrapped / 60)).padStart(2, '0')}:${String(wrapped % 60).padStart(2, '0')}`; };
+      let duration = timeToMinutes(targetVisit.endTime) - timeToMinutes(targetVisit.startTime);
+      if (duration < 0) duration += 1440; // Handle midnight crossing
       const newEndTime = minutesToTime(timeToMinutes(newStartTime) + duration);
 
       // Build new staff list: remove from source, add to target (no duplicates)

@@ -5,6 +5,21 @@
 export function normalizeTime(timeStr: string): { time: string; nextDay: boolean } {
     const [hours, minutes] = timeStr.split(':').map(Number);
 
+    if (isNaN(hours) || isNaN(minutes)) {
+        return { time: '00:00', nextDay: false };
+    }
+
+    if (hours < 0 || minutes < 0) {
+        // Wrap negative values into valid 24h range
+        const totalMins = ((hours * 60 + (minutes || 0)) % 1440 + 1440) % 1440;
+        const h = Math.floor(totalMins / 60);
+        const m = totalMins % 60;
+        return {
+            time: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`,
+            nextDay: false
+        };
+    }
+
     if (hours >= 24) {
         // Handle 24:00 or greater - convert to next day
         const normalizedHours = hours % 24;

@@ -22,7 +22,6 @@ interface ShiftManagerProps {
 export const ShiftManager: React.FC<ShiftManagerProps> = ({
   staff, shifts, currentDate, companySettings, onUpdateShift, onOpenStaffForm, onDeleteStaff, onResignStaff, isReadOnly = false
 }) => {
-  console.log('[ShiftManager] Received props:', { staffCount: staff.length, shiftsCount: shifts.length, staff });
   const { showConfirm, showAlert } = useModal();
   const [deletingStaffId, setDeletingStaffId] = useState<string | null>(null);
   const [showDeleteMenu, setShowDeleteMenu] = useState<string | null>(null);

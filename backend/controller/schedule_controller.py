@@ -36,8 +36,6 @@ class ScheduleController:
             if day_of_week_val is not None and isinstance(day_of_week_val, list) and len(day_of_week_val) == 0:
                 day_of_week_val = None
 
-            print(f"[DEBUG] Creating recurring rule - frequency: {recurring_rule.get('frequency')}, week_of_month: {week_of_month_val}, day_of_month: {recurring_rule.get('day_of_month')}")
-
             rule = RecurringRule(
                 frequency=recurring_rule.get('frequency'),
                 day_of_week=day_of_week_val,
@@ -137,42 +135,15 @@ class ScheduleController:
         result = await db.execute(query)
         all_schedules = result.scalars().all()
 
-        # Filter to get only base schedules for recurring series
+        # Single-pass dedup: for recurring bases, keep one per series (prefer by series_id, then pattern)
         seen_series = set()
-        pre_dedup = []
+        base_schedules = []
         for s in all_schedules:
             if s.recurring_rule_id and s.recurring_series_id and not s.is_exception:
                 series_key = str(s.recurring_series_id)
-                if series_key not in seen_series:
-                    seen_series.add(series_key)
-                    pre_dedup.append(s)
-            else:
-                pre_dedup.append(s)
-
-        # Second pass: deduplicate recurring bases by their effective pattern
-        seen_patterns = set()
-        base_schedules = []
-        for s in pre_dedup:
-            if s.recurring_rule_id and s.recurring_rule and not s.is_exception:
-                rule = s.recurring_rule
-                time_hhmm = s.start_time.strftime('%H:%M') if s.start_time else ''
-                end_hhmm = s.end_time.strftime('%H:%M') if s.end_time else ''
-                assigned_ids = tuple(sorted([str(a.user_id) for a in s.assignments]))
-                pattern_key = (
-                    (s.patient_name or '').strip(),
-                    time_hhmm,
-                    end_hhmm,
-                    assigned_ids,
-                    rule.frequency,
-                    tuple(sorted(rule.day_of_week or [])),
-                    tuple(sorted(rule.week_of_month or [])) if rule.week_of_month else None,
-                    rule.day_of_week_monthly,
-                    rule.day_of_month,
-                    rule.interval,
-                )
-                if pattern_key in seen_patterns:
-                    continue  # Skip duplicate pattern
-                seen_patterns.add(pattern_key)
+                if series_key in seen_series:
+                    continue
+                seen_series.add(series_key)
             base_schedules.append(s)
 
         expanded_schedules = []
@@ -265,8 +236,7 @@ class ScheduleController:
                         instance_dict['occurrence_index'] = idx
                         expanded_schedules.append(instance_dict)
 
-                except Exception as e:
-                    print(f"Recurrence expansion error for schedule {s.schedule_id}: {e}")
+                except Exception:
                     schedule_dict['start_time'] = s.start_time.isoformat() if s.start_time else None
                     schedule_dict['end_time'] = s.end_time.isoformat() if s.end_time else None
                     expanded_schedules.append(schedule_dict)
@@ -276,40 +246,45 @@ class ScheduleController:
                 schedule_dict['end_time'] = s.end_time.isoformat() if s.end_time else None
                 expanded_schedules.append(schedule_dict)
 
-        # Deduplicate expanded schedules
-        seen_occurrences = set()
-        deduplicated_schedules = []
-        for schedule in expanded_schedules:
-            raw_start = schedule.get('start_time', '') or ''
-            schedule_date = schedule.get('date') or (raw_start[:10] if raw_start else '')
-            start_hhmm = raw_start[11:16] if len(raw_start) >= 16 else raw_start
-            p_name = (schedule.get('patient_name', '') or '').strip()
-            a_user_ids = tuple(sorted([u['user_id'] for u in schedule.get('assigned_users', [])]))
+        expanded_schedules.sort(key=lambda x: x['start_time'] if x['start_time'] else '')
 
-            dedup_key = (schedule_date, start_hhmm, p_name, a_user_ids)
-
-            if dedup_key not in seen_occurrences:
-                seen_occurrences.add(dedup_key)
-                deduplicated_schedules.append(schedule)
-
-        deduplicated_schedules.sort(key=lambda x: x['start_time'] if x['start_time'] else '')
-
-        return deduplicated_schedules
+        return expanded_schedules
     
     @staticmethod
-    async def update_schedule(db: AsyncSession, schedule_id: UUID, company_id: UUID, 
+    async def update_schedule(db: AsyncSession, schedule_id: UUID, company_id: UUID,
                              update_scope: str = "this", **updates):
         result = await db.execute(
-            select(Schedule).where(
+            select(Schedule).options(
+                selectinload(Schedule.assignments),
+                selectinload(Schedule.recurring_rule)
+            ).where(
                 Schedule.schedule_id == schedule_id,
                 Schedule.company_id == company_id
             )
         )
         schedule = result.scalar_one_or_none()
-        
+
         if not schedule:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schedule not found")
-        
+
+        # If this is an exception schedule and scope is "future" or "all",
+        # find the base schedule in the same series to operate on
+        if schedule.is_exception and schedule.recurring_series_id and update_scope in ("future", "all"):
+            base_result = await db.execute(
+                select(Schedule).options(
+                    selectinload(Schedule.assignments),
+                    selectinload(Schedule.recurring_rule)
+                ).where(
+                    Schedule.recurring_series_id == schedule.recurring_series_id,
+                    Schedule.company_id == company_id,
+                    Schedule.is_exception == False,
+                    Schedule.recurring_rule_id.isnot(None)
+                ).limit(1)
+            )
+            base_schedule = base_result.scalar_one_or_none()
+            if base_schedule:
+                schedule = base_schedule
+
         assigned_user_ids = updates.pop('assigned_user_ids', None)
         recurring_rule_data = updates.pop('recurring_rule', None)
         
@@ -543,8 +518,25 @@ class ScheduleController:
         if not schedule:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schedule not found")
 
-        # Non-recurring or exception: just delete it
-        if not schedule.recurring_rule_id or schedule.is_exception:
+        # If this is an exception and scope is "future" or "all", find the base schedule
+        if schedule.is_exception and schedule.recurring_series_id and delete_scope in ("future", "all"):
+            base_result = await db.execute(
+                select(Schedule).options(
+                    selectinload(Schedule.assignments),
+                    selectinload(Schedule.recurring_rule)
+                ).where(
+                    Schedule.recurring_series_id == schedule.recurring_series_id,
+                    Schedule.company_id == company_id,
+                    Schedule.is_exception == False,
+                    Schedule.recurring_rule_id.isnot(None)
+                ).limit(1)
+            )
+            base_schedule = base_result.scalar_one_or_none()
+            if base_schedule:
+                schedule = base_schedule
+
+        # Non-recurring or exception with "this" scope: just delete it
+        if not schedule.recurring_rule_id or (schedule.is_exception and delete_scope == "this"):
             await db.delete(schedule)
             await db.commit()
             return {"message": "Schedule deleted"}

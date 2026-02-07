@@ -56,12 +56,9 @@ const timeToMinutes = (time: string) => {
 };
 
 const minutesToTime = (totalMinutes: number) => {
-    let minutes = Math.round(totalMinutes);
-    let h = Math.floor(minutes / 60);
-    let m = minutes % 60;
-    if (h >= 24) h = h % 24;
-    if (h < 0) h = 0;
-    if (m < 0) m = 0;
+    const wrapped = ((Math.round(totalMinutes) % 1440) + 1440) % 1440;
+    const h = Math.floor(wrapped / 60);
+    const m = wrapped % 60;
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 };
 

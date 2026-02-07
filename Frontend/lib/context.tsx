@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { AuthUser, UserAccount, Staff, Visit, ShiftAssignment, CompanySettings, UserRole } from '@/lib/types';
 import { authService } from '@/services/authService';
 import { userService, User } from '@/services/userService';
@@ -155,7 +155,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [shifts, setShifts] = useState<ShiftAssignment[]>([]);
   const [statuses, setStatuses] = useState<ScheduleStatus[]>([]);
   const [companySettings, setCompanySettings] = useState<CompanySettings>(DEFAULT_SETTINGS);
-  const cleanupDoneRef = useRef(false);
 
   // Error & toast state
   const [error, setError] = useState<string | null>(null);
@@ -220,10 +219,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Fetch data when user is authenticated
   // silent: if true, don't show loading indicator (for background refreshes)
   const refreshData = useCallback(async (silent = false) => {
-    console.log('[Context] refreshData called, silent:', silent, 'currentUser:', currentUser?.user_id?.slice(0, 8));
-
     if (!currentUser || !localStorage.getItem('token')) {
-      console.log('[Context] No user or token, clearing data');
       setStaff([]);
       setVisits([]);
       setShifts([]);
@@ -232,9 +228,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      // Only show loading for explicit refreshes, not background updates
       if (!silent) setIsLoading(true);
-      console.log('[Context] Fetching data from API...');
 
       // Fetch all data in parallel
       const [usersRes, schedulesRes, shiftsRes, statusesRes] = await Promise.allSettled([
@@ -244,114 +238,54 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         statusService.getAll(currentUser?.company_id),
       ]);
 
-      console.log('[Context] API Results:', {
-        users: usersRes.status === 'fulfilled' ? usersRes.value : usersRes.reason,
-        schedules: schedulesRes.status === 'fulfilled' ? schedulesRes.value : schedulesRes.reason,
-        shifts: shiftsRes.status === 'fulfilled' ? shiftsRes.value : shiftsRes.reason,
-        statuses: statusesRes.status === 'fulfilled' ? statusesRes.value : statusesRes.reason,
-      });
-
-      // Process users -> staff (filter by role for normal users)
       if (usersRes.status === 'fulfilled') {
-        const users = usersRes.value;
-        console.log('[Context] Raw users:', users);
-        const staffMembers = users
+        const staffMembers = usersRes.value
           .filter(u => u.is_active && u.role !== 'SUPER_ADMIN')
           .map(userToStaff)
           .sort((a, b) => ((a as any).sortOrder || 0) - ((b as any).sortOrder || 0));
-        console.log('[Context] Processed staff:', staffMembers);
         setStaff(staffMembers);
-      } else {
-        console.error('[Context] Users fetch failed:', usersRes.reason);
       }
 
-      // Process schedules -> visits
+      // Backend already deduplicates - no need for frontend dedup
       if (schedulesRes.status === 'fulfilled') {
-        const schedules = schedulesRes.value;
-        console.log('[Context] Raw schedules:', schedules);
-
-        // Convert to visits and deduplicate by (date, startTime HH:MM, trimmed patientName, sorted staffIds)
-        const allVisits = schedules.map(scheduleToVisit);
-        const seen = new Set<string>();
-        const deduplicatedVisits = allVisits.filter(visit => {
-          const staffKey = [...visit.staffIds].sort().join(',');
-          // Use only HH:MM for time comparison (robust against seconds/ms differences)
-          const timeKey = visit.startTime.slice(0, 5);
-          const key = `${visit.date}|${timeKey}|${(visit.patientName || '').trim()}|${staffKey}`;
-          if (seen.has(key)) {
-            return false;
-          }
-          seen.add(key);
-          return true;
-        });
-
-        console.log('[Context] Visits after dedup:', deduplicatedVisits.length, 'from', allVisits.length);
-        setVisits(deduplicatedVisits);
-      } else {
-        console.error('[Context] Schedules fetch failed:', schedulesRes.reason);
+        setVisits(schedulesRes.value.map(scheduleToVisit));
       }
 
-      // Process shifts
       if (shiftsRes.status === 'fulfilled') {
-        const shiftsData = shiftsRes.value;
-        console.log('[Context] Raw shifts:', shiftsData);
-        setShifts(shiftsData.map(shiftToAssignment));
-      } else {
-        console.error('[Context] Shifts fetch failed:', shiftsRes.reason);
+        setShifts(shiftsRes.value.map(shiftToAssignment));
       }
 
-      // Process statuses -> company settings
       if (statusesRes.status === 'fulfilled') {
         const statusList = statusesRes.value;
         setStatuses(statusList);
 
-        // Convert to company settings format
         if (statusList.length > 0) {
-          const newSettings: CompanySettings = {
+          // Load jobTitles and set settings in one state update to avoid double render
+          let jobTitles = DEFAULT_SETTINGS.jobTitles;
+          if (currentUser?.company_id) {
+            try {
+              const { companyService } = await import('@/services/companyService');
+              const jobTitlesSetting = await companyService.getSetting(currentUser.company_id, 'jobTitles');
+              if (jobTitlesSetting?.value && Array.isArray(jobTitlesSetting.value)) {
+                jobTitles = jobTitlesSetting.value;
+              }
+            } catch {
+              // Setting might not exist yet, use defaults
+            }
+          }
+
+          setCompanySettings({
             visitStatuses: statusList.map(s => ({
               key: s.status_id,
               label: s.name,
               color: s.color,
             })),
-            jobTitles: DEFAULT_SETTINGS.jobTitles, // Default for now
-          };
-          setCompanySettings(newSettings);
-          console.log('[Context] Set default company settings:', newSettings);
-
-          // Load jobTitles from backend
-          if (currentUser?.company_id) {
-            console.log('[Context] Loading jobTitles for company:', currentUser.company_id);
-            try {
-              const { companyService } = await import('@/services/companyService');
-              const jobTitlesSetting = await companyService.getSetting(currentUser.company_id, 'jobTitles');
-              console.log('[Context] JobTitles setting received:', jobTitlesSetting);
-              if (jobTitlesSetting?.value && Array.isArray(jobTitlesSetting.value)) {
-                console.log('[Context] Setting jobTitles from backend:', jobTitlesSetting.value);
-                setCompanySettings(prev => ({
-                  ...prev,
-                  jobTitles: jobTitlesSetting.value
-                }));
-              } else {
-                console.log('[Context] JobTitles value not an array or empty');
-              }
-            } catch (error) {
-              // Setting might not exist yet, use defaults
-              console.log('[Context] JobTitles not found (error):', error);
-            }
-          } else {
-            console.log('[Context] No company_id, skipping jobTitles load');
-          }
+            jobTitles,
+          });
         }
       }
 
-      // One-time cleanup of duplicate recurring schedules (admin only, fire-and-forget)
-      if (!cleanupDoneRef.current && (currentUser?.role === 'COMPANY_ADMIN' || currentUser?.role === 'SUPER_ADMIN')) {
-        cleanupDoneRef.current = true;
-        scheduleService.cleanupDuplicates().catch(() => {});
-      }
-
     } catch (err: any) {
-      console.error('Failed to fetch data:', err);
       setError(err.message || 'Failed to load data');
     } finally {
       setIsLoading(false);
@@ -365,19 +299,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentUser, refreshData]);
 
-  // Auto-refresh for real-time sync (every 30 seconds)
+  // Auto-refresh for real-time sync
   useEffect(() => {
     if (!currentUser || !localStorage.getItem('token')) {
       return;
     }
 
     const intervalId = setInterval(() => {
-      // Only refresh if page is visible - use silent mode to avoid showing loading indicator
       if (document.visibilityState === 'visible') {
-        console.log('[Context] Auto-refresh triggered (silent)');
-        refreshData(true); // silent refresh
+        refreshData(true);
       }
-    }, 60000); // 60 seconds - increased to reduce operational stress
+    }, 120000); // 2 minutes
 
     return () => clearInterval(intervalId);
   }, [currentUser, refreshData]);

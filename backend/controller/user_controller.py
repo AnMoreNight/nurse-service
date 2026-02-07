@@ -310,7 +310,7 @@ class UserController:
         await db.execute(
             delete(Shift).where(
                 Shift.user_id == user_id,
-                Shift.date > left_date
+                Shift.shift_date > left_date
             )
         )
         
