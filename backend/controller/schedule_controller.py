@@ -423,16 +423,40 @@ class ScheduleController:
                 original_rule.end_date = day_before
 
                 # Step 2: Create a new recurring rule starting from this occurrence
+                # Use recurring_rule_data from the request if available, otherwise copy from original rule
+                rd = recurring_rule_data or {}
+
+                # Handle week_of_month normalization
+                new_week_of_month = rd.get('week_of_month', original_rule.week_of_month)
+                if new_week_of_month is not None:
+                    if isinstance(new_week_of_month, list):
+                        new_week_of_month = new_week_of_month if len(new_week_of_month) > 0 else None
+                    else:
+                        new_week_of_month = [new_week_of_month]
+
+                # Handle day_of_week - empty arrays should be None
+                new_day_of_week = rd.get('day_of_week', original_rule.day_of_week)
+                if new_day_of_week is not None and isinstance(new_day_of_week, list) and len(new_day_of_week) == 0:
+                    new_day_of_week = None
+
+                # For end_date: use request data if provided, otherwise preserve original end date
+                new_end_date = original_end_date
+                if rd.get('end_date'):
+                    try:
+                        new_end_date = datetime.strptime(rd['end_date'], "%Y-%m-%d").date()
+                    except (ValueError, TypeError):
+                        new_end_date = original_end_date
+
                 new_rule = RecurringRule(
-                    frequency=original_rule.frequency,
-                    day_of_week=updates.pop('day_of_week', original_rule.day_of_week),
-                    week_of_month=updates.pop('week_of_month', original_rule.week_of_month),
-                    day_of_week_monthly=updates.pop('day_of_week_monthly', original_rule.day_of_week_monthly),
-                    month_of_year=updates.pop('month_of_year', original_rule.month_of_year),
-                    day_of_month=updates.pop('day_of_month', original_rule.day_of_month),
-                    interval=updates.pop('interval', original_rule.interval),
+                    frequency=rd.get('frequency', original_rule.frequency),
+                    day_of_week=new_day_of_week,
+                    week_of_month=new_week_of_month,
+                    day_of_week_monthly=rd.get('day_of_week_monthly', original_rule.day_of_week_monthly),
+                    month_of_year=rd.get('month_of_year', original_rule.month_of_year),
+                    day_of_month=rd.get('day_of_month', original_rule.day_of_month),
+                    interval=rd.get('interval', original_rule.interval),
                     start_date=occurrence_date,
-                    end_date=original_end_date  # Use the saved original end date
+                    end_date=new_end_date
                 )
                 db.add(new_rule)
                 await db.flush()

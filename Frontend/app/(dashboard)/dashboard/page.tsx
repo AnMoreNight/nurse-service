@@ -33,7 +33,12 @@ function DashboardContent() {
     clearError,
     toastMessage,
     showToast,
+    isRefreshing,
     refreshData,
+    refreshStaff,
+    refreshVisits,
+    refreshShifts,
+    refreshStatuses,
     addSchedule,
     updateSchedule,
     deleteSchedule,
@@ -68,6 +73,7 @@ function DashboardContent() {
   const [staffFormState, setStaffFormState] = useState<{ isOpen: boolean, initialStaff?: Staff }>({ isOpen: false });
   const [suggestionState, setSuggestionState] = useState<{ isOpen: boolean; initialValues?: any }>({ isOpen: false });
   const [localToast, setLocalToast] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Persist current date to localStorage
   useEffect(() => {
@@ -90,6 +96,30 @@ function DashboardContent() {
       router.replace('/dashboard?view=schedule');
     }
   }, [view, currentUser, router]);
+
+  // View-aware auto-refresh: only fetch data the current view needs
+  useEffect(() => {
+    if (!currentUser || !localStorage.getItem('token')) return;
+
+    const intervalId = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+
+      if (view === 'schedule') {
+        refreshStaff(); refreshVisits(); refreshShifts();
+      } else if (view === 'shifts') {
+        refreshStaff(); refreshShifts();
+      } else if (view === 'users') {
+        refreshStaff();
+      } else if (view === 'settings') {
+        refreshStatuses();
+      } else if (view === 'search') {
+        refreshStaff(); refreshVisits();
+      }
+      // export view: no auto-refresh needed
+    }, 120000); // 2 minutes
+
+    return () => clearInterval(intervalId);
+  }, [currentUser, view, refreshStaff, refreshVisits, refreshShifts, refreshStatuses]);
 
   // Filter staff by company (for non-system admins)
   // For NORMAL_USER, put their own column at the far left
@@ -225,8 +255,8 @@ function DashboardContent() {
         }, scope);
       }
       setSelectedVisit(null);
-    } catch (err) {
-      console.error('Failed to update visit:', err);
+    } catch (err: any) {
+      showToast(`更新に失敗しました: ${err.message || '不明なエラー'}`);
     }
   };
 
@@ -237,8 +267,8 @@ function DashboardContent() {
       const visit = filteredVisits.find(v => v.id === visitId);
       await deleteSchedule(visitId, scope, visit?.date);
       setSelectedVisit(null);
-    } catch (err) {
-      console.error('Failed to delete visit:', err);
+    } catch (err: any) {
+      showToast(`削除に失敗しました: ${err.message || '不明なエラー'}`);
     }
   };
 
@@ -293,10 +323,8 @@ function DashboardContent() {
         staffIds: newStaffIds,
         date: currentDate,
       }, scope);
-
-      showToast('スケジュールを移動しました');
-    } catch (err) {
-      console.error('Failed to move visit:', err);
+    } catch (err: any) {
+      showToast(`移動に失敗しました: ${err.message || '不明なエラー'}`);
     }
   };
 
@@ -305,8 +333,8 @@ function DashboardContent() {
 
     try {
       await updateShift(staffId, date, type);
-    } catch (err) {
-      console.error('Failed to update shift:', err);
+    } catch (err: any) {
+      showToast(`シフト更新に失敗しました`);
     }
   };
 
@@ -320,8 +348,8 @@ function DashboardContent() {
 
       const sortOrders = newStaffList.map((s, idx) => ({ userId: s.id, sortOrder: idx }));
       await reorderStaff(sortOrders);
-    } catch (err) {
-      console.error('Failed to reorder staff:', err);
+    } catch (err: any) {
+      showToast(`並び替えに失敗しました`);
     }
   };
 
@@ -341,24 +369,24 @@ function DashboardContent() {
         });
       }
       setStaffFormState({ isOpen: false });
-    } catch (err) {
-      console.error('Failed to save staff:', err);
+    } catch (err: any) {
+      showToast(`スタッフの保存に失敗しました: ${err.message || '不明なエラー'}`);
     }
   };
 
   const handleDeleteStaff = async (staffId: string) => {
     try {
       await deleteStaff(staffId);
-    } catch (err) {
-      console.error('Failed to delete staff:', err);
+    } catch (err: any) {
+      showToast(`スタッフの削除に失敗しました`);
     }
   };
 
   const handleResignStaff = async (staffId: string) => {
     try {
       await resignStaff(staffId);
-    } catch (err) {
-      console.error('Failed to resign staff:', err);
+    } catch (err: any) {
+      showToast(`退職処理に失敗しました`);
     }
   };
 
@@ -408,6 +436,16 @@ function DashboardContent() {
 
   return (
     <>
+      {/* Sync indicator - indeterminate progress bar */}
+      {isRefreshing && (
+        <div className="absolute top-0 left-0 right-0 z-50 h-1 bg-teal-100 overflow-hidden">
+          <div className="h-full bg-teal-500 rounded-full" style={{
+            width: '30%',
+            animation: 'slideIndeterminate 1.2s ease-in-out infinite',
+          }} />
+          <style>{`@keyframes slideIndeterminate { 0% { transform: translateX(-100%); } 100% { transform: translateX(433%); } }`}</style>
+        </div>
+      )}
       <div className="flex-1 overflow-hidden p-2 md:p-4">
         {view === 'schedule' && (
           <Dashboard
@@ -445,21 +483,15 @@ function DashboardContent() {
             {!canManageSettings ? null : (
               <CompanySettingsView
                 settings={companySettings}
+                isLoading={isSaving}
                 onSave={async (newSettings) => {
+                  setIsSaving(true);
                   try {
-                    console.log('[Settings Save] Received settings:', newSettings);
-                    console.log('[Settings Save] JobTitles:', newSettings.jobTitles);
-                    console.log('[Settings Save] Current user:', currentUser);
-
-                    // Import the required services
                     const { statusService } = await import('@/services/statusService');
                     const { companyService } = await import('@/services/companyService');
 
-                    // Prepare all statuses for bulk update
                     const statusItems = newSettings.visitStatuses.map((status, index) => {
-                      // Check if this is a UUID (existing status) or a string key (new/default)
                       const isUUID = status.key.length > 30 && status.key.includes('-');
-
                       return {
                         status_id: isUUID ? status.key : undefined,
                         name: status.label,
@@ -468,26 +500,18 @@ function DashboardContent() {
                       };
                     });
 
-                    console.log('[Settings Save] Saving statuses:', statusItems);
-                    // Save statuses
                     await statusService.bulkUpdate({ statuses: statusItems });
-                    console.log('[Settings Save] Statuses saved successfully');
 
-                    // Save jobTitles separately
                     if (currentUser?.company_id) {
-                      console.log('[Settings Save] Saving jobTitles to company:', currentUser.company_id);
-                      console.log('[Settings Save] JobTitles value:', newSettings.jobTitles);
                       await companyService.upsertSetting(currentUser.company_id, 'jobTitles', newSettings.jobTitles);
-                      console.log('[Settings Save] JobTitles saved successfully');
-                    } else {
-                      console.warn('[Settings Save] No company_id found, skipping jobTitles save');
                     }
 
                     showToast('設定を保存しました');
-                    // Refresh data to get updated statuses
-                    await refreshData();
+                    await refreshStatuses();
                   } catch (error: any) {
                     showToast(`保存に失敗しました: ${error.message || '不明なエラー'}`);
+                  } finally {
+                    setIsSaving(false);
                   }
                 }}
                 onDirtyChange={() => { }}

@@ -40,8 +40,13 @@ interface AppContextType {
   companySettings: CompanySettings;
   setShifts: React.Dispatch<React.SetStateAction<ShiftAssignment[]>>;
 
-  // Data loading
+  // Data loading - targeted refresh functions
+  isRefreshing: boolean;
   refreshData: (silent?: boolean) => Promise<void>;
+  refreshStaff: () => Promise<void>;
+  refreshVisits: () => Promise<void>;
+  refreshShifts: () => Promise<void>;
+  refreshStatuses: () => Promise<void>;
 
   // Staff operations
   addStaff: (data: Partial<Staff>) => Promise<void>;
@@ -156,6 +161,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [statuses, setStatuses] = useState<ScheduleStatus[]>([]);
   const [companySettings, setCompanySettings] = useState<CompanySettings>(DEFAULT_SETTINGS);
 
+  // Refresh tracking - counts concurrent active refreshes
+  const [activeRefreshes, setActiveRefreshes] = useState(0);
+  const isRefreshing = activeRefreshes > 0;
+
   // Error & toast state
   const [error, setError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -197,12 +206,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       try {
         const user = JSON.parse(stored);
         setCurrentUser(user);
+        // Keep isLoading=true - refreshData will set it false after data loads
       } catch {
         localStorage.removeItem('currentUser');
         localStorage.removeItem('token');
+        setIsLoading(false);
       }
+    } else {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
   // Persist user to localStorage (only if not impersonating)
@@ -216,8 +228,88 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentUser, isImpersonating]);
 
-  // Fetch data when user is authenticated
-  // silent: if true, don't show loading indicator (for background refreshes)
+  // Individual refresh functions - fetch only the data you need
+  const refreshStaff = useCallback(async () => {
+    if (!currentUser || !localStorage.getItem('token')) return;
+    setActiveRefreshes(c => c + 1);
+    try {
+      const users = await userService.getAll(currentUser.company_id);
+      const staffMembers = users
+        .filter(u => u.is_active && u.role !== 'SUPER_ADMIN')
+        .map(userToStaff)
+        .sort((a, b) => ((a as any).sortOrder || 0) - ((b as any).sortOrder || 0));
+      setStaff(staffMembers);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load staff');
+    } finally {
+      setActiveRefreshes(c => Math.max(0, c - 1));
+    }
+  }, [currentUser]);
+
+  const refreshVisits = useCallback(async () => {
+    if (!currentUser || !localStorage.getItem('token')) return;
+    setActiveRefreshes(c => c + 1);
+    try {
+      const schedules = await scheduleService.getAll(undefined, undefined, undefined, currentUser.company_id);
+      setVisits(schedules.map(scheduleToVisit));
+    } catch (err: any) {
+      setError(err.message || 'Failed to load visits');
+    } finally {
+      setActiveRefreshes(c => Math.max(0, c - 1));
+    }
+  }, [currentUser]);
+
+  const refreshShifts = useCallback(async () => {
+    if (!currentUser || !localStorage.getItem('token')) return;
+    setActiveRefreshes(c => c + 1);
+    try {
+      const shiftsData = await shiftService.getAll(undefined, undefined, undefined, currentUser.company_id);
+      setShifts(shiftsData.map(shiftToAssignment));
+    } catch (err: any) {
+      setError(err.message || 'Failed to load shifts');
+    } finally {
+      setActiveRefreshes(c => Math.max(0, c - 1));
+    }
+  }, [currentUser]);
+
+  const refreshStatuses = useCallback(async () => {
+    if (!currentUser || !localStorage.getItem('token')) return;
+    setActiveRefreshes(c => c + 1);
+    try {
+      const statusList = await statusService.getAll(currentUser.company_id);
+      setStatuses(statusList);
+
+      if (statusList.length > 0) {
+        let jobTitles = DEFAULT_SETTINGS.jobTitles;
+        if (currentUser.company_id) {
+          try {
+            const { companyService } = await import('@/services/companyService');
+            const jobTitlesSetting = await companyService.getSetting(currentUser.company_id, 'jobTitles');
+            if (jobTitlesSetting?.value && Array.isArray(jobTitlesSetting.value)) {
+              jobTitles = jobTitlesSetting.value;
+            }
+          } catch {
+            // Setting might not exist yet, use defaults
+          }
+        }
+
+        setCompanySettings({
+          visitStatuses: statusList.map(s => ({
+            key: s.status_id,
+            label: s.name,
+            color: s.color,
+          })),
+          jobTitles,
+        });
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to load statuses');
+    } finally {
+      setActiveRefreshes(c => Math.max(0, c - 1));
+    }
+  }, [currentUser]);
+
+  // Full refresh - fetches all data in parallel (used on login/error recovery)
   const refreshData = useCallback(async (silent = false) => {
     if (!currentUser || !localStorage.getItem('token')) {
       setStaff([]);
@@ -227,91 +319,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    try {
-      if (!silent) setIsLoading(true);
-
-      // Fetch all data in parallel
-      const [usersRes, schedulesRes, shiftsRes, statusesRes] = await Promise.allSettled([
-        userService.getAll(currentUser?.company_id),
-        scheduleService.getAll(undefined, undefined, undefined, currentUser?.company_id),
-        shiftService.getAll(undefined, undefined, undefined, currentUser?.company_id),
-        statusService.getAll(currentUser?.company_id),
-      ]);
-
-      if (usersRes.status === 'fulfilled') {
-        const staffMembers = usersRes.value
-          .filter(u => u.is_active && u.role !== 'SUPER_ADMIN')
-          .map(userToStaff)
-          .sort((a, b) => ((a as any).sortOrder || 0) - ((b as any).sortOrder || 0));
-        setStaff(staffMembers);
-      }
-
-      // Backend already deduplicates - no need for frontend dedup
-      if (schedulesRes.status === 'fulfilled') {
-        setVisits(schedulesRes.value.map(scheduleToVisit));
-      }
-
-      if (shiftsRes.status === 'fulfilled') {
-        setShifts(shiftsRes.value.map(shiftToAssignment));
-      }
-
-      if (statusesRes.status === 'fulfilled') {
-        const statusList = statusesRes.value;
-        setStatuses(statusList);
-
-        if (statusList.length > 0) {
-          // Load jobTitles and set settings in one state update to avoid double render
-          let jobTitles = DEFAULT_SETTINGS.jobTitles;
-          if (currentUser?.company_id) {
-            try {
-              const { companyService } = await import('@/services/companyService');
-              const jobTitlesSetting = await companyService.getSetting(currentUser.company_id, 'jobTitles');
-              if (jobTitlesSetting?.value && Array.isArray(jobTitlesSetting.value)) {
-                jobTitles = jobTitlesSetting.value;
-              }
-            } catch {
-              // Setting might not exist yet, use defaults
-            }
-          }
-
-          setCompanySettings({
-            visitStatuses: statusList.map(s => ({
-              key: s.status_id,
-              label: s.name,
-              color: s.color,
-            })),
-            jobTitles,
-          });
-        }
-      }
-
-    } catch (err: any) {
-      setError(err.message || 'Failed to load data');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentUser, isImpersonating]);
+    if (!silent) setIsLoading(true);
+    await Promise.allSettled([refreshStaff(), refreshVisits(), refreshShifts(), refreshStatuses()]);
+    setIsLoading(false);
+  }, [refreshStaff, refreshVisits, refreshShifts, refreshStatuses, currentUser]);
 
   // Refresh data when user changes
   useEffect(() => {
     if (currentUser) {
       refreshData();
     }
-  }, [currentUser, refreshData]);
-
-  // Auto-refresh for real-time sync
-  useEffect(() => {
-    if (!currentUser || !localStorage.getItem('token')) {
-      return;
-    }
-
-    const intervalId = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        refreshData(true);
-      }
-    }, 120000); // 2 minutes
-
-    return () => clearInterval(intervalId);
   }, [currentUser, refreshData]);
 
   // Staff operations
@@ -326,13 +343,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         display_color: data.color,
         join_date: data.joinedDate,
       });
-      await refreshData();
+      await refreshStaff();
       showToast('スタッフを追加しました');
     } catch (err: any) {
-      setError(err.message);
       throw err;
     }
-  }, [refreshData, showToast]);
+  }, [refreshStaff, showToast]);
 
   const updateStaff = useCallback(async (id: string, data: Partial<Staff>) => {
     try {
@@ -345,63 +361,50 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         default_holiday_weekdays: data.defaultHolidayWeekDays,
       });
 
-      await refreshData();
+      await refreshStaff();
       showToast('スタッフを更新しました');
     } catch (err: any) {
-      setError(err.message);
       throw err;
     }
-  }, [refreshData, showToast]);
+  }, [refreshStaff, showToast]);
 
   const deleteStaff = useCallback(async (id: string) => {
     try {
       // Permanent delete - removes user and all related data
       await userService.delete(id);
-      await refreshData();
+      await refreshStaff();
       showToast('スタッフを完全に削除しました');
     } catch (err: any) {
-      setError(err.message);
       throw err;
     }
-  }, [refreshData, showToast]);
+  }, [refreshStaff, showToast]);
 
   const resignStaff = useCallback(async (id: string) => {
     try {
       // Soft delete for resignation - preserves employment schedules
       await userService.resign(id);
-      await refreshData();
+      await refreshStaff();
       showToast('退職処理が完了しました');
     } catch (err: any) {
-      setError(err.message);
       throw err;
     }
-  }, [refreshData, showToast]);
+  }, [refreshStaff, showToast]);
 
   const reorderStaff = useCallback(async (sortOrders: { userId: string; sortOrder: number }[]) => {
     try {
       await userService.updateSortOrders(
         sortOrders.map(so => ({ user_id: so.userId, sort_order: so.sortOrder }))
       );
-      await refreshData();
+      await refreshStaff();
     } catch (err: any) {
-      setError(err.message);
       throw err;
     }
-  }, [refreshData]);
+  }, [refreshStaff]);
 
   // Schedule operations
   const addSchedule = useCallback(async (data: any) => {
+    setActiveRefreshes(c => c + 1);
     try {
-      // Map frontend shift types to backend
-      const typeMap: Record<string, string> = {
-        'work': 'Workday',
-        'holiday': 'ScheduledDayOff',
-        'night1': 'NightDuty1',
-        'night2': 'NightDuty2',
-        'night1_holiday': 'NightDuty1DayOff',
-        'night2_holiday': 'NightDuty2DayOff',
-      };
-
       await scheduleService.create({
         company_id: currentUser?.company_id,
         patient_name: data.patientName,
@@ -415,28 +418,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           frequency: data.recurrenceRule.frequency,
           interval: data.recurrenceRule.interval,
           day_of_week: data.recurrenceRule.weekDays,
-          // Monthly by weekday fields - send full array for multiple week support
           week_of_month: data.recurrenceRule.weekNos && data.recurrenceRule.weekNos.length > 0
             ? data.recurrenceRule.weekNos : undefined,
           day_of_week_monthly: data.recurrenceRule.frequency === 'monthly' &&
             data.recurrenceRule.weekNos && data.recurrenceRule.weekNos.length > 0 &&
             data.recurrenceRule.weekDays && data.recurrenceRule.weekDays.length > 0
             ? data.recurrenceRule.weekDays[0] : undefined,
-          // Monthly by date field
           day_of_month: data.recurrenceRule.dayOfMonth,
           start_date: data.date,
           end_date: data.recurrenceRule.endDate,
         } : undefined,
       });
-      await refreshData();
+      await refreshVisits();
       showToast('スケジュールを追加しました');
     } catch (err: any) {
-      setError(err.message);
       throw err;
+    } finally {
+      setActiveRefreshes(c => Math.max(0, c - 1));
     }
-  }, [currentUser, refreshData, showToast]);
+  }, [currentUser, refreshVisits, showToast]);
 
   const updateSchedule = useCallback(async (id: string, data: any, scope?: string) => {
+    setActiveRefreshes(c => c + 1);
     try {
       await scheduleService.update(id, {
         company_id: currentUser?.company_id,
@@ -451,40 +454,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           frequency: data.recurrenceRule.frequency,
           interval: data.recurrenceRule.interval,
           day_of_week: data.recurrenceRule.weekDays,
-          // Monthly by weekday fields - send full array for multiple week support
           week_of_month: data.recurrenceRule.weekNos && data.recurrenceRule.weekNos.length > 0
             ? data.recurrenceRule.weekNos : undefined,
           day_of_week_monthly: data.recurrenceRule.frequency === 'monthly' &&
             data.recurrenceRule.weekNos && data.recurrenceRule.weekNos.length > 0 &&
             data.recurrenceRule.weekDays && data.recurrenceRule.weekDays.length > 0
             ? data.recurrenceRule.weekDays[0] : undefined,
-          // Monthly by date field
           day_of_month: data.recurrenceRule.dayOfMonth,
           start_date: data.date,
           end_date: data.recurrenceRule.endDate,
         } : undefined,
         update_scope: scope as any,
       });
+      await refreshVisits();
       showToast('スケジュールを更新しました');
-      // Refresh data in background — don't block the UI
-      refreshData(true);
     } catch (err: any) {
-      setError(err.message);
       throw err;
+    } finally {
+      setActiveRefreshes(c => Math.max(0, c - 1));
     }
-  }, [currentUser, refreshData, showToast]);
+  }, [currentUser, refreshVisits, showToast]);
 
   const deleteSchedule = useCallback(async (id: string, scope?: string, occurrenceDate?: string) => {
+    setActiveRefreshes(c => c + 1);
     try {
       await scheduleService.delete(id, scope, occurrenceDate);
+      await refreshVisits();
       showToast('スケジュールを削除しました');
-      // Refresh data in background — don't block the UI
-      refreshData(true);
     } catch (err: any) {
-      setError(err.message);
       throw err;
+    } finally {
+      setActiveRefreshes(c => Math.max(0, c - 1));
     }
-  }, [refreshData, showToast]);
+  }, [refreshVisits, showToast]);
 
   // Shift operations
   const updateShift = useCallback(async (staffId: string, date: string, type: string | null) => {
@@ -542,25 +544,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Refresh from server to get real data
-      await refreshData();
+      await refreshShifts();
     } catch (err: any) {
       // On error, revert by refreshing
-      await refreshData();
-      setError(err.message);
+      await refreshShifts();
       throw err;
     }
-  }, [shifts, refreshData, currentUser]);
+  }, [shifts, refreshShifts, currentUser]);
 
   const applyWeeklyRules = useCallback(async (startDate: string, endDate: string) => {
     try {
       await shiftService.applyWeeklyRules(startDate, endDate);
-      await refreshData();
+      await refreshShifts();
       showToast('週間ルールを適用しました');
     } catch (err: any) {
-      setError(err.message);
       throw err;
     }
-  }, [refreshData, showToast]);
+  }, [refreshShifts, showToast]);
 
   // Status operations (admin only)
   const addStatus = useCallback(async (data: { name: string; color: string }) => {
@@ -570,13 +570,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     try {
       await statusService.create(data);
-      await refreshData();
+      await refreshStatuses();
       showToast('ステータスを追加しました');
     } catch (err: any) {
-      setError(err.message);
       throw err;
     }
-  }, [currentUser, refreshData, showToast]);
+  }, [currentUser, refreshStatuses, showToast]);
 
   const updateStatus = useCallback(async (id: string, data: Partial<ScheduleStatus>) => {
     if (currentUser?.role !== 'COMPANY_ADMIN' && currentUser?.role !== 'SUPER_ADMIN') {
@@ -585,13 +584,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     try {
       await statusService.update(id, data);
-      await refreshData();
+      await refreshStatuses();
       showToast('ステータスを更新しました');
     } catch (err: any) {
-      setError(err.message);
       throw err;
     }
-  }, [currentUser, refreshData, showToast]);
+  }, [currentUser, refreshStatuses, showToast]);
 
   const deleteStatus = useCallback(async (id: string) => {
     if (currentUser?.role !== 'COMPANY_ADMIN' && currentUser?.role !== 'SUPER_ADMIN') {
@@ -600,13 +598,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     try {
       await statusService.delete(id);
-      await refreshData();
+      await refreshStatuses();
       showToast('ステータスを削除しました');
     } catch (err: any) {
-      setError(err.message);
       throw err;
     }
-  }, [currentUser, refreshData, showToast]);
+  }, [currentUser, refreshStatuses, showToast]);
 
   const isAuthenticated = currentUser !== null && (localStorage.getItem('token') !== null || isImpersonating);
 
@@ -626,7 +623,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setShifts,
       statuses,
       companySettings,
+      isRefreshing,
       refreshData,
+      refreshStaff,
+      refreshVisits,
+      refreshShifts,
+      refreshStatuses,
       addStaff,
       updateStaff,
       deleteStaff,
