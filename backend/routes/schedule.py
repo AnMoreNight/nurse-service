@@ -48,9 +48,15 @@ async def update_schedule(schedule_id: UUID, req: ScheduleUpdate, request: Reque
     return await ScheduleController.update_schedule(db, schedule_id, effective_company_id, update_scope, **update_data)
 
 @router.delete("/{schedule_id}")
-async def delete_schedule(schedule_id: UUID, request: Request, db: AsyncSession = Depends(get_db)):
+async def delete_schedule(
+    schedule_id: UUID,
+    request: Request,
+    scope: Optional[str] = Query("this"),
+    occurrence_date: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db)
+):
     user = await require_company_admin(request, db)  # Admin only
-    return await ScheduleController.delete_schedule(db, schedule_id, user["company_id"])
+    return await ScheduleController.delete_schedule(db, schedule_id, user["company_id"], scope, occurrence_date)
 
 @router.get("/{schedule_id}/copy")
 async def copy_schedule(schedule_id: UUID, request: Request, db: AsyncSession = Depends(get_db)):

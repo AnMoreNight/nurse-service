@@ -246,7 +246,8 @@ function DashboardContent() {
     if (isReadOnly) return;
 
     try {
-      await deleteSchedule(visitId);
+      const visit = filteredVisits.find(v => v.id === visitId);
+      await deleteSchedule(visitId, scope, visit?.date);
       setSelectedVisit(null);
     } catch (err) {
       console.error('Failed to delete visit:', err);

@@ -33,7 +33,7 @@ export const VisitModal: React.FC<VisitModalProps> = ({
     isReadOnly = false
 }) => {
     const isNew = visit.id.startsWith('new_') || visit.id.startsWith('ai_') || visit.id.startsWith('dup_');
-    const isRecurring = visit.recurrence === 'custom';
+    const isRecurring = visit.recurrence === 'custom' || !!visit.recurrenceRule;
     const { showAlert, showConfirm } = useModal();
 
     const [date, setDate] = useState(visit.date);
@@ -159,25 +159,27 @@ export const VisitModal: React.FC<VisitModalProps> = ({
         if (isSaving) return; // Prevent double submission
         setIsSaving(true);
 
+        const updatedVisit: VisitWithStaff = {
+            ...visit,
+            date,
+            patientName,
+            address,
+            staffIds,
+            startTime,
+            endTime,
+            recurrence,
+            recurrenceRule: recurrence === 'custom' ? recurrenceRule : undefined,
+            notes,
+            status,
+        };
+
+        // Close modal immediately for responsive UI — API call continues in background
+        onClose();
+
         try {
-            const updatedVisit: VisitWithStaff = {
-                ...visit,
-                date,
-                patientName,
-                address,
-                staffIds,
-                startTime,
-                endTime,
-                recurrence,
-                recurrenceRule: recurrence === 'custom' ? recurrenceRule : undefined,
-                notes,
-                status,
-            };
             await onUpdate(updatedVisit, scope);
-            onClose();
         } catch (err) {
             console.error('Failed to save:', err);
-            setIsSaving(false);
         }
     };
 
@@ -719,10 +721,11 @@ export const VisitModal: React.FC<VisitModalProps> = ({
             {showScopeModal && (
                 <RecurrenceScopeModal
                     mode={showScopeModal}
-                    onSelect={async (scope) => {
-                        if (showScopeModal === 'update') await executeSave(scope);
-                        if (showScopeModal === 'delete') executeDelete(scope);
+                    onSelect={(scope) => {
+                        const mode = showScopeModal;
                         setShowScopeModal(null);
+                        if (mode === 'update') executeSave(scope);
+                        if (mode === 'delete') executeDelete(scope);
                     }}
                     onClose={() => setShowScopeModal(null)}
                 />

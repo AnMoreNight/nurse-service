@@ -224,6 +224,10 @@ class ScheduleController:
                 ]
             }
 
+            # Skip deleted exception placeholders
+            if s.is_exception and s.memo == "__deleted__":
+                continue
+
             if s.recurring_rule_id and s.recurring_rule and not s.is_exception:
                 rule = s.recurring_rule
 
@@ -415,20 +419,34 @@ class ScheduleController:
         
         elif update_scope == "future" and schedule.recurring_series_id and schedule.recurring_rule_id:
             # Split the recurring series: end the old one and create a new one from this point forward
-            
+
             # Get the original recurring rule
             rule_result = await db.execute(
                 select(RecurringRule).where(RecurringRule.rule_id == schedule.recurring_rule_id)
             )
             original_rule = rule_result.scalar_one_or_none()
-            
+
             if original_rule:
+                # Determine occurrence_date from the update's start_time (the date the user clicked on),
+                # NOT from the base schedule's start_time
+                occurrence_date = None
+                if 'start_time' in updates and updates['start_time']:
+                    new_start = updates['start_time']
+                    if isinstance(new_start, datetime):
+                        occurrence_date = new_start.date()
+                    elif isinstance(new_start, str):
+                        occurrence_date = datetime.fromisoformat(new_start.replace('Z', '+00:00')).date()
+
+                if not occurrence_date:
+                    occurrence_date = schedule.start_time.date() if isinstance(schedule.start_time, datetime) else schedule.start_time
+
+                # Save original end_date BEFORE modifying the rule
+                original_end_date = original_rule.end_date
+
                 # Step 1: Update the original rule to end before this occurrence
-                # Set end_date to one day before the current schedule's start date
-                occurrence_date = schedule.start_time.date() if isinstance(schedule.start_time, datetime) else schedule.start_time
                 day_before = occurrence_date - timedelta(days=1)
                 original_rule.end_date = day_before
-                
+
                 # Step 2: Create a new recurring rule starting from this occurrence
                 new_rule = RecurringRule(
                     frequency=original_rule.frequency,
@@ -439,7 +457,7 @@ class ScheduleController:
                     day_of_month=updates.pop('day_of_month', original_rule.day_of_month),
                     interval=updates.pop('interval', original_rule.interval),
                     start_date=occurrence_date,
-                    end_date=original_rule.end_date  # Keep the same overall end date
+                    end_date=original_end_date  # Use the saved original end date
                 )
                 db.add(new_rule)
                 await db.flush()
@@ -509,19 +527,115 @@ class ScheduleController:
         return {"message": "Schedule updated"}
     
     @staticmethod
-    async def delete_schedule(db: AsyncSession, schedule_id: UUID, company_id: UUID):
+    async def delete_schedule(db: AsyncSession, schedule_id: UUID, company_id: UUID,
+                              delete_scope: str = "this", occurrence_date: str = None):
         result = await db.execute(
-            select(Schedule).where(
+            select(Schedule).options(
+                selectinload(Schedule.assignments),
+                selectinload(Schedule.recurring_rule)
+            ).where(
                 Schedule.schedule_id == schedule_id,
                 Schedule.company_id == company_id
             )
         )
         schedule = result.scalar_one_or_none()
-        
+
         if not schedule:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schedule not found")
-        
-        await db.delete(schedule)
+
+        # Non-recurring or exception: just delete it
+        if not schedule.recurring_rule_id or schedule.is_exception:
+            await db.delete(schedule)
+            await db.commit()
+            return {"message": "Schedule deleted"}
+
+        # Recurring schedule: handle by scope
+        if delete_scope == "this":
+            # Create an exception schedule for this date so the base occurrence is excluded
+            occ_date = None
+            if occurrence_date:
+                occ_date = datetime.strptime(occurrence_date, "%Y-%m-%d").date()
+            elif schedule.start_time:
+                occ_date = schedule.start_time.date() if isinstance(schedule.start_time, datetime) else schedule.start_time
+
+            if occ_date:
+                # Create a cancelled exception — it excludes this date from expansion
+                # and won't display because start_time == end_time signals a deleted occurrence
+                exception_schedule = Schedule(
+                    company_id=schedule.company_id,
+                    patient_id=schedule.patient_id,
+                    patient_name=schedule.patient_name,
+                    visit_address=schedule.visit_address,
+                    start_time=datetime.combine(occ_date, datetime.min.time()),
+                    end_time=datetime.combine(occ_date, datetime.min.time()),
+                    status_id=None,
+                    memo="__deleted__",
+                    recurring_rule_id=None,
+                    recurring_series_id=schedule.recurring_series_id,
+                    recurrence_index=0,
+                    is_exception=True
+                )
+                db.add(exception_schedule)
+                await db.commit()
+                return {"message": "Occurrence deleted"}
+
+        elif delete_scope == "future":
+            # End the recurring rule just before this occurrence
+            occ_date = None
+            if occurrence_date:
+                occ_date = datetime.strptime(occurrence_date, "%Y-%m-%d").date()
+            elif schedule.start_time:
+                occ_date = schedule.start_time.date() if isinstance(schedule.start_time, datetime) else schedule.start_time
+
+            if occ_date and schedule.recurring_rule:
+                rule = schedule.recurring_rule
+                rule_start = rule.start_date
+
+                # If the occurrence is the very first date, delete everything
+                if rule_start and occ_date <= rule_start:
+                    # Delete all exceptions in this series
+                    await db.execute(
+                        delete(Schedule).where(
+                            Schedule.recurring_series_id == schedule.recurring_series_id,
+                            Schedule.company_id == company_id,
+                            Schedule.is_exception == True
+                        )
+                    )
+                    await db.delete(schedule)
+                    await db.commit()
+                    return {"message": "Recurring series deleted"}
+
+                # Set rule end_date to one day before the occurrence
+                day_before = occ_date - timedelta(days=1)
+                rule.end_date = day_before
+
+                # Delete any exceptions that fall on or after the occurrence date
+                series_exceptions = await db.execute(
+                    select(Schedule).where(
+                        Schedule.recurring_series_id == schedule.recurring_series_id,
+                        Schedule.company_id == company_id,
+                        Schedule.is_exception == True
+                    )
+                )
+                for exc in series_exceptions.scalars().all():
+                    exc_date = exc.start_time.date() if isinstance(exc.start_time, datetime) else exc.start_time
+                    if exc_date >= occ_date:
+                        await db.delete(exc)
+
+                await db.commit()
+                return {"message": "Future occurrences deleted"}
+
+        # delete_scope == "all" or fallback: delete entire series
+        if schedule.recurring_series_id:
+            await db.execute(
+                delete(Schedule).where(
+                    Schedule.recurring_series_id == schedule.recurring_series_id,
+                    Schedule.company_id == company_id
+                )
+            )
+        else:
+            await db.delete(schedule)
+
         await db.commit()
         return {"message": "Schedule deleted"}
     

@@ -191,7 +191,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 }
             }
             
-            if (dragState.visit.recurrence === 'custom') {
+            if (dragState.visit.recurrence === 'custom' || dragState.visit.recurrenceRule) {
                 setMoveRequest({
                     visitId,
                     sourceStaffId: dragState.sourceStaffId,

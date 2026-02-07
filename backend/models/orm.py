@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Boolean, Integer, ForeignKey, Text, Date, Enum as SQLEnum, DECIMAL, UniqueConstraint
+from sqlalchemy import Column, String, DateTime, Boolean, Integer, ForeignKey, Text, Date, Enum as SQLEnum, DECIMAL, UniqueConstraint, Index
 from sqlalchemy.dialects.postgresql import UUID, ARRAY, JSON
 from sqlalchemy.orm import relationship
 from db.database import Base
@@ -59,6 +59,11 @@ class User(Base):
     password_reset_tokens = relationship("PasswordResetToken", back_populates="user")
     audit_logs = relationship("AuditLog", back_populates="user")
 
+    __table_args__ = (
+        Index('ix_users_company_id', 'company_id'),
+        Index('ix_users_company_id_role', 'company_id', 'role'),
+    )
+
 class Patient(Base):
     __tablename__ = "patients"
     
@@ -76,6 +81,11 @@ class Patient(Base):
     company = relationship("Company", back_populates="patients")
     schedules = relationship("Schedule", back_populates="patient")
 
+    __table_args__ = (
+        Index('ix_patients_company_id', 'company_id'),
+        Index('ix_patients_company_id_is_active', 'company_id', 'is_active'),
+    )
+
 class ScheduleStatus(Base):
     __tablename__ = "schedule_statuses"
     
@@ -91,6 +101,10 @@ class ScheduleStatus(Base):
     # Relationships
     company = relationship("Company", back_populates="schedule_statuses")
     schedules = relationship("Schedule", back_populates="status")
+
+    __table_args__ = (
+        Index('ix_schedule_statuses_company_id', 'company_id'),
+    )
 
 class RecurringRule(Base):
     __tablename__ = "recurring_rules"
@@ -135,6 +149,14 @@ class Schedule(Base):
     recurring_rule = relationship("RecurringRule")
     assignments = relationship("ScheduleAssignment", back_populates="schedule", cascade="all, delete-orphan")
 
+    __table_args__ = (
+        Index('ix_schedules_company_id', 'company_id'),
+        Index('ix_schedules_company_id_start_time', 'company_id', 'start_time'),
+        Index('ix_schedules_recurring_rule_id', 'recurring_rule_id'),
+        Index('ix_schedules_recurring_series_id', 'recurring_series_id'),
+        Index('ix_schedules_recurring_rule_id_is_exception', 'recurring_rule_id', 'is_exception'),
+    )
+
 class ScheduleAssignment(Base):
     __tablename__ = "schedule_assignments"
     
@@ -145,6 +167,10 @@ class ScheduleAssignment(Base):
     # Relationships
     schedule = relationship("Schedule", back_populates="assignments")
     user = relationship("User", back_populates="schedule_assignments")
+
+    __table_args__ = (
+        Index('ix_schedule_assignments_user_id', 'user_id'),
+    )
 
 class Shift(Base):
     __tablename__ = "shifts"
@@ -163,6 +189,12 @@ class Shift(Base):
     company = relationship("Company", back_populates="shifts")
     user = relationship("User", back_populates="shifts")
 
+    __table_args__ = (
+        Index('ix_shifts_company_id', 'company_id'),
+        Index('ix_shifts_user_id_shift_date', 'user_id', 'shift_date'),
+        Index('ix_shifts_company_id_shift_date', 'company_id', 'shift_date'),
+    )
+
 class WeeklyOffRule(Base):
     __tablename__ = "weekly_off_rules"
     
@@ -177,6 +209,11 @@ class WeeklyOffRule(Base):
     # Relationships
     company = relationship("Company", back_populates="weekly_off_rules")
     user = relationship("User", back_populates="weekly_off_rules")
+
+    __table_args__ = (
+        Index('ix_weekly_off_rules_company_id', 'company_id'),
+        Index('ix_weekly_off_rules_company_id_user_id', 'company_id', 'user_id'),
+    )
 
 class UserInvitation(Base):
     __tablename__ = "user_invitations"
@@ -193,6 +230,11 @@ class UserInvitation(Base):
     # Relationships
     company = relationship("Company", back_populates="invitations")
 
+    __table_args__ = (
+        Index('ix_user_invitations_company_id', 'company_id'),
+        Index('ix_user_invitations_email', 'email'),
+    )
+
 class PasswordResetToken(Base):
     __tablename__ = "password_reset_tokens"
     
@@ -205,6 +247,10 @@ class PasswordResetToken(Base):
     
     # Relationships
     user = relationship("User", back_populates="password_reset_tokens")
+
+    __table_args__ = (
+        Index('ix_password_reset_tokens_user_id', 'user_id'),
+    )
 
 class CompanySetting(Base):
     __tablename__ = "company_settings"
@@ -236,3 +282,9 @@ class AuditLog(Base):
     
     # Relationships
     user = relationship("User", back_populates="audit_logs")
+
+    __table_args__ = (
+        Index('ix_audit_logs_company_id', 'company_id'),
+        Index('ix_audit_logs_user_id', 'user_id'),
+        Index('ix_audit_logs_created_at', 'created_at'),
+    )

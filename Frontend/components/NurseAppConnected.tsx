@@ -339,9 +339,9 @@ export default function NurseAppConnected() {
     }
   };
 
-  const handleDeleteVisit = async (visitId: string) => {
+  const handleDeleteVisit = async (visitId: string, scope?: string, occurrenceDate?: string) => {
     try {
-      await scheduleService.delete(visitId);
+      await scheduleService.delete(visitId, scope, occurrenceDate);
       showToast('スケジュールを削除しました');
       // Silent background refresh - won't interrupt user
       loadData(false, true);
@@ -774,7 +774,8 @@ export default function NurseAppConnected() {
             setSelectedVisit(null);
           }}
           onDelete={async (visitId, scope) => {
-            await handleDeleteVisit(visitId);
+            const visit = visits.find(v => v.id === visitId);
+            await handleDeleteVisit(visitId, scope, visit?.date);
             setSelectedVisit(null);
           }}
           isReadOnly={isReadOnly}

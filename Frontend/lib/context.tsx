@@ -53,7 +53,7 @@ interface AppContextType {
   // Schedule operations
   addSchedule: (data: any) => Promise<void>;
   updateSchedule: (id: string, data: any, scope?: string) => Promise<void>;
-  deleteSchedule: (id: string) => Promise<void>;
+  deleteSchedule: (id: string, scope?: string, occurrenceDate?: string) => Promise<void>;
 
   // Shift operations
   updateShift: (staffId: string, date: string, type: string | null) => Promise<void>;
@@ -533,19 +533,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         } : undefined,
         update_scope: scope as any,
       });
-      await refreshData();
       showToast('スケジュールを更新しました');
+      // Refresh data in background — don't block the UI
+      refreshData(true);
     } catch (err: any) {
       setError(err.message);
       throw err;
     }
   }, [currentUser, refreshData, showToast]);
 
-  const deleteSchedule = useCallback(async (id: string) => {
+  const deleteSchedule = useCallback(async (id: string, scope?: string, occurrenceDate?: string) => {
     try {
-      await scheduleService.delete(id);
-      await refreshData();
+      await scheduleService.delete(id, scope, occurrenceDate);
       showToast('スケジュールを削除しました');
+      // Refresh data in background — don't block the UI
+      refreshData(true);
     } catch (err: any) {
       setError(err.message);
       throw err;

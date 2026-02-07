@@ -73,7 +73,13 @@ export const scheduleService = {
   update: (id: string, data: ScheduleUpdate) => 
     apiClient.patch(`/schedules/${id}`, data),
   
-  delete: (id: string) => apiClient.delete(`/schedules/${id}`),
+  delete: (id: string, scope?: string, occurrenceDate?: string) => {
+    const params = new URLSearchParams();
+    if (scope) params.append('scope', scope);
+    if (occurrenceDate) params.append('occurrence_date', occurrenceDate);
+    const query = params.toString();
+    return apiClient.delete(`/schedules/${id}${query ? `?${query}` : ''}`);
+  },
   
   copy: (id: string) => 
     apiClient.get<{ patient_name: string; visit_address?: string }>(`/schedules/${id}/copy`),
