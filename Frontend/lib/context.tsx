@@ -204,7 +204,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // Quick check - get data counts/timestamps without full refresh
         const [staffData, scheduleData, shiftData, statusData] = await Promise.all([
           userService.getAll(),
-          scheduleService.getAll({ companyId: currentUser.company_id }),
+          scheduleService.getAll(undefined, undefined, undefined, currentUser.company_id),
           shiftService.getAll(),
           statusService.getAll(currentUser.company_id),
         ]);
