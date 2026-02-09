@@ -122,3 +122,28 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* iPhone specific fixes */
+@media (max-width: 768px) {
+  /* Fix for modal visibility on iPhone - ensure all content is visible */
+  .fixed.inset-0 {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* Ensure modals are scrollable and buttons are visible */
+  .max-h-\[100vh\] {
+    max-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+  
+  /* Fix calendar navigation arrows visibility */
+  .overflow-hidden {
+    overflow: visible !important;
+  }
+}
+
+/* Ensure safe area for iPhone notch and home indicator */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

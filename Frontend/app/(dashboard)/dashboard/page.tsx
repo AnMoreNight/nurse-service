@@ -353,15 +353,14 @@ function DashboardContent() {
     }
   };
 
-  const handleSaveStaff = async (name: string, jobTitle: string, defaultHolidays: number[], joinedDate: string, color: string) => {
+  const handleSaveStaff = async (name: string, jobTitle: string, defaultHolidays: number[], color: string) => {
     try {
       if (staffFormState.initialStaff) {
-        await updateStaff(staffFormState.initialStaff.id, { name, jobTitle, joinedDate, defaultHolidayWeekDays: defaultHolidays, color });
+        await updateStaff(staffFormState.initialStaff.id, { name, jobTitle, defaultHolidayWeekDays: defaultHolidays, color });
       } else {
         await addStaff({
           name,
           jobTitle,
-          joinedDate,
           companyId: companyId!,
           color: color || 'blue',
           avatar: name.slice(0, 2),

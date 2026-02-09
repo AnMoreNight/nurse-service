@@ -14,9 +14,10 @@ interface CompanySettingsProps {
 }
 
 export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, isLoading = false, onSave, onDirtyChange }) => {
-  const { showConfirm } = useModal();
+  const { showConfirm, showAlert } = useModal();
   const [visitStatuses, setVisitStatuses] = useState(settings.visitStatuses);
   const [jobTitles, setJobTitles] = useState(settings.jobTitles);
+  const [isDirty, setIsDirty] = useState(false);
 
   // New Status Form State
   const [newStatusLabel, setNewStatusLabel] = useState('');
@@ -36,12 +37,26 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
 
   // Detect changes
   useEffect(() => {
+    const isStatusChanged = JSON.stringify(visitStatuses) !== JSON.stringify(settings.visitStatuses);
+    const isJobTitlesChanged = JSON.stringify(jobTitles) !== JSON.stringify(settings.jobTitles);
+    const dirty = isStatusChanged || isJobTitlesChanged;
+    setIsDirty(dirty);
     if (onDirtyChange) {
-      const isStatusChanged = JSON.stringify(visitStatuses) !== JSON.stringify(settings.visitStatuses);
-      const isJobTitlesChanged = JSON.stringify(jobTitles) !== JSON.stringify(settings.jobTitles);
-      onDirtyChange(isStatusChanged || isJobTitlesChanged);
+      onDirtyChange(dirty);
     }
   }, [visitStatuses, jobTitles, settings, onDirtyChange]);
+
+  // Warn before leaving if unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
 
   const handleStatusChange = (index: number, field: 'label' | 'color', value: string) => {
     const updated = [...visitStatuses];
@@ -75,11 +90,12 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
     setJobTitles(jobTitles.filter(t => t !== title));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     onSave({
       visitStatuses,
       jobTitles
     });
+    setIsDirty(false);
   };
 
   const colorOptions = [

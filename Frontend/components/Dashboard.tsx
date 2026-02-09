@@ -418,7 +418,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         const isDragOver = dragOverColumnIndex === colIndex;
 
                         return (
-                            <div key={staff.id} className={`w-[200px] md:w-[220px] flex-shrink-0 border-r relative group ${isHoliday ? 'bg-gray-50' : 'bg-white'} ${isDragOver ? 'border-r-4 border-r-blue-500 bg-blue-50' : 'border-gray-200'}`}>
+                            <div key={staff.id} className={`w-[200px] md:w-[220px] lg:w-[280px] flex-shrink-0 border-r relative group ${isHoliday ? 'bg-gray-50' : 'bg-white'} ${isDragOver ? 'border-r-4 border-r-blue-500 bg-blue-50' : 'border-gray-200'}`}>
                                 <div
                                     className={`h-auto border-b border-gray-200 bg-white sticky top-0 z-20 flex flex-col justify-center px-3 py-3 gap-2 ${isHoliday ? 'bg-gray-50' : ''} ${!isReadOnly ? 'cursor-grab active:cursor-grabbing' : ''}`}
                                     draggable={!isReadOnly}

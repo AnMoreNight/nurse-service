@@ -82,17 +82,17 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({ currentDate, onDateS
   };
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow-xl border border-gray-200 w-[320px] select-none animate-in fade-in zoom-in-95 duration-100">
+    <div className="bg-white p-4 rounded-lg shadow-xl border border-gray-200 w-[320px] max-w-[90vw] select-none animate-in fade-in zoom-in-95 duration-100">
       {/* Header */}
       <div className="flex justify-between items-center mb-4 px-2">
-        <span className="text-gray-800 font-bold text-lg">
+        <span className="text-gray-800 font-bold text-base md:text-lg">
           {year}年 {month + 1}月
         </span>
-        <div className="flex gap-1">
-          <button onClick={prevMonth} className="p-1 hover:bg-gray-100 rounded-full text-gray-600">
+        <div className="flex gap-1 shrink-0">
+          <button onClick={prevMonth} className="p-1.5 md:p-1 hover:bg-gray-100 rounded-full text-gray-600">
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <button onClick={nextMonth} className="p-1 hover:bg-gray-100 rounded-full text-gray-600">
+          <button onClick={nextMonth} className="p-1.5 md:p-1 hover:bg-gray-100 rounded-full text-gray-600">
             <ChevronRight className="w-5 h-5" />
           </button>
         </div>

@@ -596,7 +596,7 @@ class ScheduleController:
                 return {"message": "Occurrence deleted"}
 
         elif delete_scope == "future":
-            # End the recurring rule just before this occurrence
+            # End the recurring rule at the occurrence date (not before)
             occ_date = None
             if occurrence_date:
                 occ_date = datetime.strptime(occurrence_date, "%Y-%m-%d").date()
@@ -621,7 +621,7 @@ class ScheduleController:
                     await db.commit()
                     return {"message": "Recurring series deleted"}
 
-                # Set rule end_date to one day before the occurrence
+                # Set rule end_date to one day before the occurrence (to exclude the occurrence date itself)
                 day_before = occ_date - timedelta(days=1)
                 rule.end_date = day_before
 
@@ -678,6 +678,8 @@ class ScheduleController:
         schedules = await ScheduleController.get_schedules(db, company_id, start_date, end_date)
         
         output = io.StringIO()
+        # Add BOM for UTF-8 to prevent garbling in Excel
+        output.write('\ufeff')
         writer = csv.writer(output)
         writer.writerow(['Schedule ID', 'Patient Name', 'Address', 'Start Time', 'End Time', 'Assigned Staff', 'Memo'])
         

@@ -136,7 +136,7 @@ export const VisitModal: React.FC<VisitModalProps> = ({
     };
 
     const handleSave = async () => {
-        if (isSaving) return; // Prevent double submission
+        if (isSaving) return;
         
         if (!date || !startTime || !endTime) {
             await showAlert('日付と時間は必須です', 'error');
@@ -148,7 +148,12 @@ export const VisitModal: React.FC<VisitModalProps> = ({
             return;
         }
 
-        if (!isNew && isRecurring) {
+        // Check if this is an independent schedule (was recurring but now set to none)
+        const wasRecurring = visit.recurrence === 'custom' || !!visit.recurrenceRule;
+        const isNowIndependent = recurrence === 'none' && wasRecurring;
+
+        // If editing an existing recurring schedule that's still recurring, show scope modal
+        if (!isNew && isRecurring && !isNowIndependent) {
             setShowScopeModal('update');
         } else {
             await executeSave('this');
@@ -291,10 +296,10 @@ export const VisitModal: React.FC<VisitModalProps> = ({
 
     return (
         <div className="fixed inset-0 bg-white/30 z-[100] flex justify-center items-center p-0 md:p-4 backdrop-blur-md">
-            <div className="bg-white rounded-none md:rounded-2xl shadow-2xl w-full max-h-[100vh] md:max-h-[90vh] md:max-w-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200 relative">
+            <div className="bg-white rounded-none md:rounded-2xl shadow-2xl w-full h-full md:h-auto md:max-h-[90vh] md:max-w-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200 relative overflow-hidden">
 
                 {/* Header */}
-                <div className="p-4 md:p-5 border-b bg-gray-50 flex justify-between items-center rounded-t-none md:rounded-t-2xl shrink-0">
+                <div className="p-4 md:p-5 border-b bg-gray-50 flex justify-between items-center rounded-t-none md:rounded-t-2xl shrink-0 safe-top">
                     <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                         {isNew ? <Sparkles className="w-5 h-5 text-indigo-500" /> : <FileText className="w-5 h-5 text-gray-600" />}
                         {isNew ? '新規訪問予定' : '訪問詳細'}
@@ -316,7 +321,7 @@ export const VisitModal: React.FC<VisitModalProps> = ({
                 </div>
 
                 {/* Body */}
-                <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+                <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 pb-24 md:pb-6">
 
                     {/* Date & Time Row */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -627,7 +632,7 @@ export const VisitModal: React.FC<VisitModalProps> = ({
                         <label className="block text-xs font-bold text-gray-500 mb-1">メモ</label>
                         <textarea
                             className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white min-h-[100px] resize-none disabled:bg-gray-100"
-                            placeholder="申し送り事項などを入力..."
+                            placeholder="情報を入力..."
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
                         />
@@ -648,7 +653,7 @@ export const VisitModal: React.FC<VisitModalProps> = ({
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 md:p-5 border-t bg-gray-50 flex justify-between items-center rounded-b-none md:rounded-b-2xl shrink-0">
+                <div className="p-4 md:p-5 border-t bg-gray-50 flex justify-between items-center rounded-b-none md:rounded-b-2xl shrink-0 pb-safe fixed md:relative bottom-0 left-0 right-0 md:bottom-auto md:left-auto md:right-auto shadow-lg md:shadow-none z-10">
                     <div className="flex gap-2">
                         {!isNew && !isReadOnly && (
                             <button

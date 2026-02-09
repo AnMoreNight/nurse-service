@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { AuthUser, UserAccount, Staff, Visit, ShiftAssignment, CompanySettings, UserRole } from '@/lib/types';
 import { authService } from '@/services/authService';
 import { userService, User } from '@/services/userService';
@@ -47,6 +47,9 @@ interface AppContextType {
   refreshVisits: () => Promise<void>;
   refreshShifts: () => Promise<void>;
   refreshStatuses: () => Promise<void>;
+
+  // Real-time updates
+  isPollingActive: boolean;
 
   // Staff operations
   addStaff: (data: Partial<Staff>) => Promise<void>;
@@ -169,6 +172,101 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Real-time polling state
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastDataHashRef = useRef<string>('');
+  const [isPollingActive, setIsPollingActive] = useState(false);
+
+  // Generate hash of current data for change detection
+  const generateDataHash = useCallback(() => {
+    const dataToHash = {
+      staffCount: staff.length,
+      visitsCount: visits.length,
+      shiftsCount: shifts.length,
+      statusesCount: statuses.length,
+      lastStaffUpdate: staff[0]?.id || '',
+      lastVisitUpdate: visits[0]?.id || '',
+      lastShiftUpdate: shifts[0]?.id || '',
+    };
+    return JSON.stringify(dataToHash);
+  }, [staff, visits, shifts, statuses]);
+
+  // Start real-time polling
+  const startPolling = useCallback(() => {
+    if (!currentUser || pollingIntervalRef.current) return;
+
+    setIsPollingActive(true);
+    pollingIntervalRef.current = setInterval(async () => {
+      // Only poll if document is visible, user is logged in, and no active refreshes
+      if (document.hidden || !currentUser || activeRefreshes > 0) return;
+
+      try {
+        // Quick check - get data counts/timestamps without full refresh
+        const [staffData, scheduleData, shiftData, statusData] = await Promise.all([
+          userService.getAll(),
+          scheduleService.getAll({ companyId: currentUser.company_id }),
+          shiftService.getAll(),
+          statusService.getAll(currentUser.company_id),
+        ]);
+
+        // Generate hash of new data
+        const newDataHash = JSON.stringify({
+          staffCount: staffData.length,
+          visitsCount: scheduleData.length,
+          shiftsCount: shiftData.length,
+          statusesCount: statusData.length,
+          lastStaffUpdate: staffData[0]?.user_id || '',
+          lastVisitUpdate: scheduleData[0]?.schedule_id || '',
+          lastShiftUpdate: shiftData[0]?.shift_id || '',
+        });
+
+        // Only refresh if data actually changed
+        if (newDataHash !== lastDataHashRef.current) {
+          lastDataHashRef.current = newDataHash;
+          
+          // Convert and update all data
+          setStaff(staffData.filter(user => user.role !== 'COMPANY_ADMIN').map(userToStaff));
+          setVisits(scheduleData.map(scheduleToVisit));
+          setShifts(shiftData.map(shiftToAssignment));
+          setStatuses(statusData);
+          
+          console.log('🔄 Real-time update: Data refreshed');
+        }
+      } catch (error) {
+        console.warn('⚠️  Real-time update failed:', error);
+        // Don't stop polling on errors, just log them
+      }
+    }, 8000); // Poll every 8 seconds
+  }, [currentUser, activeRefreshes]);
+
+  // Stop polling
+  const stopPolling = useCallback(() => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+      setIsPollingActive(false);
+    }
+  }, []);
+
+  // Handle document visibility changes
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Page hidden, reduce polling frequency or stop
+        stopPolling();
+      } else if (currentUser && !pollingIntervalRef.current) {
+        // Page visible, resume polling
+        startPolling();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [currentUser, startPolling, stopPolling]);
+
   const showToast = useCallback((message: string) => {
     setToastMessage(message);
     setTimeout(() => setToastMessage(null), 3000);
@@ -227,6 +325,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       document.cookie = 'currentUser=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     }
   }, [currentUser, isImpersonating]);
+
+  // Update data hash when data changes
+  useEffect(() => {
+    lastDataHashRef.current = generateDataHash();
+  }, [generateDataHash]);
+
+  // Start/stop polling based on authentication
+  useEffect(() => {
+    if (currentUser && !document.hidden) {
+      startPolling();
+    } else {
+      stopPolling();
+    }
+
+    // Cleanup on unmount
+    return () => stopPolling();
+  }, [currentUser, startPolling, stopPolling]);
 
   // Individual refresh functions - fetch only the data you need
   const refreshStaff = useCallback(async () => {
@@ -341,7 +456,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         name: data.name || '',
         job_title: data.jobTitle,
         display_color: data.color,
-        join_date: data.joinedDate,
+        join_date: new Date().toISOString().split('T')[0], // Set current date as default
       });
       await refreshStaff();
       showToast('スタッフを追加しました');
@@ -356,7 +471,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         name: data.name,
         job_title: data.jobTitle,
         display_color: data.color,
-        join_date: data.joinedDate,
         left_date: data.leftDate,
         default_holiday_weekdays: data.defaultHolidayWeekDays,
       });
@@ -624,6 +738,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       statuses,
       companySettings,
       isRefreshing,
+      isPollingActive,
       refreshData,
       refreshStaff,
       refreshVisits,
