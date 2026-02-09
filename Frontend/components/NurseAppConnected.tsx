@@ -450,7 +450,7 @@ export default function NurseAppConnected() {
         name: staffData.name,
         job_title: staffData.jobTitle,
         display_color: staffData.color,
-        join_date: staffData.joinedDate,
+        join_date: new Date().toISOString().split('T')[0], // Set current date as default
         default_holiday_weekdays: staffData.defaultHolidays,
       });
 
@@ -468,7 +468,6 @@ export default function NurseAppConnected() {
         name: updates.name,
         job_title: updates.jobTitle,
         display_color: updates.color,
-        join_date: updates.joinedDate,
         default_holiday_weekdays: updates.defaultHolidays,
       });
 
@@ -789,13 +788,12 @@ export default function NurseAppConnected() {
           currentDate={currentDate}
           jobTitles={companySettings.jobTitles}
           onClose={() => setStaffFormState({ isOpen: false })}
-          onSave={async (name, jobTitle, defaultHolidays, joinedDate, color) => {
+          onSave={async (name, jobTitle, defaultHolidays, color) => {
             if (staffFormState.initialStaff) {
               await handleUpdateStaff(staffFormState.initialStaff.id, { 
                 name, 
                 jobTitle, 
                 defaultHolidays, 
-                joinedDate,
                 color
               });
             } else {
@@ -803,7 +801,6 @@ export default function NurseAppConnected() {
                 name, 
                 jobTitle, 
                 defaultHolidays, 
-                joinedDate,
                 color
               });
             }

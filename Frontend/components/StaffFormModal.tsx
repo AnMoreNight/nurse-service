@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { Staff } from '@/lib/types';
-import { X, Save, Calendar, Briefcase } from 'lucide-react';
+import { X, Save, Briefcase } from 'lucide-react';
 import { useModal } from '@/contexts/ModalContext';
 
 interface StaffFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (name: string, jobTitle: string, defaultHolidays: number[], joinedDate: string, color: string) => void;
+  onSave: (name: string, jobTitle: string, defaultHolidays: number[], color: string) => void;
   initialStaff?: Staff;
   currentDate: string;
   jobTitles: string[]; // Provided from settings
@@ -22,7 +22,6 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({
   const [jobTitle, setJobTitle] = useState('');
   const [color, setColor] = useState('#3B82F6');
   const [defaultHolidays, setDefaultHolidays] = useState<number[]>([]);
-  const [joinedDate, setJoinedDate] = useState('');
   const [saving, setSaving] = useState(false);
   const weekDayLabels = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -35,13 +34,11 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({
         const colorValue = initialStaff.color?.startsWith('#') ? initialStaff.color : '#3B82F6';
         setColor(colorValue);
         setDefaultHolidays(initialStaff.defaultHolidayWeekDays || []);
-        setJoinedDate(initialStaff.joinedDate);
       } else {
         setName('');
         setJobTitle(jobTitles[0] || '');
         setColor('#3B82F6');
         setDefaultHolidays([]);
-        setJoinedDate(currentDate);
       }
     }
   }, [isOpen, initialStaff, currentDate, jobTitles]);
@@ -56,13 +53,9 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({
 
   const handleSave = async () => {
     if (!name.trim()) return;
-    if (!joinedDate) {
-      await showAlert("入職日を入力してください", 'error');
-      return;
-    }
     try {
       setSaving(true);
-      await onSave(name, jobTitle, defaultHolidays, joinedDate, color);
+      await onSave(name, jobTitle, defaultHolidays, color);
       onClose();
     } finally {
       setSaving(false);
@@ -125,20 +118,6 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({
               />
               <span className="text-sm text-gray-600">{color}</span>
             </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-gray-500 mb-1">入職日 (表示開始日)</label>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-              <input
-                type="date"
-                className="w-full pl-9 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none bg-white"
-                value={joinedDate}
-                onChange={(e) => setJoinedDate(e.target.value)}
-              />
-            </div>
-            <p className="text-[10px] text-gray-400 mt-1">※この日付より前のスケジュールには表示されません。</p>
           </div>
 
           <div>

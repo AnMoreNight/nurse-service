@@ -18,7 +18,7 @@ const NavButton = ({ active, onClick, icon, label }: any) => (
 );
 
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
-  const { currentUser, setCurrentUser, isImpersonating, setImpersonating } = useApp();
+  const { currentUser, setCurrentUser, isImpersonating, setImpersonating, isPollingActive } = useApp();
   const router = useRouter();
   const searchParams = useSearchParams();
   const view = searchParams.get('view') || 'schedule';
@@ -56,6 +56,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             <Image src="/image.png" alt="Logo" width={32} height={32} className="object-contain" />
           </div>
           comorebi
+          {isPollingActive && (
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" title="リアルタイム更新中" />
+          )}
         </div>
         <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 text-slate-300 hover:text-white rounded-lg active:bg-slate-800 cursor-pointer">
           <Menu size={24} />
@@ -82,6 +85,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
               <Image src="/image.png" alt="Logo" width={32} height={32} className="object-contain" />
             </div>
             <span className="font-bold text-white text-lg">comorebi</span>
+            {isPollingActive && (
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" title="リアルタイム更新中" />
+            )}
           </div>
           <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden text-slate-400 hover:text-white p-1 rounded-full hover:bg-slate-800 cursor-pointer">
             <X size={24} />
