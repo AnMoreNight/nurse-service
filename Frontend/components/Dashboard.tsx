@@ -347,20 +347,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
     return (
         <div className="flex flex-col h-full bg-white rounded-none md:rounded-xl shadow-none md:shadow-sm border-0 md:border border-gray-200 overflow-hidden">
-            <div className="p-2 md:p-4 border-b border-gray-200 flex flex-wrap md:flex-nowrap justify-between items-center bg-white sticky top-0 z-50 shrink-0 shadow-sm gap-2">
-                <div className="flex items-center gap-2 md:gap-4 relative w-full md:w-auto">
-                    <button onClick={onToday} className="px-2 py-1.5 md:px-3 border border-gray-300 rounded-md text-xs md:text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">今日</button>
-                    <div className="flex items-center gap-1">
-                        <button onClick={onPrevDate} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-600"><ChevronLeft className="w-5 h-5" /></button>
-                        <button onClick={onNextDate} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-600"><ChevronRight className="w-5 h-5" /></button>
+            <div className="p-2 md:p-4 border-b border-gray-200 flex flex-col md:flex-row justify-between items-stretch md:items-center bg-white sticky top-0 z-50 shrink-0 shadow-sm gap-2">
+                <div className="flex items-center gap-2 md:gap-4 relative w-full md:w-auto justify-between md:justify-start">
+                    <div className="flex items-center gap-2">
+                        <button onClick={onToday} className="px-3 py-1.5 border border-gray-300 rounded-md text-xs md:text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700 whitespace-nowrap">今日</button>
                     </div>
-                    <div className="relative flex-1 md:flex-none" ref={calendarRef}>
-                        <button onClick={() => setIsCalendarOpen(!isCalendarOpen)} className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-gray-100 transition-colors w-full md:w-auto">
-                            <h2 className="text-sm md:text-xl font-bold text-gray-800 ml-1 whitespace-nowrap">{dateDisplay}</h2>
+                    <div className="relative" ref={calendarRef}>
+                        <button onClick={() => setIsCalendarOpen(!isCalendarOpen)} className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-gray-100 transition-colors">
+                            <h2 className="text-sm md:text-xl font-bold text-gray-800 whitespace-nowrap">{dateDisplay}</h2>
                             <ChevronDown className={`w-4 h-4 md:w-5 md:h-5 text-gray-500 transition-transform ${isCalendarOpen ? 'rotate-180' : ''}`} />
                         </button>
                         {isCalendarOpen && (
-                            <div className="absolute top-full left-0 mt-2 z-50">
+                            <div className="absolute top-full right-0 md:left-0 mt-2 z-50">
                                 <MiniCalendar currentDate={currentDate} onDateSelect={(d) => { if (onDateSelect) onDateSelect(d); }} onClose={() => setIsCalendarOpen(false)} />
                             </div>
                         )}

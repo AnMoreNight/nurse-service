@@ -82,36 +82,34 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({ currentDate, onDateS
   };
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow-xl border border-gray-200 w-[320px] max-w-[90vw] select-none animate-in fade-in zoom-in-95 duration-100">
+    <div className="bg-white p-3 md:p-4 rounded-lg shadow-xl border border-gray-200 w-[280px] md:w-[320px] max-w-[90vw] select-none animate-in fade-in zoom-in-95 duration-100">
       {/* Header */}
-      <div className="flex justify-between items-center mb-4 px-2">
-        <span className="text-gray-800 font-bold text-base md:text-lg">
+      <div className="flex justify-between items-center mb-3 md:mb-4 px-1">
+        <button onClick={prevMonth} className="p-1.5 hover:bg-gray-100 rounded-full text-gray-600">
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <span className="text-gray-800 font-bold text-sm md:text-base">
           {year}年 {month + 1}月
         </span>
-        <div className="flex gap-1 shrink-0">
-          <button onClick={prevMonth} className="p-1.5 md:p-1 hover:bg-gray-100 rounded-full text-gray-600">
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <button onClick={nextMonth} className="p-1.5 md:p-1 hover:bg-gray-100 rounded-full text-gray-600">
-            <ChevronRight className="w-5 h-5" />
-          </button>
-        </div>
+        <button onClick={nextMonth} className="p-1.5 hover:bg-gray-100 rounded-full text-gray-600">
+          <ChevronRight className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Weekdays */}
-      <div className="grid grid-cols-7 mb-2">
+      <div className="grid grid-cols-7 mb-1 md:mb-2">
         {weeks.map((w, i) => (
-          <div key={i} className="text-center text-xs text-gray-500 font-medium py-1">
+          <div key={i} className="text-center text-[10px] md:text-xs text-gray-500 font-medium py-0.5 md:py-1">
             {w}
           </div>
         ))}
       </div>
 
       {/* Days Grid */}
-      <div className="grid grid-cols-7 gap-y-1">
+      <div className="grid grid-cols-7 gap-y-0.5 md:gap-y-1">
         {days.map((date, i) => {
           if (!date) {
-            return <div key={`empty-${i}`} className="h-10" />;
+            return <div key={`empty-${i}`} className="h-8 md:h-10" />;
           }
 
           const selected = isSelected(date);
@@ -122,7 +120,7 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({ currentDate, onDateS
               key={i}
               onClick={() => handleSelect(date)}
               className={`
-                h-9 w-9 mx-auto rounded-full flex items-center justify-center text-sm transition-colors relative
+                h-8 w-8 md:h-9 md:w-9 mx-auto rounded-full flex items-center justify-center text-xs md:text-sm transition-colors relative
                 ${selected 
                   ? 'bg-blue-600 text-white font-bold hover:bg-blue-700' 
                   : 'text-gray-700 hover:bg-gray-100'

@@ -139,6 +139,16 @@
   .overflow-hidden {
     overflow: visible !important;
   }
+
+  /* Ensure calendar dropdown is properly positioned on mobile */
+  .animate-in.fade-in.zoom-in-95 {
+    transform-origin: top right;
+  }
+
+  /* Improve schedule header responsiveness */
+  #dashboard-scroll-container {
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* Ensure safe area for iPhone notch and home indicator */
