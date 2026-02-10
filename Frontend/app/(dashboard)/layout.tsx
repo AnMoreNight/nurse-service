@@ -31,6 +31,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   }
 
   const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setCurrentUser(null);
     router.push('/login');
   };

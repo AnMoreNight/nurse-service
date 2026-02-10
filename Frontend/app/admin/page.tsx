@@ -374,6 +374,7 @@ export default function AdminPage() {
     if (!selectedUserId || !selectedCompany) return;
 
     try {
+      setSaving(true);
       await userService.assignCompanyAdmin({
         company_id: selectedCompany.company_id,
         user_id: selectedUserId
@@ -386,6 +387,8 @@ export default function AdminPage() {
     } catch (error: any) {
       console.error('Failed to assign admin:', error);
       await showAlert(error.message || '管理者の割り当てに失敗しました', 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -396,6 +399,7 @@ export default function AdminPage() {
     }
 
     try {
+      setSaving(true);
       await userService.removeCompanyAdmin({ user_id: userId });
 
       // Reload admin list
@@ -407,6 +411,8 @@ export default function AdminPage() {
     } catch (error: any) {
       console.error('Failed to remove admin:', error);
       await showAlert(error.message || '管理者権限の削除に失敗しました', 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -433,7 +439,16 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 relative">
+      {/* Loading Overlay */}
+      {saving && (
+        <div className="fixed inset-0 bg-white/70 z-50 flex items-center justify-center backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-sm text-gray-700 font-medium">処理中...</p>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="border-b border-gray-200 bg-white sticky top-0 z-40 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4">
@@ -502,7 +517,8 @@ export default function AdminPage() {
               <h2 className="text-xl font-bold text-gray-900">会社一覧</h2>
               <button
                 onClick={() => openCompanyModal()}
-                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors flex items-center gap-2 shadow-sm"
+                disabled={saving}
+                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Plus size={20} />
                 会社を追加
@@ -532,21 +548,24 @@ export default function AdminPage() {
                   <div className="flex gap-2 mt-4 pt-4 border-t border-gray-200">
                     <button
                       onClick={() => openCompanyModal(company)}
-                      className="flex-1 px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2 text-sm"
+                      disabled={saving}
+                      className="flex-1 px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Pencil size={16} />
                       編集
                     </button>
                     <button
                       onClick={() => openAdminModal(company)}
-                      className="flex-1 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2 text-sm"
+                      disabled={saving}
+                      className="flex-1 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Shield size={16} />
                       管理者
                     </button>
                     <button
                       onClick={() => handleDeleteCompany(company.company_id)}
-                      className="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2 text-sm"
+                      disabled={saving}
+                      className="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Trash2 size={16} />
                       削除
@@ -563,7 +582,8 @@ export default function AdminPage() {
               </h2>
               <button
                 onClick={() => openUserModal()}
-                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors flex items-center gap-2 shadow-sm"
+                disabled={saving}
+                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <UserPlus size={20} />
                 ユーザーを追加
@@ -609,13 +629,15 @@ export default function AdminPage() {
                         <div className="flex justify-end gap-2">
                           <button
                             onClick={() => openUserModal(user)}
-                            className="p-2 text-teal-600 hover:text-teal-700 hover:bg-teal-50 rounded transition-colors"
+                            disabled={saving}
+                            className="p-2 text-teal-600 hover:text-teal-700 hover:bg-teal-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <Pencil size={16} />
                           </button>
                           <button
                             onClick={() => handleDeleteUser(user.user_id)}
-                            className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                            disabled={saving}
+                            className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <Trash2 size={16} />
                           </button>
@@ -778,7 +800,8 @@ export default function AdminPage() {
             <div className="p-6 border-t border-gray-200 flex gap-3 flex-shrink-0">
               <button
                 onClick={() => setIsCompanyModalOpen(false)}
-                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg transition-colors flex items-center justify-center gap-2"
+                disabled={saving}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <X size={18} />
                 キャンセル
@@ -939,7 +962,8 @@ export default function AdminPage() {
             <div className="p-6 border-t border-gray-200 flex gap-3 flex-shrink-0">
               <button
                 onClick={() => setIsUserModalOpen(false)}
-                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg transition-colors flex items-center justify-center gap-2"
+                disabled={saving}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <X size={18} />
                 キャンセル
@@ -1003,7 +1027,8 @@ export default function AdminPage() {
                         </div>
                         <button
                           onClick={() => handleRemoveAdmin(admin.user_id)}
-                          className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm transition-colors flex items-center gap-1"
+                          disabled={saving}
+                          className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <X size={14} />
                           削除
@@ -1037,7 +1062,7 @@ export default function AdminPage() {
                     </select>
                     <button
                       onClick={handleAssignAdmin}
-                      disabled={!selectedUserId}
+                      disabled={!selectedUserId || saving}
                       className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Shield size={18} />
@@ -1051,7 +1076,8 @@ export default function AdminPage() {
             <div className="p-6 border-t border-gray-200 flex-shrink-0">
               <button
                 onClick={() => setIsAdminModalOpen(false)}
-                className="w-full px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg transition-colors flex items-center justify-center gap-2"
+                disabled={saving}
+                className="w-full px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <X size={18} />
                 閉じる

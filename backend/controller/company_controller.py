@@ -1,6 +1,10 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
-from models.orm import Company, CompanySetting
+from models.orm import (
+    Company, CompanySetting, User, Patient, Schedule, ScheduleStatus,
+    ScheduleAssignment, Shift, WeeklyOffRule, UserInvitation,
+    PasswordResetToken, AuditLog, RecurringRule
+)
 from fastapi import HTTPException, status
 from uuid import UUID
 from datetime import datetime
@@ -49,10 +53,51 @@ class CompanyController:
     async def delete_company(db: AsyncSession, company_id: UUID):
         result = await db.execute(select(Company).where(Company.company_id == company_id))
         company = result.scalar_one_or_none()
-        
+
         if not company:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
-        
+
+        # Get all user_ids for this company (needed for user-linked tables)
+        user_result = await db.execute(select(User.user_id).where(User.company_id == company_id))
+        user_ids = [row[0] for row in user_result.all()]
+
+        # Get all schedule_ids for this company (needed for assignments)
+        schedule_result = await db.execute(select(Schedule.schedule_id).where(Schedule.company_id == company_id))
+        schedule_ids = [row[0] for row in schedule_result.all()]
+
+        # Get all recurring_rule_ids for this company's schedules
+        rule_result = await db.execute(
+            select(Schedule.recurring_rule_id).where(
+                Schedule.company_id == company_id,
+                Schedule.recurring_rule_id.isnot(None)
+            ).distinct()
+        )
+        rule_ids = [row[0] for row in rule_result.all()]
+
+        # Delete in dependency order (children first)
+        if schedule_ids:
+            await db.execute(delete(ScheduleAssignment).where(ScheduleAssignment.schedule_id.in_(schedule_ids)))
+        # Also delete assignments where company users are assigned to external schedules
+        if user_ids:
+            await db.execute(delete(ScheduleAssignment).where(ScheduleAssignment.user_id.in_(user_ids)))
+
+        if user_ids:
+            await db.execute(delete(PasswordResetToken).where(PasswordResetToken.user_id.in_(user_ids)))
+            await db.execute(delete(AuditLog).where(AuditLog.user_id.in_(user_ids)))
+
+        await db.execute(delete(AuditLog).where(AuditLog.company_id == company_id))
+        await db.execute(delete(Shift).where(Shift.company_id == company_id))
+        await db.execute(delete(WeeklyOffRule).where(WeeklyOffRule.company_id == company_id))
+        await db.execute(delete(Schedule).where(Schedule.company_id == company_id))
+
+        if rule_ids:
+            await db.execute(delete(RecurringRule).where(RecurringRule.rule_id.in_(rule_ids)))
+
+        await db.execute(delete(ScheduleStatus).where(ScheduleStatus.company_id == company_id))
+        await db.execute(delete(Patient).where(Patient.company_id == company_id))
+        await db.execute(delete(CompanySetting).where(CompanySetting.company_id == company_id))
+        await db.execute(delete(UserInvitation).where(UserInvitation.company_id == company_id))
+        await db.execute(delete(User).where(User.company_id == company_id))
         await db.delete(company)
         await db.commit()
         return {"message": "Company deleted"}

@@ -14,7 +14,8 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
   const { currentUser } = useApp();
   const { showAlert, showConfirm } = useModal();
   const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -31,12 +32,14 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
   });
 
   useEffect(() => {
-    loadUsers();
+    loadUsers(true);
   }, [companyId, currentPage, pageSize]);
 
-  const loadUsers = async () => {
+  const loadUsers = async (isInitial = false) => {
     try {
-      setLoading(true);
+      if (isInitial) setInitialLoading(true);
+      else setRefreshing(true);
+
       const response = await userService.getAllUsers(
         companyId,
         currentPage,
@@ -44,12 +47,10 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
       );
 
       if ('data' in response) {
-        // Paginated response
         setUsers(response.data);
         setTotalUsers(response.total_count);
         setTotalPages(response.total_pages);
       } else {
-        // Non-paginated response (fallback)
         setUsers(response);
         setTotalUsers(response.length);
         setTotalPages(1);
@@ -58,7 +59,8 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
       console.error('Failed to load users:', error);
       await showAlert('ユーザーの読み込みに失敗しました', 'error');
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -155,16 +157,34 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
     return <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">一般ユーザー</span>;
   };
 
-  if (loading) {
+  if (initialLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="w-8 h-8 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+      <div className="h-full bg-white rounded-xl shadow-sm border border-gray-200 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm text-gray-500 font-medium">ユーザーを読み込み中...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+    <div className="h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col relative">
+      {/* Subtle refresh overlay — keeps table visible */}
+      {refreshing && (
+        <div className="absolute inset-0 bg-white/50 z-20 flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      )}
+      {/* Saving/Delete loading overlay */}
+      {saving && (
+        <div className="absolute inset-0 bg-white/70 z-30 flex items-center justify-center backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-sm text-gray-700 font-medium">処理中...</p>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
         <div>
@@ -176,7 +196,8 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
         </div>
         <button
           onClick={() => openModal()}
-          className="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors text-sm font-bold shadow-sm"
+          disabled={saving}
+          className="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors text-sm font-bold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Plus className="w-4 h-4" />
           ユーザー追加
@@ -223,14 +244,16 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
                   <div className="flex items-center justify-end gap-2">
                     <button
                       onClick={() => openModal(user)}
-                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      disabled={saving}
+                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       title="編集"
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(user.user_id)}
-                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      disabled={saving}
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       title="削除"
                     >
                       <Trash2 className="w-4 h-4" />

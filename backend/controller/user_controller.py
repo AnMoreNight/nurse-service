@@ -319,13 +319,16 @@ class UserController:
         return {"message": "User resigned - employment schedules preserved"}
     
     @staticmethod
-    async def delete_user(db: AsyncSession, user_id: UUID, company_id: UUID):
+    async def delete_user(db: AsyncSession, user_id: UUID, company_id: UUID = None):
         """Hard delete - permanently removes user and related data from database"""
         from models.orm import ScheduleAssignment, Shift, WeeklyOffRule, AuditLog, PasswordResetToken
-        
-        result = await db.execute(
-            select(User).where(User.user_id == user_id, User.company_id == company_id)
-        )
+
+        # SUPER_ADMIN has no company_id — skip company filter so they can delete any user
+        query = select(User).where(User.user_id == user_id)
+        if company_id is not None:
+            query = query.where(User.company_id == company_id)
+
+        result = await db.execute(query)
         user = result.scalar_one_or_none()
         
         if not user:

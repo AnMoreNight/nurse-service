@@ -203,7 +203,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       try {
         // Quick check - get data counts/timestamps without full refresh
         const [staffData, scheduleData, shiftData, statusData] = await Promise.all([
-          userService.getAll(),
+          userService.getAll(currentUser.company_id),
           scheduleService.getAll(undefined, undefined, undefined, currentUser.company_id),
           shiftService.getAll(),
           statusService.getAll(currentUser.company_id),
@@ -223,9 +223,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // Only refresh if data actually changed
         if (newDataHash !== lastDataHashRef.current) {
           lastDataHashRef.current = newDataHash;
-          
-          // Convert and update all data
-          setStaff(staffData.filter(user => user.role !== 'COMPANY_ADMIN').map(userToStaff));
+
+          // Convert and update all data — same filter as refreshStaff()
+          setStaff(staffData.filter(u => u.is_active && u.role !== 'SUPER_ADMIN').map(userToStaff));
           setVisits(scheduleData.map(scheduleToVisit));
           setShifts(shiftData.map(shiftToAssignment));
           setStatuses(statusData);
@@ -301,6 +301,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const stored = localStorage.getItem('currentUser');
     const token = localStorage.getItem('token');
     if (stored && token) {
+      // Check if token is expired before restoring session
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.exp * 1000 < Date.now()) {
+          // Token expired — clear storage and go to login
+          localStorage.removeItem('currentUser');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setIsLoading(false);
+          return;
+        }
+      } catch {
+        localStorage.removeItem('currentUser');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setIsLoading(false);
+        return;
+      }
       try {
         const user = JSON.parse(stored);
         setCurrentUser(user);

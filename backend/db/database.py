@@ -54,6 +54,9 @@ async def get_db() -> AsyncSession:
     async with session_maker() as session:
         try:
             yield session
+        except Exception:
+            await session.rollback()
+            raise
         finally:
             await session.close()
 
