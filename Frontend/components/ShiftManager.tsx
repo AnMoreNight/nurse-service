@@ -235,16 +235,18 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
     <div className="h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
       {/* Header */}
       <div className="p-4 border-b bg-gray-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-4">
-          <button onClick={prevMonth} className="p-2 hover:bg-gray-200 rounded-full">
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <h2 className="text-xl font-bold text-gray-800">
+        <div className="flex items-center gap-2 md:gap-4">
+          <span className="text-gray-800 font-bold text-base md:text-xl">
             {year}年 {month + 1}月
-          </h2>
-          <button onClick={nextMonth} className="p-2 hover:bg-gray-200 rounded-full">
-            <ChevronRight className="w-5 h-5" />
-          </button>
+          </span>
+          <div className="flex gap-1 shrink-0">
+            <button onClick={prevMonth} className="p-1.5 md:p-2 hover:bg-gray-200 rounded-full text-gray-600">
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button onClick={nextMonth} className="p-1.5 md:p-2 hover:bg-gray-200 rounded-full text-gray-600">
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           {!isReadOnly && (
