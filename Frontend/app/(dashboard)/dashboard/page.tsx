@@ -533,7 +533,7 @@ function DashboardContent() {
             <div className="overflow-auto max-h-[calc(90vh-88px)]">
               <SearchVisitsModal
                 onClose={() => window.history.back()} allVisits={allVisits} staffList={filteredStaff}
-                companySettings={companySettings} onSelectVisit={setSelectedVisit}
+                companySettings={companySettings} onSelectVisit={(visit) => { setCurrentDate(visit.date); setSelectedVisit(visit); }}
               />
             </div>
           </div>
