@@ -122,32 +122,32 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
     if (type === 'night1' || type === 'night2') {
       return (
         <div 
-          className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
+          className="w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
           style={{ backgroundColor: type === 'night1' ? '#da5597' : '#5383ec' }}
         >
-          <Moon className="w-3.5 h-3.5" />
+          <Moon className="w-3 h-3 md:w-3.5 md:h-3.5" />
         </div>
       );
     }
     if (type === 'holiday') {
       return (
-        <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ backgroundColor: '#8f8f8f' }}>
-          <Palmtree className="w-3.5 h-3.5 text-white" />
+        <div className="w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center" style={{ backgroundColor: '#8f8f8f' }}>
+          <Palmtree className="w-3 h-3 md:w-3.5 md:h-3.5 text-white" />
         </div>
       );
     }
     if (type === 'night1_holiday' || type === 'night2_holiday') {
       return (
         <div 
-          className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold relative"
+          className="w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs font-bold relative"
           style={{ backgroundColor: type === 'night1_holiday' ? '#da5597' : '#5383ec' }}
         >
-          <Moon className="w-3.5 h-3.5 text-white" />
+          <Moon className="w-3 h-3 md:w-3.5 md:h-3.5 text-white" />
           <Palmtree className="w-2.5 h-2.5 text-white absolute -bottom-0.5 -right-0.5" style={{ backgroundColor: '#8f8f8f', borderRadius: '50%', padding: '1px' }} />
         </div>
       );
     }
-    return <div className="w-7 h-7"></div>;
+    return <div className="w-6 h-6 md:w-7 md:h-7"></div>;
   };
 
   const handleCopyLastMonth = async () => {
@@ -278,11 +278,11 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
       </div>
 
       {/* Calendar Grid */}
-      <div className="flex-1 overflow-auto">
-        <table className="w-full border-collapse text-sm min-w-[900px]">
+      <div className="flex-1 overflow-x-auto overflow-y-auto">
+        <table className="w-full border-collapse text-sm min-w-[400px] sm:min-w-[600px] md:min-w-[900px]">
           <thead className="bg-white sticky top-0 z-10 border-b">
             <tr>
-              <th className="py-3 px-3 text-left font-bold text-gray-600 w-36 border-r bg-gray-50 sticky left-0 z-20">
+              <th className="py-3 px-3 text-left font-bold text-gray-600 w-20 md:w-36 border-r bg-gray-50 sticky left-0 z-20">
                 スタッフ
               </th>
               {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
@@ -292,10 +292,10 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
                 return (
                   <th
                     key={day}
-                    className={`py-3 px-1 text-center font-medium w-10 border-r border-gray-100 ${isToday ? 'bg-blue-50' : ''} ${dayOfWeek === 0 ? 'text-red-500' : dayOfWeek === 6 ? 'text-blue-500' : 'text-gray-600'}`}
+                    className={`py-3 px-1 text-center font-medium w-8 md:w-10 border-r border-gray-100 ${isToday ? 'bg-blue-50' : ''} ${dayOfWeek === 0 ? 'text-red-500' : dayOfWeek === 6 ? 'text-blue-500' : 'text-gray-600'}`}
                   >
-                    <div className="text-xs text-gray-400">{weekDayLabels[dayOfWeek]}</div>
-                    <div className={`text-base ${isToday ? 'font-bold text-blue-600' : ''}`}>{day}</div>
+                    <div className="text-xs md:text-xs text-gray-400">{weekDayLabels[dayOfWeek]}</div>
+                    <div className={`text-sm md:text-base ${isToday ? 'font-bold text-blue-600' : ''}`}>{day}</div>
                   </th>
                 );
               })}
