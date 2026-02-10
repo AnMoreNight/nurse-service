@@ -222,6 +222,8 @@ class ShiftController:
         shifts = result.scalars().all()
 
         output = io.StringIO()
+        # Add BOM for UTF-8 to prevent garbling in Excel
+        output.write('\ufeff')
         writer = csv.writer(output)
         writer.writerow(['日付', 'スタッフ', 'シフト種別'])
 
