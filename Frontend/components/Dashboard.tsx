@@ -351,6 +351,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <div className="flex items-center gap-2 md:gap-4 relative w-full md:w-auto justify-between md:justify-start">
                     <div className="flex items-center gap-2">
                         <button onClick={onToday} className="px-3 py-1.5 border border-gray-300 rounded-md text-xs md:text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700 whitespace-nowrap">今日</button>
+                        <div className="flex items-center gap-1">
+                            <button onClick={onPrevDate} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-600"><ChevronLeft className="w-5 h-5" /></button>
+                            <button onClick={onNextDate} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-600"><ChevronRight className="w-5 h-5" /></button>
+                        </div>
                     </div>
                     <div className="relative" ref={calendarRef}>
                         <button onClick={() => setIsCalendarOpen(!isCalendarOpen)} className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-gray-100 transition-colors">
