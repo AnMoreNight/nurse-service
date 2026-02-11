@@ -297,12 +297,12 @@ class ScheduleController:
                     week_of_month_val = week_of_month_val if len(week_of_month_val) > 0 else None
                 else:
                     week_of_month_val = [week_of_month_val]
-            
+
             # Handle day_of_week - empty arrays should be None
             day_of_week_val = recurring_rule_data.get('day_of_week')
             if day_of_week_val is not None and isinstance(day_of_week_val, list) and len(day_of_week_val) == 0:
                 day_of_week_val = None
-            
+
             rule = RecurringRule(
                 frequency=recurring_rule_data.get('frequency'),
                 day_of_week=day_of_week_val,
@@ -316,7 +316,23 @@ class ScheduleController:
             )
             db.add(rule)
             await db.flush()
-            
+
+            # If this was an exception in a recurring series, create a deleted placeholder
+            # to preserve the exclusion so the original series doesn't regenerate this date
+            old_series_id = schedule.recurring_series_id
+            if schedule.is_exception and old_series_id:
+                placeholder = Schedule(
+                    company_id=schedule.company_id,
+                    patient_name=schedule.patient_name,
+                    start_time=schedule.start_time,
+                    end_time=schedule.end_time,
+                    status_id=schedule.status_id,
+                    memo="__deleted__",
+                    recurring_series_id=old_series_id,
+                    is_exception=True,
+                )
+                db.add(placeholder)
+
             # Update schedule with new recurring rule
             schedule.recurring_rule_id = rule.rule_id
             schedule.recurring_series_id = uuid4()

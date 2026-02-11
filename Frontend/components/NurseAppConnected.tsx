@@ -203,7 +203,7 @@ export default function NurseAppConnected() {
         startTime: `${startDateTime.getHours().toString().padStart(2, '0')}:${startDateTime.getMinutes().toString().padStart(2, '0')}`,
         endTime: `${endDateTime.getHours().toString().padStart(2, '0')}:${endDateTime.getMinutes().toString().padStart(2, '0')}`,
         status: sch.status_id,
-        recurrence: sch.recurring_series_id ? 'custom' as const : 'none' as const,
+        recurrence: (sch.recurring_series_id && !sch.is_exception) ? 'custom' as const : 'none' as const,
         recurrenceRule: sch.recurring_rule ? {
           frequency: sch.recurring_rule.frequency as 'daily' | 'weekly' | 'monthly' | 'yearly',
           interval: sch.recurring_rule.interval || 1,
@@ -360,9 +360,19 @@ export default function NurseAppConnected() {
         newStaffIds.push(targetStaffId);
       }
 
+      // Calculate new end time preserving the original duration
+      const [startH, startM] = visit.startTime.split(':').map(Number);
+      const [endH, endM] = visit.endTime.split(':').map(Number);
+      let duration = (endH * 60 + endM) - (startH * 60 + startM);
+      if (duration < 0) duration += 24 * 60;
+      const [newH, newM] = newStartTime.split(':').map(Number);
+      const newEndMins = newH * 60 + newM + duration;
+      const newEndTime = `${String(Math.floor(newEndMins / 60) % 24).padStart(2, '0')}:${String(newEndMins % 60).padStart(2, '0')}`;
+
       await scheduleService.update(visitId, {
         assigned_user_ids: newStaffIds,
         start_time: createDateTime(visit.date, newStartTime),
+        end_time: createDateTime(visit.date, newEndTime),
         update_scope: scope || 'this',
       });
 

@@ -80,6 +80,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
         newStartTime: string;
     } | null>(null);
 
+    // Guard: prevent click on hour slot from firing after a drag-and-drop
+    const justDraggedRef = useRef(false);
+
     useEffect(() => {
         const interval = setInterval(() => setNow(new Date()), 60000);
         return () => clearInterval(interval);
@@ -128,6 +131,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const handleDragEnd = () => {
         setDragState(null);
         setDropPreview(null);
+        justDraggedRef.current = true;
+        setTimeout(() => { justDraggedRef.current = false; }, 200);
     };
 
     const handleDragOverWithTime = (e: React.DragEvent, targetStaffId: string) => {
@@ -527,7 +532,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                             style={{ height: SLOT_HEIGHT }}
                                             onDragOver={(e) => handleDragOverWithTime(e, staff.id)}
                                             onDrop={(e) => handleContainerDrop(e, staff.id)}
-                                            onClick={() => { if (!isReadOnly) onAddVisitSlot(staff.id, `${hour.toString().padStart(2, '0')}:00`); }}
+                                            onClick={() => { if (!isReadOnly && !justDraggedRef.current) onAddVisitSlot(staff.id, `${hour.toString().padStart(2, '0')}:00`); }}
                                         ></div>
                                     ))}
 
@@ -548,7 +553,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                                 onDragEnd={handleDragEnd}
                                                 onDragOver={(e) => handleDragOverWithTime(e, staff.id)}
                                                 onDrop={(e) => handleContainerDrop(e, staff.id)}
-                                                onClick={(e) => { e.stopPropagation(); onSelectVisit(visit); }}
+                                                onClick={(e) => { e.stopPropagation(); if (!justDraggedRef.current) onSelectVisit(visit); }}
                                                 className={`absolute rounded-lg border-l-4 p-2.5 text-xs transition-all select-none overflow-hidden z-10 ${bgClass} ${opacity} ${isBeingDragged ? 'opacity-0' : ''} ${isReadOnly ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'}`}
                                                 style={{
                                                     top: `${top}px`,
