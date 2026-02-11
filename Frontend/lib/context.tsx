@@ -110,7 +110,7 @@ function scheduleToVisit(schedule: Schedule): Visit {
     startTime: schedule.start_time.split('T')[1]?.slice(0, 5) || '09:00',
     endTime: schedule.end_time.split('T')[1]?.slice(0, 5) || '10:00',
     status: schedule.status_id,
-    recurrence: schedule.recurring_series_id ? 'custom' : 'none',
+    recurrence: (schedule.recurring_series_id && schedule.recurring_rule && !schedule.is_exception) ? 'custom' : 'none',
     recurrenceRule: schedule.recurring_rule ? {
       frequency: schedule.recurring_rule.frequency as any,
       interval: schedule.recurring_rule.interval || 1,

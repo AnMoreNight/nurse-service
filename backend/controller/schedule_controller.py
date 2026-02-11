@@ -486,13 +486,41 @@ class ScheduleController:
                 else:
                     # Copy from original schedule
                     user_ids_to_assign = [a.user_id for a in schedule.assignments]
-                
+
                 for user_id in user_ids_to_assign:
                     db.add(ScheduleAssignment(schedule_id=new_schedule.schedule_id, user_id=user_id))
 
+                # Step 5: Migrate exceptions from old series to new series
+                # Exceptions on/after occurrence_date belong to the new series now
+                old_series_id = schedule.recurring_series_id
+                if old_series_id:
+                    exceptions_result = await db.execute(
+                        select(Schedule).where(
+                            Schedule.recurring_series_id == old_series_id,
+                            Schedule.is_exception == True,
+                            Schedule.schedule_id != schedule.schedule_id
+                        )
+                    )
+                    for exc in exceptions_result.scalars().all():
+                        exc_date = exc.start_time.date() if isinstance(exc.start_time, datetime) else exc.start_time
+                        if exc_date >= occurrence_date:
+                            exc.recurring_series_id = new_series_id
+
         
+        elif update_scope == "future" and schedule.is_exception and not schedule.recurring_rule_id:
+            # Exception schedule (cut from a recurring series) - treat as a single-day update
+            for key, value in updates.items():
+                if value is not None and hasattr(schedule, key):
+                    setattr(schedule, key, value)
+
+            if assigned_user_ids is not None:
+                await db.execute(
+                    delete(ScheduleAssignment).where(ScheduleAssignment.schedule_id == schedule_id)
+                )
+                for user_id in assigned_user_ids:
+                    db.add(ScheduleAssignment(schedule_id=schedule_id, user_id=user_id))
+
         elif update_scope == "all" and schedule.recurring_series_id:
-            # Update all occurrences in the series
             all_in_series = await db.execute(
                 select(Schedule).where(
                     Schedule.recurring_series_id == schedule.recurring_series_id,
