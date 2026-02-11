@@ -560,14 +560,10 @@ export default function NurseAppConnected() {
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
-          {!isReadOnly && (
-            <>
-              <NavButton active={view === 'schedule'} onClick={() => { setView('schedule'); setIsMobileMenuOpen(false); }} icon={<Calendar className="w-5 h-5" />} label="スケジュール" />
-              <NavButton active={view === 'shifts'} onClick={() => { setView('shifts'); setIsMobileMenuOpen(false); }} icon={<Notebook className="w-5 h-5" />} label="シフト管理" />
-              {isAdmin && <NavButton active={view === 'users'} onClick={() => { setView('users'); setIsMobileMenuOpen(false); }} icon={<Users className="w-5 h-5" />} label="ユーザー管理" />}
-              {isAdmin && <NavButton active={view === 'settings'} onClick={() => { setView('settings'); setIsMobileMenuOpen(false); }} icon={<Settings className="w-5 h-5" />} label="設定" />}
-            </>
-          )}
+          <NavButton active={view === 'schedule'} onClick={() => { setView('schedule'); setIsMobileMenuOpen(false); }} icon={<Calendar className="w-5 h-5" />} label="スケジュール" />
+          <NavButton active={view === 'shifts'} onClick={() => { setView('shifts'); setIsMobileMenuOpen(false); }} icon={<Notebook className="w-5 h-5" />} label="シフト管理" />
+          {isAdmin && <NavButton active={view === 'users'} onClick={() => { setView('users'); setIsMobileMenuOpen(false); }} icon={<Users className="w-5 h-5" />} label="ユーザー管理" />}
+          {isAdmin && <NavButton active={view === 'settings'} onClick={() => { setView('settings'); setIsMobileMenuOpen(false); }} icon={<Settings className="w-5 h-5" />} label="設定" />}
         </nav>
 
         <div className="p-4 border-t border-slate-700 space-y-2">

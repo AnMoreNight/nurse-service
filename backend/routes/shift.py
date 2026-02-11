@@ -32,8 +32,8 @@ async def get_shifts(
     # SUPER_ADMIN can specify company_id for impersonation, others use their own
     effective_company_id = company_id if (user["role"] == "SUPER_ADMIN" and company_id) else user["company_id"]
     
-    # NORMAL_USER can only see their own shifts
-    effective_user_id = user["user_id"] if user["role"] == "NORMAL_USER" else user_id
+    # All users can see all shifts in their company (team collaboration requirement)
+    effective_user_id = user_id
     
     return await ShiftController.get_shifts(db, effective_company_id, start_date, end_date, effective_user_id)
 

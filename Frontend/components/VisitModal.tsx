@@ -511,6 +511,20 @@ export const VisitModal: React.FC<VisitModalProps> = ({
                     </div>
 
                     {/* Recurrence */}
+                    {isReadOnly && recurrence === 'custom' && recurrenceRule && (
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 mb-1">繰り返し設定</label>
+                            <div className="relative">
+                                <Repeat className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                <div className="w-full pl-9 pr-3 py-2 border rounded-lg bg-gray-100 text-gray-700 text-sm">
+                                    {recurrenceRule.frequency === 'weekly' && `毎週 (${weekDayLabels[recurrenceRule.weekDays?.[0]] || ''}曜日)`}
+                                    {recurrenceRule.frequency === 'monthly' && '毎月'}
+                                    {recurrenceRule.frequency === 'yearly' && '毎年'}
+                                    {recurrenceRule.frequency === 'daily' && '毎日'}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     {!isReadOnly && (
                         <div>
                             <label className="block text-xs font-bold text-gray-500 mb-1">繰り返し設定</label>
@@ -631,6 +645,7 @@ export const VisitModal: React.FC<VisitModalProps> = ({
                     <div>
                         <label className="block text-xs font-bold text-gray-500 mb-1">メモ</label>
                         <textarea
+                            disabled={isReadOnly}
                             className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white min-h-[100px] resize-none disabled:bg-gray-100"
                             placeholder="情報を入力..."
                             value={notes}
@@ -671,25 +686,27 @@ export const VisitModal: React.FC<VisitModalProps> = ({
                             onClick={handleCloseAttempt}
                             className="px-5 py-2 rounded-lg text-gray-600 hover:bg-gray-200 transition-colors text-sm font-bold"
                         >
-                            キャンセル
+                            {isReadOnly ? '閉じる' : 'キャンセル'}
                         </button>
-                        <button
-                            onClick={handleSave}
-                            disabled={isSaving}
-                            className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors shadow-md flex items-center gap-2 text-sm font-bold"
-                        >
-                            {isSaving ? (
-                                <>
-                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    保存中...
-                                </>
-                            ) : (
-                                <>
-                                    <Save className="w-4 h-4" />
-                                    保存
-                                </>
-                            )}
-                        </button>
+                        {!isReadOnly && (
+                            <button
+                                onClick={handleSave}
+                                disabled={isSaving}
+                                className="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors shadow-md flex items-center gap-2 text-sm font-bold"
+                            >
+                                {isSaving ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        保存中...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save className="w-4 h-4" />
+                                        保存
+                                    </>
+                                )}
+                            </button>
+                        )}
                     </div>
                 </div>
 

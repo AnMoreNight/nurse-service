@@ -275,8 +275,12 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
           <div className="w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: '#8f8f8f' }}><Palmtree className="w-2.5 h-2.5 text-white" /></div>
           <span>休み</span>
         </div>
-        <span className="text-gray-400">|</span>
-        <span className="text-gray-400 italic">セルをクリックで切替</span>
+        {!isReadOnly && (
+          <>
+            <span className="text-gray-400">|</span>
+            <span className="text-gray-400 italic">セルをクリックで切替</span>
+          </>
+        )}
       </div>
 
       {/* Calendar Grid */}
