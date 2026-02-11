@@ -93,6 +93,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   placeholder="email@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('正しいメールアドレスを入力してください')}
+                  onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
                   required
                   disabled={isLoading}
                 />
@@ -141,12 +143,9 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </button>
 
             <div className="text-center mt-4">
-              <a
-                href="/forgot-password"
-                className="text-sm text-teal-600 hover:text-teal-700 font-medium hover:underline"
-              >
-                パスワードをお忘れですか？
-              </a>
+              <span className="text-sm text-gray-500">
+                パスワードをお忘れの場合は管理者にお問い合わせください
+              </span>
             </div>
           </form>
         </div>

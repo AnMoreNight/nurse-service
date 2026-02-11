@@ -69,6 +69,8 @@ export const LoginConnected: React.FC<LoginProps> = ({ onLogin }) => {
                   placeholder="メールアドレスを入力"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('正しいメールアドレスを入力してください')}
+                  onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
                   disabled={loading}
                 />
               </div>

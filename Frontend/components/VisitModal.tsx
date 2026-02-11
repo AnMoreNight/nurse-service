@@ -14,7 +14,7 @@ interface VisitModalProps {
     companySettings: CompanySettings;
     onClose: () => void;
     onUpdate: (updatedVisit: VisitWithStaff, scope?: RecurrenceScope) => void | Promise<void>;
-    onDelete: (visitId: string, scope?: RecurrenceScope) => void;
+    onDelete: (visitId: string, scope?: RecurrenceScope, occurrenceDate?: string) => void;
     onDuplicate?: (visit: VisitWithStaff) => void;
     onAiQuery?: (data: { patientName: string; address: string; date: string; staffIds: string[] }) => void;
     isReadOnly?: boolean;
@@ -194,14 +194,14 @@ export const VisitModal: React.FC<VisitModalProps> = ({
         } else {
             const confirmed = await showConfirm('この予定を削除しますか？');
             if (confirmed) {
-                onDelete(visit.id, 'this');
+                onDelete(visit.id, 'this', visit.date);
                 onClose();
             }
         }
     };
 
     const executeDelete = (scope: RecurrenceScope) => {
-        onDelete(visit.id, scope);
+        onDelete(visit.id, scope, visit.date);
         onClose();
     };
 

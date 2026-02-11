@@ -92,6 +92,16 @@ async def update_user(user_id: UUID, req: UserUpdate, request: Request, db: Asyn
         default_holiday_weekdays=req.default_holiday_weekdays
     )
 
+@router.post("/{user_id}/reset-password")
+async def admin_reset_password(user_id: UUID, request: Request, db: AsyncSession = Depends(get_db)):
+    """Admin resets a user's password"""
+    user = await require_company_admin(request, db)
+    body = await request.json()
+    new_password = body.get("new_password")
+    if not new_password:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="新しいパスワードを入力してください")
+    return await UserController.admin_reset_password(db, user_id, user["company_id"], new_password)
+
 @router.delete("/{user_id}")
 async def delete_user(user_id: UUID, request: Request, db: AsyncSession = Depends(get_db)):
     user = await require_company_admin(request, db)  # Admin only

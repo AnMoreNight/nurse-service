@@ -119,6 +119,9 @@ export const userService = {
   updateSortOrders: (sortOrders: UserSortOrder[]) =>
     apiClient.put('/users/sort-order', sortOrders),
 
+  resetPassword: (id: string, newPassword: string) =>
+    apiClient.post(`/users/${id}/reset-password`, { new_password: newPassword }),
+
   delete: (id: string) => apiClient.delete(`/users/${id}`),
 
   // Soft delete for resignation - preserves employment schedules

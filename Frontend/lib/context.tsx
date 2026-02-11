@@ -179,14 +179,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Generate hash of current data for change detection
   const generateDataHash = useCallback(() => {
+    const visitSummary = visits.slice(0, 50).map(v =>
+      `${v.id}:${v.startTime}:${v.staffIds?.join(',') || ''}`
+    ).join('|');
     const dataToHash = {
       staffCount: staff.length,
       visitsCount: visits.length,
       shiftsCount: shifts.length,
       statusesCount: statuses.length,
-      lastStaffUpdate: staff[0]?.id || '',
-      lastVisitUpdate: visits[0]?.id || '',
-      lastShiftUpdate: shifts[0]?.id || '',
+      visitSummary,
     };
     return JSON.stringify(dataToHash);
   }, [staff, visits, shifts, statuses]);
@@ -209,15 +210,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           statusService.getAll(currentUser.company_id),
         ]);
 
-        // Generate hash of new data
+        // Generate hash of new data - include enough detail to detect moves/updates
+        const visitSummary = scheduleData.slice(0, 50).map((s: any) =>
+          `${s.schedule_id}:${s.start_time}:${s.assigned_user_ids?.join(',') || ''}`
+        ).join('|');
         const newDataHash = JSON.stringify({
           staffCount: staffData.length,
           visitsCount: scheduleData.length,
           shiftsCount: shiftData.length,
           statusesCount: statusData.length,
-          lastStaffUpdate: staffData[0]?.user_id || '',
-          lastVisitUpdate: scheduleData[0]?.schedule_id || '',
-          lastShiftUpdate: shiftData[0]?.shift_id || '',
+          visitSummary,
         });
 
         // Only refresh if data actually changed

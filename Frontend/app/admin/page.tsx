@@ -287,6 +287,10 @@ export default function AdminPage() {
           job_title: userForm.job_title || undefined,
         };
         await userService.update(editingUser.user_id, updateData);
+        // If password provided, reset it
+        if (userForm.password.trim()) {
+          await userService.resetPassword(editingUser.user_id, userForm.password);
+        }
         await showAlert('ユーザーを更新しました', 'success');
       } else {
         // Create new user
@@ -774,6 +778,8 @@ export default function AdminPage() {
                           type="email"
                           value={companyForm.admin_email}
                           onChange={(e) => setCompanyForm({ ...companyForm, admin_email: e.target.value })}
+                          onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('正しいメールアドレスを入力してください')}
+                          onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none bg-white"
                           placeholder="例: admin@example.com"
                         />
@@ -860,6 +866,8 @@ export default function AdminPage() {
                   type="email"
                   value={userForm.email}
                   onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                  onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('正しいメールアドレスを入力してください')}
+                  onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
                   placeholder="例: yamada@example.com"
                   disabled={!!editingUser}

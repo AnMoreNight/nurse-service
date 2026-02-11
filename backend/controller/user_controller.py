@@ -247,6 +247,23 @@ class UserController:
         return {"message": "User updated"}
     
     @staticmethod
+    async def admin_reset_password(db: AsyncSession, user_id: UUID, company_id: UUID, new_password: str):
+        """Admin resets a user's password"""
+        result = await db.execute(
+            select(User).where(User.user_id == user_id, User.company_id == company_id)
+        )
+        user = result.scalar_one_or_none()
+
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+        user.password_hash = hash_password(new_password)
+        user.updated_at = datetime.utcnow()
+        await db.commit()
+
+        return {"message": "パスワードをリセットしました"}
+
+    @staticmethod
     async def update_sort_orders(db: AsyncSession, company_id: UUID, sort_orders: list):
         # Bulk update using case statement for better performance
         

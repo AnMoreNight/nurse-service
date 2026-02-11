@@ -22,8 +22,8 @@ class ApiClient {
       if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }));
 
-      // Handle 401 Unauthorized - auto logout
-      if (response.status === 401) {
+      // Handle 401 Unauthorized - auto logout (but not for login requests)
+      if (response.status === 401 && !endpoint.includes('/auth/login')) {
         if (typeof window !== 'undefined') {
           localStorage.removeItem('token');
           localStorage.removeItem('currentUser');

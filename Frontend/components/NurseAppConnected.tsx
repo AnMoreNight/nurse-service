@@ -778,9 +778,8 @@ export default function NurseAppConnected() {
             }
             setSelectedVisit(null);
           }}
-          onDelete={async (visitId, scope) => {
-            const visit = visits.find(v => v.id === visitId);
-            await handleDeleteVisit(visitId, scope, visit?.date);
+          onDelete={async (visitId, scope, occurrenceDate) => {
+            await handleDeleteVisit(visitId, scope, occurrenceDate);
             setSelectedVisit(null);
           }}
           isReadOnly={isReadOnly}

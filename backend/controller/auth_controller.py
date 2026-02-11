@@ -20,10 +20,10 @@ class AuthController:
         user = result.scalar_one_or_none()
 
         if not user or not verify_password(password, user.password_hash):
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="メールアドレスまたはパスワードが間違っています")
 
         if not user.is_active:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is inactive")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="アカウントが無効です")
 
         company_name = user.company.name if user.company else None
         
@@ -190,7 +190,7 @@ class AuthController:
             if existing.scalar_one_or_none():
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Email already in use"
+                    detail="このメールアドレスは既に使用されています"
                 )
             user.email = email
         
@@ -217,7 +217,7 @@ class AuthController:
         if not verify_password(current_password, user.password_hash):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Current password is incorrect"
+                detail="現在のパスワードが正しくありません"
             )
         
         # Update password

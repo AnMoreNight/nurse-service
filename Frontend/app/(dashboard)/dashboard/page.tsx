@@ -12,7 +12,7 @@ import { ExportModal } from '@/components/ExportModal';
 import { Toast } from '@/components/Toast';
 import { useApp, useRoleAccess } from '@/lib/context';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useState, useMemo, useEffect, Suspense } from 'react';
+import { useState, useMemo, useEffect, useRef, Suspense } from 'react';
 import { toLocalISOString, checkVisitVisibility, formatDateForCSV, getEffectiveShiftType } from '@/lib/constants';
 import { VisitWithStaff, Staff, RecurrenceScope, Visit, ShiftType, ScheduleSuggestion, ShiftAssignment } from '@/lib/types';
 import { X, Loader2 } from 'lucide-react';
@@ -74,6 +74,8 @@ function DashboardContent() {
   const [suggestionState, setSuggestionState] = useState<{ isOpen: boolean; initialValues?: any }>({ isOpen: false });
   const [localToast, setLocalToast] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const settingsDirtyRef = useRef(false);
+  const prevViewRef = useRef(view);
 
   // Persist current date to localStorage
   useEffect(() => {
@@ -96,6 +98,20 @@ function DashboardContent() {
       router.replace('/dashboard?view=schedule');
     }
   }, [view, currentUser, router]);
+
+  // Guard: if navigating away from settings with unsaved changes, confirm
+  useEffect(() => {
+    if (prevViewRef.current === 'settings' && view !== 'settings' && settingsDirtyRef.current) {
+      const leave = window.confirm('設定が保存されていません。このまま移動しますか？');
+      if (!leave) {
+        router.replace('/dashboard?view=settings');
+        prevViewRef.current = 'settings';
+        return;
+      }
+      settingsDirtyRef.current = false;
+    }
+    prevViewRef.current = view;
+  }, [view, router]);
 
   // View-aware auto-refresh: only fetch data the current view needs
   useEffect(() => {
@@ -513,7 +529,7 @@ function DashboardContent() {
                     setIsSaving(false);
                   }
                 }}
-                onDirtyChange={() => { }}
+                onDirtyChange={(dirty) => { settingsDirtyRef.current = dirty; }}
               />
             )}
           </>

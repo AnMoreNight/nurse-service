@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '@/lib/context';
 import { userService, User, UserCreate, UserUpdate, PaginatedResponse } from '@/services';
-import { Plus, Pencil, Trash2, X, Save, Mail, Users as UsersIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Save, Mail, Users as UsersIcon, Key } from 'lucide-react';
 import { useModal } from '@/contexts/ModalContext';
 
 interface UserManagementConnectedProps {
@@ -104,6 +104,10 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
           display_color: formData.display_color || undefined,
         };
         await userService.update(editingUser.user_id, updateData);
+        // If password provided, reset it
+        if (formData.password.trim()) {
+          await userService.resetPassword(editingUser.user_id, formData.password);
+        }
       } else {
         // Create new user
         if (!formData.password) {
@@ -359,6 +363,8 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('正しいメールアドレスを入力してください')}
+                    onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
                     className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
                     placeholder="例: yamada@example.com"
                     disabled={!!editingUser}
@@ -369,20 +375,25 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
                 )}
               </div>
 
-              {!editingUser && (
-                <div>
-                  <label className="block text-sm font-bold text-gray-600 mb-2">
-                    パスワード <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
-                    placeholder="パスワードを入力"
-                  />
-                </div>
-              )}
+              <div>
+                <label className="block text-sm font-bold text-gray-600 mb-2">
+                  {editingUser ? (
+                    <>
+                      <Key className="w-3.5 h-3.5 inline mr-1" />
+                      パスワードリセット
+                    </>
+                  ) : (
+                    <>パスワード <span className="text-red-500">*</span></>
+                  )}
+                </label>
+                <input
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+                  placeholder={editingUser ? "新しいパスワード（変更する場合のみ）" : "パスワードを入力"}
+                />
+              </div>
 
               <div>
                 <label className="block text-sm font-bold text-gray-600 mb-2">権限</label>

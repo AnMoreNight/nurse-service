@@ -209,6 +209,8 @@ export default function ProfilePageConnected() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('正しいメールアドレスを入力してください')}
+                  onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
                   className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 md:px-4 md:py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition-all"
                   placeholder="user@example.com"
                 />
