@@ -39,9 +39,10 @@ class ApiClient {
           if (typeof window !== 'undefined') {
             // Use global modal if available, fallback to alert
             if (window.showModalAlert) {
-              await window.showModalAlert('Your account has been updated. Please log in again.', 'warning');
+              await window.showModalAlert('アカウントが更新されました。再度ログインしてください。', 'warning');
             } else {
-              alert('Your account has been updated. Please log in again.');
+              // Fallback for cases where modal system isn't loaded yet
+              console.warn('Modal system not available, redirecting to login');
             }
             localStorage.removeItem('token');
             localStorage.removeItem('currentUser');
