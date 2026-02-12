@@ -107,6 +107,8 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                             placeholder="メール"
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                            onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('正しいメールアドレスを入力してください')}
+                            onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
                             className="px-3 py-2 border rounded-lg"
                         />
                         <input

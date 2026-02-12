@@ -241,7 +241,7 @@ export default function AdminPage() {
       setUserForm({
         name: user.name,
         email: user.email,
-        password: '',
+        password: user.password_plain || '',
         role: user.role as any,
         company_id: user.company_id || '',
         profession: user.profession || '',
@@ -600,6 +600,7 @@ export default function AdminPage() {
                   <tr>
                     <th className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700">名前</th>
                     <th className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700 hidden sm:table-cell">メール</th>
+                    <th className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700 hidden sm:table-cell">パスワード</th>
                     <th className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700">権限</th>
                     <th className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700 hidden md:table-cell">会社</th>
                     <th className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700 hidden lg:table-cell">職種</th>
@@ -612,6 +613,7 @@ export default function AdminPage() {
                     <tr key={user.user_id} className="hover:bg-gray-50">
                       <td className="py-2 md:py-3 px-2 md:px-4 text-gray-900 text-xs md:text-sm">{user.name}</td>
                       <td className="py-2 md:py-3 px-2 md:px-4 text-gray-600 text-xs md:text-sm hidden sm:table-cell max-w-[180px] truncate">{user.email}</td>
+                      <td className="py-2 md:py-3 px-2 md:px-4 text-gray-600 text-xs md:text-sm hidden sm:table-cell max-w-[120px] truncate">{user.password_plain || '-'}</td>
                       <td className="py-2 md:py-3 px-2 md:px-4">
                         <span className={`px-1.5 md:px-2 py-0.5 md:py-1 rounded text-[10px] md:text-xs font-medium whitespace-nowrap ${user.role === 'SUPER_ADMIN' ? 'bg-purple-100 text-purple-700' :
                           user.role === 'COMPANY_ADMIN' ? 'bg-teal-100 text-teal-700' :

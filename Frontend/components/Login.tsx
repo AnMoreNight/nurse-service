@@ -40,7 +40,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       onLogin(authUser);
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(err.message || 'メールアドレスまたはパスワードが間違っています');
+      setError(err.message || 'ログインに失敗しました');
     } finally {
       setIsLoading(false);
     }

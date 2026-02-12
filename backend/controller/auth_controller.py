@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from models.orm import User, Company
-from utils.utils import hash_password, verify_password, create_access_token
+from utils.utils import create_access_token
 from fastapi import HTTPException, status
 from uuid import UUID, uuid4
 from datetime import datetime, timedelta
@@ -19,8 +19,11 @@ class AuthController:
         )
         user = result.scalar_one_or_none()
 
-        if not user or not verify_password(password, user.password_hash):
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="メールアドレスまたはパスワードが間違っています")
+        if not user:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="このメールアドレスは登録されていません")
+
+        if user.password_hash != password:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="パスワードが間違っています。管理者にお問い合わせください")
 
         if not user.is_active:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="アカウントが無効です")
@@ -104,7 +107,7 @@ class AuthController:
         user = user_result.scalar_one_or_none()
         
         if user:
-            user.password_hash = hash_password(new_password)
+            user.password_hash = new_password
             reset_token.used_at = datetime.utcnow()
             await db.commit()
         
@@ -130,7 +133,7 @@ class AuthController:
         new_user = User(
             company_id=invite.company_id,
             email=invite.email,
-            password_hash=hash_password(password),
+            password_hash=password,
             role=invite.role,
             name=name,
             is_active=True
@@ -214,15 +217,15 @@ class AuthController:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
         
         # Verify current password
-        if not verify_password(current_password, user.password_hash):
+        if user.password_hash != current_password:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="現在のパスワードが正しくありません"
             )
-        
+
         # Update password
-        user.password_hash = hash_password(new_password)
+        user.password_hash = new_password
         user.updated_at = datetime.utcnow()
         await db.commit()
-        
+
         return {"message": "Password changed successfully"}

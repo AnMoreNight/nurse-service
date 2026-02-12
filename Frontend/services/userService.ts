@@ -15,6 +15,7 @@ export interface User {
   join_date?: string;
   left_date?: string;
   default_holiday_weekdays?: number[];
+  password_plain?: string;
   created_at: string;
 }
 

@@ -330,23 +330,46 @@ export default function NurseAppConnected() {
         };
       }
 
+      // Optimistic update: immediately update local schedules state
+      setSchedules(prev => prev.map(sch => {
+        if (sch.schedule_id !== visitId) return sch;
+        const updated = { ...sch };
+        if (updateData.patient_name) updated.patient_name = updateData.patient_name;
+        if (updateData.visit_address) updated.visit_address = updateData.visit_address;
+        if (updateData.status_id) updated.status_id = updateData.status_id;
+        if (updateData.memo !== undefined) updated.memo = updateData.memo;
+        if (updateData.start_time) updated.start_time = updateData.start_time;
+        if (updateData.end_time) updated.end_time = updateData.end_time;
+        if (updateData.assigned_user_ids) {
+          updated.assigned_users = updateData.assigned_user_ids
+            .map((id: string) => staff.find(s => s.user_id === id))
+            .filter(Boolean) as User[];
+        }
+        return updated;
+      }));
+
       await scheduleService.update(visitId, updateData);
       showToast('スケジュールを更新しました');
-      // Silent background refresh - won't interrupt user
+      // Background refresh for server reconciliation
       loadData(false, true);
     } catch (error: any) {
       showToast(error.message || '更新に失敗しました');
+      loadData(false, true);
     }
   };
 
   const handleDeleteVisit = async (visitId: string, scope?: string, occurrenceDate?: string) => {
     try {
+      // Optimistic update: immediately remove from local state
+      setSchedules(prev => prev.filter(sch => sch.schedule_id !== visitId));
+
       await scheduleService.delete(visitId, scope, occurrenceDate);
       showToast('スケジュールを削除しました');
-      // Silent background refresh - won't interrupt user
+      // Background refresh for server reconciliation
       loadData(false, true);
     } catch (error: any) {
       showToast(error.message || '削除に失敗しました');
+      loadData(false, true);
     }
   };
 
@@ -369,18 +392,34 @@ export default function NurseAppConnected() {
       const newEndMins = newH * 60 + newM + duration;
       const newEndTime = `${String(Math.floor(newEndMins / 60) % 24).padStart(2, '0')}:${String(newEndMins % 60).padStart(2, '0')}`;
 
+      const newStartTimeISO = createDateTime(visit.date, newStartTime);
+      const newEndTimeISO = createDateTime(visit.date, newEndTime);
+
+      // Optimistic update: immediately update local schedules state
+      setSchedules(prev => prev.map(sch => {
+        if (sch.schedule_id !== visitId) return sch;
+        const targetUser = staff.find(s => s.user_id === targetStaffId);
+        const newAssignedUsers = sch.assigned_users.filter(u => u.user_id !== sourceStaffId);
+        if (targetUser && !newAssignedUsers.some(u => u.user_id === targetStaffId)) {
+          newAssignedUsers.push(targetUser);
+        }
+        return { ...sch, assigned_users: newAssignedUsers, start_time: newStartTimeISO, end_time: newEndTimeISO };
+      }));
+
       await scheduleService.update(visitId, {
         assigned_user_ids: newStaffIds,
-        start_time: createDateTime(visit.date, newStartTime),
-        end_time: createDateTime(visit.date, newEndTime),
+        start_time: newStartTimeISO,
+        end_time: newEndTimeISO,
         update_scope: scope || 'this',
       });
 
       showToast('スケジュールを移動しました');
-      // Silent background refresh - won't interrupt user
+      // Background refresh for server reconciliation
       loadData(false, true);
     } catch (error: any) {
       showToast(error.message || '移動に失敗しました');
+      // Revert optimistic update on error by refreshing from server
+      loadData(false, true);
     }
   };
 

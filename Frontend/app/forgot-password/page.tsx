@@ -75,6 +75,8 @@ export default function ForgotPasswordPage() {
                             placeholder="example@nurseservice.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
+                            onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('正しいメールアドレスを入力してください')}
+                            onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
                         />
                     </div>
 

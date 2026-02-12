@@ -3,7 +3,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from pydantic import BaseModel, EmailStr
 from models.orm import Company, User
-from utils.utils import hash_password
 from db.database import get_db
 from uuid import uuid4
 from datetime import datetime
@@ -41,9 +40,6 @@ async def create_first_admin(
     if existing_users > 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Admin already exists")
     
-    # Hash password
-    hashed_password = hash_password(data.password)
-    
     # Determine role and company based on company_name
     if data.company_name:
         # Create company
@@ -55,7 +51,7 @@ async def create_first_admin(
         user = User(
             company_id=company.company_id,
             email=data.email,
-            password_hash=hashed_password,
+            password_hash=data.password,
             role="COMPANY_ADMIN",
             name=data.name,
             is_active=True
@@ -66,7 +62,7 @@ async def create_first_admin(
         user = User(
             company_id=None,  # System admin has no company
             email=data.email,
-            password_hash=hashed_password,
+            password_hash=data.password,
             role="SUPER_ADMIN",
             name=data.name,
             is_active=True

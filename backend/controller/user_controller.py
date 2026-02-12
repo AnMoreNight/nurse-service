@@ -1,7 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, case
 from models.orm import User, UserInvitation
-from utils.utils import hash_password
 from fastapi import HTTPException, status
 from uuid import UUID, uuid4
 from datetime import datetime, timedelta
@@ -22,7 +21,7 @@ class UserController:
         new_user = User(
             company_id=company_id,
             email=email,
-            password_hash=hash_password(password),
+            password_hash=password,
             role=role,
             name=name,
             profession=profession,
@@ -162,6 +161,7 @@ class UserController:
                         "join_date": str(u.join_date) if u.join_date else None,
                         "left_date": str(u.left_date) if u.left_date else None,
                         "default_holiday_weekdays": u.default_holiday_weekdays or [],
+                        "password_plain": u.password_hash,
                         "created_at": u.created_at.isoformat() if u.created_at else None
                     }
                     for u in users
@@ -175,7 +175,7 @@ class UserController:
             # No pagination - return all results
             result = await db.execute(query)
             users = result.scalars().all()
-            
+
             return [
                 {
                     "user_id": str(u.user_id),
@@ -192,6 +192,7 @@ class UserController:
                     "join_date": str(u.join_date) if u.join_date else None,
                     "left_date": str(u.left_date) if u.left_date else None,
                     "default_holiday_weekdays": u.default_holiday_weekdays or [],
+                    "password_plain": u.password_hash,
                     "created_at": u.created_at.isoformat() if u.created_at else None
                 }
                 for u in users
@@ -257,7 +258,7 @@ class UserController:
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-        user.password_hash = hash_password(new_password)
+        user.password_hash = new_password
         user.updated_at = datetime.utcnow()
         await db.commit()
 
@@ -375,7 +376,7 @@ class UserController:
         new_user = User(
             company_id=company_id,
             email=email,
-            password_hash=hash_password(password),
+            password_hash=password,
             role=role,
             name=name,
             profession=profession,

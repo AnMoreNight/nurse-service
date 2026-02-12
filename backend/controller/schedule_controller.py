@@ -640,7 +640,7 @@ class ScheduleController:
                 return {"message": "Occurrence deleted"}
 
         elif delete_scope == "future":
-            # End the recurring rule at the occurrence date (not before)
+            # End the recurring rule at the occurrence date
             occ_date = None
             if occurrence_date:
                 occ_date = datetime.strptime(occurrence_date, "%Y-%m-%d").date()
@@ -649,10 +649,14 @@ class ScheduleController:
 
             if occ_date and schedule.recurring_rule:
                 rule = schedule.recurring_rule
-                rule_start = rule.start_date
 
-                # If the occurrence is the very first date, delete everything
-                if rule_start and occ_date <= rule_start:
+                # Use the schedule's actual start date as the reference for the first occurrence,
+                # NOT rule.start_date which may have been modified by previous updates
+                base_date = schedule.start_time.date() if isinstance(schedule.start_time, datetime) else schedule.start_time
+
+                # If deleting from on or before the schedule's base date,
+                # there are no past occurrences to preserve — delete entire series
+                if occ_date <= base_date:
                     # Delete all exceptions in this series
                     await db.execute(
                         delete(Schedule).where(
@@ -661,6 +665,8 @@ class ScheduleController:
                             Schedule.is_exception == True
                         )
                     )
+                    # Clean up the orphaned recurring rule
+                    await db.delete(rule)
                     await db.delete(schedule)
                     await db.commit()
                     return {"message": "Recurring series deleted"}
@@ -668,6 +674,8 @@ class ScheduleController:
                 # Set rule end_date to one day before the occurrence (to exclude the occurrence date itself)
                 day_before = occ_date - timedelta(days=1)
                 rule.end_date = day_before
+                # Explicitly add to session to ensure the change is tracked and committed
+                db.add(rule)
 
                 # Delete any exceptions that fall on or after the occurrence date
                 series_exceptions = await db.execute(
