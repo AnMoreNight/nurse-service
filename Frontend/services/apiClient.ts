@@ -52,12 +52,16 @@ class ApiClient {
         }
       }
 
-      // Handle error detail properly - it might be a string or an object
+      // Handle error detail properly - extract only the message
       let errorMessage: string;
       if (typeof error.detail === 'string') {
         errorMessage = error.detail;
+      } else if (Array.isArray(error.detail)) {
+        // Handle Pydantic validation errors (array of error objects)
+        errorMessage = error.detail.map((err: any) => err.msg || err.message).join(', ') || 'エラーが発生しました';
       } else if (typeof error.detail === 'object' && error.detail !== null) {
-        errorMessage = JSON.stringify(error.detail);
+        // Extract message from error object
+        errorMessage = error.detail.message || error.detail.msg || 'エラーが発生しました';
       } else if (error.message) {
         errorMessage = error.message;
       } else {
