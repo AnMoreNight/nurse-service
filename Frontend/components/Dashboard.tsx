@@ -425,7 +425,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         const isDragOver = dragOverColumnIndex === colIndex;
 
                         return (
-                            <div key={staff.id} className={`w-[130px] md:w-[220px] lg:w-[280px] flex-shrink-0 border-r relative group ${isHoliday ? 'bg-gray-50' : 'bg-white'} ${isDragOver ? 'border-r-4 border-r-blue-500 bg-blue-50' : 'border-gray-200'}`}>
+                            <div key={staff.id} className={`w-[105px] sm:w-[130px] md:w-[220px] lg:w-[280px] flex-shrink-0 border-r relative group ${isHoliday ? 'bg-gray-50' : 'bg-white'} ${isDragOver ? 'border-r-4 border-r-blue-500 bg-blue-50' : 'border-gray-200'}`}>
                                 <div
                                     className={`h-auto border-b border-gray-200 bg-white sticky top-0 z-20 flex flex-col justify-center px-2 py-1.5 md:px-3 md:py-3 gap-1 md:gap-2 ${isHoliday ? 'bg-gray-50' : ''} ${!isReadOnly ? 'cursor-grab active:cursor-grabbing' : ''}`}
                                     draggable={!isReadOnly}
@@ -435,16 +435,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                     onDrop={(e) => handleColumnDrop(e, colIndex)}
                                 >
                                     <div className="flex items-start justify-between w-full pointer-events-none gap-2">
-                                        <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
-                                            {!isReadOnly && <GripVertical className="w-4 h-4 text-gray-300 shrink-0 mt-1" />}
+                                        <div className="flex items-center gap-1 sm:gap-2 overflow-hidden flex-1 min-w-0">
+                                            {!isReadOnly && <GripVertical className="w-3 h-3 sm:w-4 sm:h-4 text-gray-300 shrink-0 mt-1 hidden sm:block" />}
                                             <div
-                                                className="w-7 h-7 md:w-10 md:h-10 rounded-full flex items-center justify-center text-[10px] md:text-sm font-bold text-white shadow-md shrink-0"
+                                                className="w-6 h-6 sm:w-7 sm:h-7 md:w-10 md:h-10 rounded-full flex items-center justify-center text-[9px] sm:text-[10px] md:text-sm font-bold text-white shadow-md shrink-0"
                                                 style={{ backgroundColor: getColorValue(staff.color) }}
                                             >
                                                 {staff.avatar}
                                             </div>
                                             <div className="flex flex-col min-w-0 flex-1">
-                                                <span className="line-clamp-1 text-xs md:text-base font-bold text-gray-800" title={staff.name}>{staff.name}</span>
+                                                <span className="line-clamp-1 text-[10px] sm:text-xs md:text-base font-bold text-gray-800" title={staff.name}>{staff.name}</span>
                                                 <span className="truncate text-[10px] md:text-xs text-gray-500 mt-0.5 hidden md:block">{staff.jobTitle || '\u00A0'}</span>
                                             </div>
                                         </div>
@@ -513,11 +513,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                                             return (
                                                 <div
-                                                    className={`absolute rounded-lg border-l-4 p-2.5 text-xs overflow-hidden z-50 pointer-events-none shadow-lg ${bgClass} ${opacity}`}
+                                                    className={`absolute rounded-lg border-l-4 p-1 sm:p-1.5 md:p-2.5 text-[10px] sm:text-xs overflow-hidden z-50 pointer-events-none shadow-lg ${bgClass} ${opacity}`}
                                                     style={{ top: dropPreview.top, height: `${Math.max(height, 30)}px`, left: '4px', width: 'calc(100% - 8px)' }}
                                                 >
                                                     <div className="flex justify-between items-start gap-1">
-                                                        <span className="font-bold truncate text-sm leading-tight">{dropPreview.time} {visit.patientName}</span>
+                                                        <span className="font-bold truncate text-[10px] sm:text-xs md:text-sm leading-tight">{dropPreview.time} {visit.patientName}</span>
                                                         {visit.recurrence === 'custom' && <Repeat className="w-4 h-4 flex-shrink-0 text-gray-600" />}
                                                     </div>
                                                 </div>
@@ -554,7 +554,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                                 onDragOver={(e) => handleDragOverWithTime(e, staff.id)}
                                                 onDrop={(e) => handleContainerDrop(e, staff.id)}
                                                 onClick={(e) => { e.stopPropagation(); if (!justDraggedRef.current) onSelectVisit(visit); }}
-                                                className={`absolute rounded-lg border-l-4 p-2.5 text-xs transition-all select-none overflow-hidden z-10 ${bgClass} ${opacity} ${isBeingDragged ? 'opacity-0' : ''} ${isReadOnly ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'}`}
+                                                className={`absolute rounded-lg border-l-4 p-1 sm:p-1.5 md:p-2.5 text-[10px] sm:text-xs transition-all select-none overflow-hidden z-10 ${bgClass} ${opacity} ${isBeingDragged ? 'opacity-0' : ''} ${isReadOnly ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'}`}
                                                 style={{
                                                     top: `${top}px`,
                                                     height: `${Math.max(height, 30)}px`,
@@ -563,7 +563,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                                 }}
                                             >
                                                 <div className="flex justify-between items-start gap-1 pointer-events-none">
-                                                    <span className="font-bold truncate text-sm leading-snug">{visit.startTime} {visit.patientName}</span>
+                                                    <span className="font-bold truncate text-[10px] sm:text-xs md:text-sm leading-snug">{visit.startTime} {visit.patientName}</span>
                                                     {visit.recurrence === 'custom' && <Repeat className="w-4 h-4 flex-shrink-0 text-gray-600" />}
                                                 </div>
                                                 {visit.staffMembers && visit.staffMembers.length > 1 && (

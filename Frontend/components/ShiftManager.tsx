@@ -121,33 +121,33 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
   const renderCellIcon = (type: ShiftType | 'none') => {
     if (type === 'night1' || type === 'night2') {
       return (
-        <div 
-          className="w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
+        <div
+          className="w-5 h-5 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
           style={{ backgroundColor: type === 'night1' ? '#da5597' : '#5383ec' }}
         >
-          <Moon className="w-3 h-3 md:w-3.5 md:h-3.5" />
+          <Moon className="w-2.5 h-2.5 md:w-3.5 md:h-3.5" />
         </div>
       );
     }
     if (type === 'holiday') {
       return (
-        <div className="w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center" style={{ backgroundColor: '#8f8f8f' }}>
-          <Palmtree className="w-3 h-3 md:w-3.5 md:h-3.5 text-white" />
+        <div className="w-5 h-5 md:w-7 md:h-7 rounded-full flex items-center justify-center" style={{ backgroundColor: '#8f8f8f' }}>
+          <Palmtree className="w-2.5 h-2.5 md:w-3.5 md:h-3.5 text-white" />
         </div>
       );
     }
     if (type === 'night1_holiday' || type === 'night2_holiday') {
       return (
-        <div 
-          className="w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs font-bold relative"
+        <div
+          className="w-5 h-5 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs font-bold relative"
           style={{ backgroundColor: type === 'night1_holiday' ? '#da5597' : '#5383ec' }}
         >
-          <Moon className="w-3 h-3 md:w-3.5 md:h-3.5 text-white" />
-          <Palmtree className="w-2.5 h-2.5 text-white absolute -bottom-0.5 -right-0.5" style={{ backgroundColor: '#8f8f8f', borderRadius: '50%', padding: '1px' }} />
+          <Moon className="w-2.5 h-2.5 md:w-3.5 md:h-3.5 text-white" />
+          <Palmtree className="w-2 h-2 md:w-2.5 md:h-2.5 text-white absolute -bottom-0.5 -right-0.5" style={{ backgroundColor: '#8f8f8f', borderRadius: '50%', padding: '1px' }} />
         </div>
       );
     }
-    return <div className="w-6 h-6 md:w-7 md:h-7"></div>;
+    return <div className="w-5 h-5 md:w-7 md:h-7"></div>;
   };
 
   const handleCopyLastMonth = async () => {
@@ -232,11 +232,11 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
   }
 
   return (
-    <div className="h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+    <div className="h-full bg-white rounded-none md:rounded-xl shadow-none md:shadow-sm border-0 md:border border-gray-200 overflow-hidden flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b bg-gray-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="p-2.5 md:p-4 border-b bg-gray-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 md:gap-4">
         <div className="flex items-center gap-2 md:gap-4">
-          <span className="text-gray-800 font-bold text-base md:text-xl">
+          <span className="text-gray-800 font-bold text-sm md:text-xl">
             {year}年 {month + 1}月
           </span>
           <div className="flex gap-1 shrink-0">
@@ -252,9 +252,9 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
           {!isReadOnly && (
             <button
               onClick={handleCopyLastMonth}
-              className="flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-full hover:bg-gray-700 transition-colors text-sm font-bold shadow-sm"
+              className="flex items-center gap-1.5 md:gap-2 bg-gray-600 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-full hover:bg-gray-700 transition-colors text-xs md:text-sm font-bold shadow-sm"
             >
-              <Copy className="w-4 h-4" />
+              <Copy className="w-3.5 h-3.5 md:w-4 md:h-4" />
               前月からコピー
             </button>
           )}
@@ -262,7 +262,7 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
       </div>
 
       {/* Legend */}
-      <div className="px-4 py-2 border-b bg-slate-50 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600">
+      <div className="px-2.5 md:px-4 py-1.5 md:py-2 border-b bg-slate-50 flex flex-wrap items-center gap-x-2 md:gap-x-4 gap-y-1 text-[10px] md:text-xs text-gray-600">
         <div className="flex items-center gap-1">
           <div className="w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: '#da5597' }}><Moon className="w-2.5 h-2.5 text-white" /></div>
           <span>夜間待機1</span>
@@ -285,11 +285,12 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
 
       {/* Calendar Grid */}
       <div className="flex-1 overflow-x-auto overflow-y-auto">
-        <table className="w-full border-collapse text-sm min-w-[400px] sm:min-w-[600px] md:min-w-[900px]">
+        <table className="w-full border-collapse text-xs md:text-sm min-w-[400px] sm:min-w-[600px] md:min-w-[900px]">
           <thead className="bg-white sticky top-0 z-10 border-b">
             <tr>
-              <th className="py-3 px-3 text-left font-bold text-gray-600 w-20 md:w-36 border-r bg-gray-50 sticky left-0 z-20">
-                スタッフ
+              <th className="py-2 px-1.5 md:py-3 md:px-3 text-left font-bold text-gray-600 w-16 md:w-36 border-r bg-gray-50 sticky left-0 z-20">
+                <span className="hidden md:inline">スタッフ</span>
+                <span className="md:hidden text-[10px]">名前</span>
               </th>
               {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
                 const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -298,10 +299,10 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
                 return (
                   <th
                     key={day}
-                    className={`py-3 px-1 text-center font-medium w-8 md:w-10 border-r border-gray-100 ${isToday ? 'bg-blue-50' : ''} ${dayOfWeek === 0 ? 'text-red-500' : dayOfWeek === 6 ? 'text-blue-500' : 'text-gray-600'}`}
+                    className={`py-1.5 md:py-3 px-0.5 md:px-1 text-center font-medium w-7 md:w-10 border-r border-gray-100 ${isToday ? 'bg-blue-50' : ''} ${dayOfWeek === 0 ? 'text-red-500' : dayOfWeek === 6 ? 'text-blue-500' : 'text-gray-600'}`}
                   >
-                    <div className="text-xs md:text-xs text-gray-400">{weekDayLabels[dayOfWeek]}</div>
-                    <div className={`text-sm md:text-base ${isToday ? 'font-bold text-blue-600' : ''}`}>{day}</div>
+                    <div className="text-[9px] md:text-xs text-gray-400">{weekDayLabels[dayOfWeek]}</div>
+                    <div className={`text-xs md:text-base ${isToday ? 'font-bold text-blue-600' : ''}`}>{day}</div>
                   </th>
                 );
               })}
@@ -312,15 +313,15 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
               const isDeleting = deletingStaffId === member.id;
               return (
               <tr key={member.id} className={`hover:bg-gray-50/50 group ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}>
-                <td className="py-2 px-3 border-r font-medium text-gray-800 bg-white sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                  <div className="flex items-center gap-2">
+                <td className="py-1.5 md:py-2 px-1.5 md:px-3 border-r font-medium text-gray-800 bg-white sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                  <div className="flex items-center gap-1.5 md:gap-2">
                     {isDeleting ? (
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center bg-red-100 shrink-0">
-                        <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                      <div className="w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center bg-red-100 shrink-0">
+                        <div className="w-3 h-3 md:w-4 md:h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
                       </div>
                     ) : (
                       <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0"
+                        className="w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center font-bold text-[10px] md:text-xs shrink-0"
                         style={{
                           backgroundColor: getColorStyles(member.color).bgLight,
                           color: getColorStyles(member.color).text
@@ -330,10 +331,10 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
                       </div>
                     )}
                     <div className="flex-1 min-w-0 overflow-hidden">
-                      <div className={`truncate font-medium whitespace-nowrap ${isDeleting ? 'text-red-500 line-through' : ''}`} title={member.name}>
+                      <div className={`truncate font-medium whitespace-nowrap text-[11px] md:text-sm ${isDeleting ? 'text-red-500 line-through' : ''}`} title={member.name}>
                         {isDeleting ? '削除中...' : member.name.substring(0, 2)}
                       </div>
-                      {member.jobTitle && !isDeleting && <div className="text-[10px] text-gray-400 truncate whitespace-nowrap max-w-full" title={member.jobTitle}>{member.jobTitle}</div>}
+                      {member.jobTitle && !isDeleting && <div className="text-[9px] md:text-[10px] text-gray-400 truncate whitespace-nowrap max-w-full hidden md:block" title={member.jobTitle}>{member.jobTitle}</div>}
                     </div>
                     {!isReadOnly && !isDeleting && (
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 relative">
@@ -380,7 +381,7 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
                     <td
                       key={day}
                       onClick={(e) => handleCellClick(e, member.id, dateStr)}
-                      className={`p-1 text-center border-r border-b border-gray-100 cursor-pointer hover:bg-gray-100 relative ${isToday ? 'bg-blue-50/50' : ''} ${isActive ? 'bg-blue-100 ring-2 ring-blue-400 ring-inset' : ''}`}
+                      className={`p-0.5 md:p-1 text-center border-r border-b border-gray-100 cursor-pointer hover:bg-gray-100 relative ${isToday ? 'bg-blue-50/50' : ''} ${isActive ? 'bg-blue-100 ring-2 ring-blue-400 ring-inset' : ''}`}
                     >
                       <div className="flex justify-center">
                         {renderCellIcon(effective)}

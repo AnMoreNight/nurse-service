@@ -114,16 +114,16 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
   ];
 
   return (
-    <div className="h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-auto flex flex-col">
-      <div className="p-6 border-b bg-gray-50 flex justify-between items-center sticky top-0 z-10">
-        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-          <Settings className="w-6 h-6 text-slate-600" />
+    <div className="h-full bg-white rounded-none md:rounded-xl shadow-none md:shadow-sm border-0 md:border border-gray-200 overflow-auto flex flex-col">
+      <div className="p-3 md:p-6 border-b bg-gray-50 flex justify-between items-center sticky top-0 z-10 gap-2">
+        <h2 className="text-base md:text-xl font-bold text-gray-800 flex items-center gap-2">
+          <Settings className="w-5 h-5 md:w-6 md:h-6 text-slate-600" />
           詳細設定
         </h2>
         <button
           onClick={handleSave}
           disabled={isLoading}
-          className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors font-bold shadow-md active:scale-95"
+          className="flex items-center gap-1.5 md:gap-2 bg-blue-600 text-white px-3 py-1.5 md:px-6 md:py-2 rounded-full hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors text-xs md:text-sm font-bold shadow-md active:scale-95"
         >
           {isLoading ? (
             <>
@@ -139,30 +139,30 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
         </button>
       </div>
 
-      <div className="p-8 max-w-4xl mx-auto w-full space-y-10">
+      <div className="p-3 md:p-8 max-w-4xl mx-auto w-full space-y-6 md:space-y-10">
 
         {/* Visit Status Settings */}
         <section>
-          <h3 className="text-lg font-bold text-gray-700 mb-4 border-l-4 border-blue-500 pl-3">
+          <h3 className="text-sm md:text-lg font-bold text-gray-700 mb-3 md:mb-4 border-l-4 border-blue-500 pl-3">
             訪問の種類（ステータス）設定
           </h3>
-          <p className="text-sm text-gray-500 mb-4">
+          <p className="text-xs md:text-sm text-gray-500 mb-3 md:mb-4">
             カレンダーやリストに表示される訪問の種類名と色をカスタマイズできます。
           </p>
-          <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
-            <table className="w-full text-left">
+          <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-x-auto">
+            <table className="w-full text-left min-w-[500px]">
               <thead className="bg-slate-100 border-b border-slate-200">
                 <tr>
-                  <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase">表示ラベル</th>
-                  <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase w-48">表示色</th>
-                  <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase w-32 text-center">プレビュー</th>
-                  <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase w-20 text-center">削除</th>
+                  <th className="px-2 md:px-6 py-2 md:py-3 text-[10px] md:text-xs font-bold text-slate-500 uppercase">表示ラベル</th>
+                  <th className="px-2 md:px-6 py-2 md:py-3 text-[10px] md:text-xs font-bold text-slate-500 uppercase w-32 md:w-48">表示色</th>
+                  <th className="px-2 md:px-6 py-2 md:py-3 text-[10px] md:text-xs font-bold text-slate-500 uppercase w-24 md:w-32 text-center">プレビュー</th>
+                  <th className="px-2 md:px-6 py-2 md:py-3 text-[10px] md:text-xs font-bold text-slate-500 uppercase w-14 md:w-20 text-center">削除</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {visitStatuses.map((status, index) => (
                   <tr key={status.key} className="hover:bg-white">
-                    <td className="px-6 py-4">
+                    <td className="px-2 md:px-6 py-2 md:py-4">
                       <input
                         type="text"
                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
@@ -170,7 +170,7 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
                         onChange={(e) => handleStatusChange(index, 'label', e.target.value)}
                       />
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-2 md:px-6 py-2 md:py-4">
                       <select
                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white cursor-pointer"
                         value={status.color}
@@ -181,7 +181,7 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
                         ))}
                       </select>
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-2 md:px-6 py-2 md:py-4 text-center">
                       <span
                         className="inline-block px-3 py-1 rounded text-xs font-bold border"
                         style={{
@@ -193,7 +193,7 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
                         {status.label}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-2 md:px-6 py-2 md:py-4 text-center">
                       <button
                         onClick={() => handleDeleteStatus(status.key)}
                         className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
@@ -205,7 +205,7 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
                 ))}
                 {/* Add New Status Row */}
                 <tr className="bg-blue-50/50">
-                  <td className="px-6 py-4">
+                  <td className="px-2 md:px-6 py-2 md:py-4">
                     <input
                       type="text"
                       className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
@@ -215,7 +215,7 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
                       onKeyDown={(e) => e.key === 'Enter' && handleAddStatus()}
                     />
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-2 md:px-6 py-2 md:py-4">
                     <select
                       className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white cursor-pointer"
                       value={newStatusColor}
@@ -226,7 +226,7 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
                       ))}
                     </select>
                   </td>
-                  <td className="px-6 py-4 text-center">
+                  <td className="px-2 md:px-6 py-2 md:py-4 text-center">
                     <span
                       className="inline-block px-3 py-1 rounded text-xs font-bold border opacity-70"
                       style={{
@@ -238,7 +238,7 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
                       {newStatusLabel || 'プレビュー'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-center">
+                  <td className="px-2 md:px-6 py-2 md:py-4 text-center">
                     <button
                       onClick={handleAddStatus}
                       disabled={!newStatusLabel.trim()}
@@ -255,16 +255,16 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
 
         {/* Job Title Settings */}
         <section>
-          <h3 className="text-lg font-bold text-gray-700 mb-4 border-l-4 border-emerald-500 pl-3">
+          <h3 className="text-sm md:text-lg font-bold text-gray-700 mb-3 md:mb-4 border-l-4 border-emerald-500 pl-3">
             職種マスター設定
           </h3>
-          <p className="text-sm text-gray-500 mb-4">
+          <p className="text-xs md:text-sm text-gray-500 mb-3 md:mb-4">
             スタッフ登録時に選択できる職種を管理します。
           </p>
 
-          <div className="flex flex-wrap gap-3 mb-4">
+          <div className="flex flex-wrap gap-2 md:gap-3 mb-4">
             {jobTitles.map(title => (
-              <div key={title} className="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm text-slate-700 text-sm font-medium group hover:border-red-300 transition-colors">
+              <div key={title} className="flex items-center gap-1.5 md:gap-2 bg-white px-3 py-1.5 md:px-4 md:py-2 rounded-full border border-slate-200 shadow-sm text-slate-700 text-xs md:text-sm font-medium group hover:border-red-300 transition-colors">
                 {title}
                 <button
                   onClick={() => handleDeleteJobTitle(title)}
@@ -276,10 +276,10 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
             ))}
           </div>
 
-          <div className="flex gap-2 max-w-md">
+          <div className="flex gap-2 max-w-full md:max-w-md">
             <input
               type="text"
-              className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+              className="flex-1 min-w-0 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm"
               placeholder="新しい職種名 (例: 作業療法士)"
               value={newJobTitle}
               onChange={(e) => setNewJobTitle(e.target.value)}

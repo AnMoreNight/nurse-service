@@ -109,9 +109,9 @@ export const SearchVisitsModal: React.FC<SearchVisitsModalProps> = ({
             <div className="bg-white rounded-none md:rounded-2xl shadow-2xl w-full h-full md:max-w-4xl md:h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
 
                 {/* Header */}
-                <div className="p-5 border-b bg-gray-50 flex justify-between items-center shrink-0">
-                    <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                        <Search className="w-5 h-5 text-blue-600" />
+                <div className="p-3 md:p-5 border-b bg-gray-50 flex justify-between items-center shrink-0">
+                    <h3 className="text-base md:text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <Search className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
                         スケジュール検索
                     </h3>
                     <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
@@ -120,14 +120,14 @@ export const SearchVisitsModal: React.FC<SearchVisitsModalProps> = ({
                 </div>
 
                 {/* Search Controls */}
-                <div className="p-5 bg-white border-b border-gray-100 space-y-4 shrink-0">
+                <div className="p-3 md:p-5 bg-white border-b border-gray-100 space-y-3 md:space-y-4 shrink-0">
                     {/* Text Search with Autocomplete */}
                     <div className="relative">
-                        <Search className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
+                        <Search className="absolute left-3 top-2.5 w-4 h-4 md:w-5 md:h-5 text-gray-400" />
                         <input
                             type="text"
                             list="patient-suggestions"
-                            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full pl-9 md:pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm md:text-base"
                             placeholder="患者名、住所、メモ、スタッフ名で検索..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
@@ -142,18 +142,18 @@ export const SearchVisitsModal: React.FC<SearchVisitsModalProps> = ({
 
                     {/* Date Range */}
                     <div className="flex flex-wrap items-center gap-2 text-sm">
-                        <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border">
+                        <div className="flex flex-wrap items-center gap-1.5 md:gap-2 bg-gray-50 px-2 md:px-3 py-1.5 rounded-lg border w-full sm:w-auto">
                             <span className="text-gray-500 font-bold text-xs">期間:</span>
                             <input
                                 type="date"
-                                className="bg-transparent border-none outline-none text-gray-700 font-medium cursor-pointer"
+                                className="bg-transparent border-none outline-none text-gray-700 font-medium cursor-pointer text-xs md:text-sm"
                                 value={startDate}
                                 onChange={(e) => setStartDate(e.target.value)}
                             />
                             <span className="text-gray-400">～</span>
                             <input
                                 type="date"
-                                className="bg-transparent border-none outline-none text-gray-700 font-medium cursor-pointer"
+                                className="bg-transparent border-none outline-none text-gray-700 font-medium cursor-pointer text-xs md:text-sm"
                                 value={endDate}
                                 onChange={(e) => setEndDate(e.target.value)}
                             />
@@ -165,14 +165,14 @@ export const SearchVisitsModal: React.FC<SearchVisitsModalProps> = ({
                 </div>
 
                 {/* Results List */}
-                <div className="flex-1 overflow-y-auto bg-gray-50 p-4">
+                <div className="flex-1 overflow-y-auto bg-gray-50 p-2.5 md:p-4">
                     {searchResults.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                            <Search className="w-12 h-12 mb-2 opacity-20" />
-                            <p>条件に一致する予定はありません</p>
+                            <Search className="w-10 h-10 md:w-12 md:h-12 mb-2 opacity-20" />
+                            <p className="text-sm md:text-base">条件に一致する予定はありません</p>
                         </div>
                     ) : (
-                        <div className="space-y-3">
+                        <div className="space-y-2 md:space-y-3">
                             {searchResults.map((visit, idx) => {
                                 const dateObj = new Date(visit.date);
                                 const dateLabel = dateObj.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
@@ -185,21 +185,21 @@ export const SearchVisitsModal: React.FC<SearchVisitsModalProps> = ({
                                             onSelectVisit(visit);
                                             onClose();
                                         }}
-                                        className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group"
+                                        className="bg-white p-3 md:p-4 rounded-lg md:rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group"
                                     >
-                                        <div className="flex justify-between items-start mb-2">
-                                            <div className="flex items-center gap-2">
-                                                <div className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+                                        <div className="flex flex-wrap justify-between items-start gap-1.5 mb-2">
+                                            <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
+                                                <div className="bg-gray-100 text-gray-600 px-1.5 md:px-2 py-0.5 md:py-1 rounded text-[10px] md:text-xs font-bold flex items-center gap-1">
                                                     <Calendar className="w-3 h-3" />
                                                     {dateLabel}
                                                 </div>
-                                                <div className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+                                                <div className="bg-gray-100 text-gray-600 px-1.5 md:px-2 py-0.5 md:py-1 rounded text-[10px] md:text-xs font-bold flex items-center gap-1">
                                                     <Clock className="w-3 h-3" />
                                                     {visit.startTime} - {visit.endTime}
                                                 </div>
                                             </div>
                                             <span
-                                                className="px-2 py-0.5 rounded text-[10px] font-bold border"
+                                                className="px-2 py-0.5 rounded text-[10px] font-bold border shrink-0"
                                                 style={{
                                                     backgroundColor: getColorStyles(color).bgLight,
                                                     color: getColorStyles(color).text,
@@ -210,29 +210,29 @@ export const SearchVisitsModal: React.FC<SearchVisitsModalProps> = ({
                                             </span>
                                         </div>
 
-                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
-                                                    <User className="w-5 h-5" />
+                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 md:gap-4">
+                                            <div className="flex items-center gap-2 md:gap-3">
+                                                <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 shrink-0">
+                                                    <User className="w-4 h-4 md:w-5 md:h-5" />
                                                 </div>
-                                                <div>
-                                                    <h4 className="font-bold text-gray-800 text-base">{visit.patientName}</h4>
+                                                <div className="min-w-0">
+                                                    <h4 className="font-bold text-gray-800 text-sm md:text-base truncate">{visit.patientName}</h4>
                                                     {visit.address && (
-                                                        <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
-                                                            <MapPin className="w-3 h-3" />
-                                                            {visit.address}
+                                                        <div className="flex items-center gap-1 text-[10px] md:text-xs text-gray-500 mt-0.5">
+                                                            <MapPin className="w-3 h-3 shrink-0" />
+                                                            <span className="truncate">{visit.address}</span>
                                                         </div>
                                                     )}
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-3 md:gap-4 ml-10 md:ml-0">
                                                 {/* Staff */}
                                                 <div className="flex -space-x-2">
                                                     {visit.staffMembers && visit.staffMembers.map(s => (
                                                         <div
                                                             key={s.id}
-                                                            className="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-xs font-bold text-white"
+                                                            className="w-6 h-6 md:w-8 md:h-8 rounded-full border-2 border-white flex items-center justify-center text-[10px] md:text-xs font-bold text-white"
                                                             style={{ backgroundColor: getColorStyles(s.color).bg }}
                                                             title={s.name}
                                                         >
@@ -240,11 +240,11 @@ export const SearchVisitsModal: React.FC<SearchVisitsModalProps> = ({
                                                         </div>
                                                     ))}
                                                 </div>
-                                                <ArrowRight className="w-5 h-5 text-gray-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
+                                                <ArrowRight className="w-4 h-4 md:w-5 md:h-5 text-gray-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
                                             </div>
                                         </div>
                                         {visit.notes && (
-                                            <div className="mt-3 text-xs text-gray-500 bg-gray-50 p-2 rounded border border-gray-100 truncate">
+                                            <div className="mt-2 md:mt-3 text-[10px] md:text-xs text-gray-500 bg-gray-50 p-1.5 md:p-2 rounded border border-gray-100 truncate">
                                                 {visit.notes}
                                             </div>
                                         )}

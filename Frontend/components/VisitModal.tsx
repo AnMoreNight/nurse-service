@@ -559,8 +559,8 @@ export const VisitModal: React.FC<VisitModalProps> = ({
 
                             {/* Monthly Recurrence Details */}
                             {getRecurrenceMode() === 'monthly' && recurrenceRule && (
-                                <div className="mt-2 ml-9 p-3 bg-gray-50 rounded-lg border border-gray-200 text-sm animate-in fade-in slide-in-from-top-1">
-                                    <div className="flex gap-4 mb-3">
+                                <div className="mt-2 ml-0 md:ml-9 p-3 bg-gray-50 rounded-lg border border-gray-200 text-sm animate-in fade-in slide-in-from-top-1">
+                                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-3">
                                         <label className="flex items-center gap-2 cursor-pointer">
                                             <input
                                                 type="radio"

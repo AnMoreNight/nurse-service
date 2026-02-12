@@ -541,10 +541,14 @@ export default function NurseAppConnected() {
   }
 
   return (
-    <div className="flex h-screen bg-slate-900 text-white font-sans overflow-hidden">
+    <div className="flex h-dvh bg-slate-900 text-white font-sans overflow-hidden">
+      {/* Mobile sidebar backdrop */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setIsMobileMenuOpen(false)} />
+      )}
       {/* Sidebar */}
       <aside className={`${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-50 w-64 bg-slate-800 border-r border-slate-700 transition-transform duration-300 flex flex-col`}>
-        <div className="p-6 border-b border-slate-700 flex items-center justify-between">
+        <div className="p-4 md:p-6 border-b border-slate-700 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-teal-600 rounded-xl flex items-center justify-center">
               <span className="text-xl font-bold">C</span>
@@ -583,19 +587,19 @@ export default function NurseAppConnected() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-slate-800 border-b border-slate-700 p-4 flex items-center justify-between">
-          <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden">
+        <header className="bg-slate-800 border-b border-slate-700 px-3 py-2.5 md:p-4 flex items-center justify-between gap-2">
+          <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden shrink-0">
             <Menu className="w-6 h-6" />
           </button>
-          <h2 className="text-xl font-bold">
+          <h2 className="text-sm md:text-xl font-bold truncate">
             {view === 'schedule' && 'スケジュール管理'}
             {view === 'shifts' && 'シフト管理'}
             {view === 'users' && 'ユーザー管理'}
             {view === 'settings' && '詳細設定'}
           </h2>
-          <div className="flex gap-2">
-            {view === 'schedule' && <button onClick={handleExportSchedules} className="px-4 py-2 bg-teal-600 hover:bg-teal-700 rounded-lg flex items-center gap-2"><Download className="w-4 h-4" />CSV</button>}
-            {view === 'shifts' && <button onClick={handleExportShifts} className="px-4 py-2 bg-teal-600 hover:bg-teal-700 rounded-lg flex items-center gap-2"><Download className="w-4 h-4" />CSV</button>}
+          <div className="flex gap-2 shrink-0">
+            {view === 'schedule' && <button onClick={handleExportSchedules} className="px-2.5 py-1.5 md:px-4 md:py-2 text-xs md:text-sm bg-teal-600 hover:bg-teal-700 rounded-lg flex items-center gap-1.5 md:gap-2"><Download className="w-3.5 h-3.5 md:w-4 md:h-4" /><span className="hidden sm:inline">CSV</span></button>}
+            {view === 'shifts' && <button onClick={handleExportShifts} className="px-2.5 py-1.5 md:px-4 md:py-2 text-xs md:text-sm bg-teal-600 hover:bg-teal-700 rounded-lg flex items-center gap-1.5 md:gap-2"><Download className="w-3.5 h-3.5 md:w-4 md:h-4" /><span className="hidden sm:inline">CSV</span></button>}
           </div>
         </header>
 

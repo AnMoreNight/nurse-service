@@ -117,9 +117,27 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    box-sizing: border-box;
+  }
+  html {
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
   }
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden;
+    min-height: 100vh;
+    min-height: 100dvh;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* Prevent inputs from zooming on iOS (16px minimum) */
+  input, select, textarea {
+    font-size: 16px;
+  }
+  @media (min-width: 768px) {
+    input, select, textarea {
+      font-size: inherit;
+    }
   }
 }
 
@@ -129,12 +147,12 @@
   .fixed.inset-0 {
     padding-bottom: env(safe-area-inset-bottom);
   }
-  
+
   /* Ensure modals are scrollable and buttons are visible */
   .max-h-\[100vh\] {
     max-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   }
-  
+
   /* Ensure calendar dropdown is properly positioned on mobile */
   .animate-in.fade-in.zoom-in-95 {
     transform-origin: top right;
@@ -143,6 +161,17 @@
   /* Improve schedule header responsiveness */
   #dashboard-scroll-container {
     -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent horizontal overflow on tables */
+  table {
+    table-layout: auto;
+  }
+
+  /* Smooth scrolling for overflow containers */
+  .overflow-x-auto, .overflow-auto {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
   }
 }
 

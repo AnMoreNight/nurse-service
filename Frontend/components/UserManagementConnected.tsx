@@ -190,77 +190,78 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
         </div>
       )}
       {/* Header */}
-      <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
+      <div className="p-3 md:p-4 border-b bg-gray-50 flex justify-between items-center gap-2">
         <div>
-          <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-            <UsersIcon className="w-5 h-5 text-purple-600" />
+          <h2 className="text-base md:text-lg font-bold text-gray-800 flex items-center gap-2">
+            <UsersIcon className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
             ユーザー管理
           </h2>
-          <p className="text-sm text-gray-500 mt-1">{totalUsers} 人</p>
+          <p className="text-xs md:text-sm text-gray-500 mt-0.5 md:mt-1">{totalUsers} 人</p>
         </div>
         <button
           onClick={() => openModal()}
           disabled={saving}
-          className="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors text-sm font-bold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1.5 md:gap-2 bg-teal-600 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-lg hover:bg-teal-700 transition-colors text-xs md:text-sm font-bold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
         >
-          <Plus className="w-4 h-4" />
-          ユーザー追加
+          <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" />
+          <span className="hidden sm:inline">ユーザー追加</span>
+          <span className="sm:hidden">追加</span>
         </button>
       </div>
 
       {/* Table */}
       <div className="flex-1 overflow-auto">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full text-left border-collapse min-w-[540px]">
           <thead className="bg-white border-b sticky top-0 z-10">
             <tr>
-              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">名前</th>
-              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">メール</th>
-              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">職種</th>
-              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">権限</th>
-              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">状態</th>
-              <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase text-right">操作</th>
+              <th className="px-2 md:px-6 py-2 md:py-4 text-[10px] md:text-xs font-bold text-gray-500 uppercase">名前</th>
+              <th className="px-2 md:px-6 py-2 md:py-4 text-[10px] md:text-xs font-bold text-gray-500 uppercase">メール</th>
+              <th className="px-2 md:px-6 py-2 md:py-4 text-[10px] md:text-xs font-bold text-gray-500 uppercase hidden md:table-cell">職種</th>
+              <th className="px-2 md:px-6 py-2 md:py-4 text-[10px] md:text-xs font-bold text-gray-500 uppercase">権限</th>
+              <th className="px-2 md:px-6 py-2 md:py-4 text-[10px] md:text-xs font-bold text-gray-500 uppercase hidden sm:table-cell">状態</th>
+              <th className="px-2 md:px-6 py-2 md:py-4 text-[10px] md:text-xs font-bold text-gray-500 uppercase text-right">操作</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {users.map((user) => (
               <tr key={user.user_id} className="hover:bg-gray-50 group">
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
+                <td className="px-2 md:px-6 py-2 md:py-4">
+                  <div className="flex items-center gap-2 md:gap-3">
                     <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold"
+                      className="w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center text-white text-[10px] md:text-sm font-bold shrink-0"
                       style={{ backgroundColor: user.display_color || '#3B82F6' }}
                     >
                       {user.name.charAt(0)}
                     </div>
-                    <div className="font-bold text-gray-800">{user.name}</div>
+                    <div className="font-bold text-gray-800 text-xs md:text-sm truncate">{user.name}</div>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{user.job_title || '-'}</td>
-                <td className="px-6 py-4">{getRoleBadge(user.role)}</td>
-                <td className="px-6 py-4">
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${user.is_active ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                <td className="px-2 md:px-6 py-2 md:py-4 text-xs md:text-sm text-gray-600 truncate max-w-[120px] md:max-w-none">{user.email}</td>
+                <td className="px-2 md:px-6 py-2 md:py-4 text-xs md:text-sm text-gray-600 hidden md:table-cell">{user.job_title || '-'}</td>
+                <td className="px-2 md:px-6 py-2 md:py-4">{getRoleBadge(user.role)}</td>
+                <td className="px-2 md:px-6 py-2 md:py-4 hidden sm:table-cell">
+                  <span className={`px-1.5 md:px-2 py-0.5 md:py-1 rounded text-[10px] md:text-xs font-medium ${user.is_active ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
                     }`}>
                     {user.is_active ? '有効' : '無効'}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex items-center justify-end gap-2">
+                <td className="px-2 md:px-6 py-2 md:py-4 text-right">
+                  <div className="flex items-center justify-end gap-1 md:gap-2">
                     <button
                       onClick={() => openModal(user)}
                       disabled={saving}
-                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="p-1.5 md:p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       title="編集"
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Pencil className="w-3.5 h-3.5 md:w-4 md:h-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(user.user_id)}
                       disabled={saving}
-                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="p-1.5 md:p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       title="削除"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
                     </button>
                   </div>
                 </td>

@@ -455,21 +455,21 @@ export default function AdminPage() {
       )}
       {/* Header */}
       <div className="border-b border-gray-200 bg-white sticky top-0 z-40 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="max-w-7xl mx-auto px-3 md:px-6 py-3 md:py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-                <Image src="/image.png" alt="Logo" width={28} height={28} className="object-contain" />
+              <h1 className="text-lg md:text-2xl font-bold text-gray-900 flex items-center gap-2 md:gap-3">
+                <Image src="/image.png" alt="Logo" width={24} height={24} className="object-contain md:w-7 md:h-7" />
                 システム管理
               </h1>
-              <p className="text-gray-600 text-sm mt-1">会社とユーザーの管理</p>
+              <p className="text-gray-600 text-xs md:text-sm mt-0.5 md:mt-1">会社とユーザーの管理</p>
             </div>
             <button
               onClick={handleLogout}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-2 shadow-sm"
+              className="px-3 py-1.5 md:px-4 md:py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-1.5 md:gap-2 shadow-sm text-xs md:text-sm"
             >
-              <LogOut size={18} />
-              ログアウト
+              <LogOut size={16} className="md:w-4.5 md:h-4.5" />
+              <span className="hidden sm:inline">ログアウト</span>
             </button>
           </div>
         </div>
@@ -477,17 +477,17 @@ export default function AdminPage() {
 
       {/* Tabs */}
       <div className="border-b border-gray-200 bg-white">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-7xl mx-auto px-3 md:px-6">
           <div className="flex gap-1">
             <button
               onClick={() => setActiveTab('companies')}
-              className={`px-6 py-3 font-semibold transition-colors relative ${activeTab === 'companies'
+              className={`px-3 md:px-6 py-2.5 md:py-3 font-semibold transition-colors relative text-sm md:text-base ${activeTab === 'companies'
                 ? 'text-teal-600'
                 : 'text-gray-500 hover:text-gray-700'
                 }`}
             >
-              <div className="flex items-center gap-2">
-                <Building2 size={20} />
+              <div className="flex items-center gap-1.5 md:gap-2">
+                <Building2 size={18} className="md:w-5 md:h-5" />
                 会社 ({companies.length})
               </div>
               {activeTab === 'companies' && (
@@ -496,13 +496,13 @@ export default function AdminPage() {
             </button>
             <button
               onClick={() => setActiveTab('users')}
-              className={`px-6 py-3 font-semibold transition-colors relative ${activeTab === 'users'
+              className={`px-3 md:px-6 py-2.5 md:py-3 font-semibold transition-colors relative text-sm md:text-base ${activeTab === 'users'
                 ? 'text-teal-600'
                 : 'text-gray-500 hover:text-gray-700'
                 }`}
             >
-              <div className="flex items-center gap-2">
-                <Users size={20} />
+              <div className="flex items-center gap-1.5 md:gap-2">
+                <Users size={18} className="md:w-5 md:h-5" />
                 ユーザー ({totalUsers})
               </div>
               {activeTab === 'users' && (
@@ -514,34 +514,34 @@ export default function AdminPage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-3 md:px-6 py-4 md:py-8">
         {activeTab === 'companies' ? (
           <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-900">会社一覧</h2>
+            <div className="flex justify-between items-center mb-4 md:mb-6">
+              <h2 className="text-base md:text-xl font-bold text-gray-900">会社一覧</h2>
               <button
                 onClick={() => openCompanyModal()}
                 disabled={saving}
-                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 md:px-4 md:py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors flex items-center gap-1.5 md:gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed text-xs md:text-sm"
               >
-                <Plus size={20} />
+                <Plus size={16} className="md:w-5 md:h-5" />
                 会社を追加
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
               {companies.map((company) => (
                 <div
                   key={company.company_id}
-                  className="bg-white rounded-lg p-6 hover:shadow-md transition-shadow border border-gray-200"
+                  className="bg-white rounded-lg p-4 md:p-6 hover:shadow-md transition-shadow border border-gray-200"
                 >
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center">
-                        <Building2 className="w-6 h-6 text-teal-600" />
+                  <div className="flex justify-between items-start mb-3 md:mb-4">
+                    <div className="flex items-center gap-2.5 md:gap-3">
+                      <div className="w-10 h-10 md:w-12 md:h-12 bg-teal-100 rounded-lg flex items-center justify-center shrink-0">
+                        <Building2 className="w-5 h-5 md:w-6 md:h-6 text-teal-600" />
                       </div>
-                      <div>
-                        <h3 className="font-bold text-lg text-gray-900">{company.name}</h3>
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-base md:text-lg text-gray-900 truncate">{company.name}</h3>
                         <p className="text-xs text-gray-500">
                           {users.filter(u => u.company_id === company.company_id).length} ユーザー
                         </p>
@@ -549,29 +549,29 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2 mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex gap-1.5 md:gap-2 mt-3 md:mt-4 pt-3 md:pt-4 border-t border-gray-200">
                     <button
                       onClick={() => openCompanyModal(company)}
                       disabled={saving}
-                      className="flex-1 px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 px-2 md:px-3 py-1.5 md:py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors flex items-center justify-center gap-1 md:gap-2 text-xs md:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Pencil size={16} />
+                      <Pencil size={14} className="md:w-4 md:h-4" />
                       編集
                     </button>
                     <button
                       onClick={() => openAdminModal(company)}
                       disabled={saving}
-                      className="flex-1 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 px-2 md:px-3 py-1.5 md:py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center justify-center gap-1 md:gap-2 text-xs md:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Shield size={16} />
+                      <Shield size={14} className="md:w-4 md:h-4" />
                       管理者
                     </button>
                     <button
                       onClick={() => handleDeleteCompany(company.company_id)}
                       disabled={saving}
-                      className="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 px-2 md:px-3 py-1.5 md:py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center justify-center gap-1 md:gap-2 text-xs md:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={14} className="md:w-4 md:h-4" />
                       削除
                     </button>
                   </div>
@@ -581,39 +581,39 @@ export default function AdminPage() {
           </div>
         ) : (
           <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-900">全ユーザー ({totalUsers})
+            <div className="flex justify-between items-center mb-4 md:mb-6">
+              <h2 className="text-base md:text-xl font-bold text-gray-900">全ユーザー ({totalUsers})
               </h2>
               <button
                 onClick={() => openUserModal()}
                 disabled={saving}
-                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 md:px-4 md:py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors flex items-center gap-1.5 md:gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed text-xs md:text-sm"
               >
-                <UserPlus size={20} />
-                ユーザーを追加
+                <UserPlus size={16} className="md:w-5 md:h-5" />
+                <span className="hidden sm:inline">ユーザーを</span>追加
               </button>
             </div>
 
-            <div className="bg-white rounded-lg overflow-hidden shadow-sm border border-gray-200">
-              <table className="w-full">
+            <div className="bg-white rounded-lg overflow-hidden shadow-sm border border-gray-200 overflow-x-auto">
+              <table className="w-full min-w-[540px]">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">名前</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">メール</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">権限</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">会社</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">職種</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">状態</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">操作</th>
+                    <th className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700">名前</th>
+                    <th className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700 hidden sm:table-cell">メール</th>
+                    <th className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700">権限</th>
+                    <th className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700 hidden md:table-cell">会社</th>
+                    <th className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700 hidden lg:table-cell">職種</th>
+                    <th className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700 hidden sm:table-cell">状態</th>
+                    <th className="text-right py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700">操作</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {users.map((user) => (
                     <tr key={user.user_id} className="hover:bg-gray-50">
-                      <td className="py-3 px-4 text-gray-900">{user.name}</td>
-                      <td className="py-3 px-4 text-gray-600">{user.email}</td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${user.role === 'SUPER_ADMIN' ? 'bg-purple-100 text-purple-700' :
+                      <td className="py-2 md:py-3 px-2 md:px-4 text-gray-900 text-xs md:text-sm">{user.name}</td>
+                      <td className="py-2 md:py-3 px-2 md:px-4 text-gray-600 text-xs md:text-sm hidden sm:table-cell max-w-[180px] truncate">{user.email}</td>
+                      <td className="py-2 md:py-3 px-2 md:px-4">
+                        <span className={`px-1.5 md:px-2 py-0.5 md:py-1 rounded text-[10px] md:text-xs font-medium whitespace-nowrap ${user.role === 'SUPER_ADMIN' ? 'bg-purple-100 text-purple-700' :
                           user.role === 'COMPANY_ADMIN' ? 'bg-teal-100 text-teal-700' :
                             'bg-green-100 text-green-700'
                           }`}>
@@ -621,29 +621,29 @@ export default function AdminPage() {
                             user.role === 'COMPANY_ADMIN' ? '会社管理者' : '一般ユーザー'}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-gray-600">{getCompanyName(user.company_id)}</td>
-                      <td className="py-3 px-4 text-gray-600">{user.profession || '-'}</td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${user.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      <td className="py-2 md:py-3 px-2 md:px-4 text-gray-600 text-xs md:text-sm hidden md:table-cell">{getCompanyName(user.company_id)}</td>
+                      <td className="py-2 md:py-3 px-2 md:px-4 text-gray-600 text-xs md:text-sm hidden lg:table-cell">{user.profession || '-'}</td>
+                      <td className="py-2 md:py-3 px-2 md:px-4 hidden sm:table-cell">
+                        <span className={`px-1.5 md:px-2 py-0.5 md:py-1 rounded text-[10px] md:text-xs font-medium ${user.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                           }`}>
                           {user.is_active ? '有効' : '無効'}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex justify-end gap-2">
+                      <td className="py-2 md:py-3 px-2 md:px-4 text-right">
+                        <div className="flex justify-end gap-1 md:gap-2">
                           <button
                             onClick={() => openUserModal(user)}
                             disabled={saving}
-                            className="p-2 text-teal-600 hover:text-teal-700 hover:bg-teal-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="p-1.5 md:p-2 text-teal-600 hover:text-teal-700 hover:bg-teal-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            <Pencil size={16} />
+                            <Pencil size={14} className="md:w-4 md:h-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteUser(user.user_id)}
                             disabled={saving}
-                            className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="p-1.5 md:p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={14} className="md:w-4 md:h-4" />
                           </button>
                         </div>
                       </td>
@@ -654,13 +654,13 @@ export default function AdminPage() {
             </div>
 
             {/* Pagination Controls */}
-            <div className="mt-4 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="text-sm text-gray-600">
-                  表示中: {users.length > 0 ? ((currentPage - 1) * pageSize + 1) : 0} - {Math.min(currentPage * pageSize, totalUsers)} / 全 {totalUsers} 件
+            <div className="mt-3 md:mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 md:gap-0">
+              <div className="flex flex-wrap items-center gap-2 md:gap-4">
+                <div className="text-xs md:text-sm text-gray-600">
+                  {users.length > 0 ? ((currentPage - 1) * pageSize + 1) : 0}-{Math.min(currentPage * pageSize, totalUsers)} / {totalUsers}件
                 </div>
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-gray-600">表示件数:</label>
+                <div className="flex items-center gap-1.5 md:gap-2">
+                  <label className="text-xs md:text-sm text-gray-600">件数:</label>
                   <select
                     value={pageSize}
                     onChange={(e) => {
@@ -669,7 +669,7 @@ export default function AdminPage() {
                       setCurrentPage(1);
                       loadUsers(1, newSize);
                     }}
-                    className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
+                    className="px-2 md:px-3 py-1 border border-gray-300 rounded-lg text-xs md:text-sm focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
                   >
                     <option value={10}>10</option>
                     <option value={25}>25</option>
@@ -679,7 +679,7 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 md:gap-2">
                 <button
                   onClick={() => {
                     if (currentPage > 1) {
@@ -689,13 +689,13 @@ export default function AdminPage() {
                     }
                   }}
                   disabled={currentPage <= 1}
-                  className="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-2.5 md:px-3 py-1 border border-gray-300 rounded-lg text-xs md:text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   前へ
                 </button>
 
-                <span className="text-sm text-gray-600">
-                  ページ {currentPage} / {totalPages}
+                <span className="text-xs md:text-sm text-gray-600">
+                  {currentPage}/{totalPages}
                 </span>
 
                 <button
@@ -707,7 +707,7 @@ export default function AdminPage() {
                     }
                   }}
                   disabled={currentPage >= totalPages}
-                  className="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-2.5 md:px-3 py-1 border border-gray-300 rounded-lg text-xs md:text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   次へ
                 </button>
@@ -719,15 +719,15 @@ export default function AdminPage() {
 
       {/* Company Modal */}
       {isCompanyModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col">
-            <div className="p-6 border-b border-gray-200 flex-shrink-0">
-              <h3 className="text-xl font-bold text-gray-900">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-4">
+          <div className="bg-white rounded-t-xl sm:rounded-xl shadow-2xl w-full sm:max-w-md max-h-[90vh] flex flex-col">
+            <div className="p-4 md:p-6 border-b border-gray-200 flex-shrink-0">
+              <h3 className="text-lg md:text-xl font-bold text-gray-900">
                 {editingCompany ? '会社を編集' : '新しい会社を追加'}
               </h3>
             </div>
 
-            <div className="p-6 space-y-4 overflow-y-auto flex-1">
+            <div className="p-4 md:p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   会社名 <span className="text-red-500">*</span>
@@ -756,7 +756,7 @@ export default function AdminPage() {
                   </div>
 
                   {companyForm.create_admin && (
-                    <div className="pl-6 space-y-4 bg-gray-50 p-4 rounded-lg">
+                    <div className="pl-4 md:pl-6 space-y-4 bg-gray-50 p-3 md:p-4 rounded-lg">
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
                           管理者名 <span className="text-red-500">*</span>
@@ -803,11 +803,11 @@ export default function AdminPage() {
               )}
             </div>
 
-            <div className="p-6 border-t border-gray-200 flex gap-3 flex-shrink-0">
+            <div className="p-4 md:p-6 border-t border-gray-200 flex gap-3 shrink-0">
               <button
                 onClick={() => setIsCompanyModalOpen(false)}
                 disabled={saving}
-                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <X size={18} />
                 キャンセル
@@ -815,7 +815,7 @@ export default function AdminPage() {
               <button
                 onClick={handleSaveCompany}
                 disabled={saving}
-                className="flex-1 px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2 text-sm md:text-base"
               >
                 {saving ? (
                   <>
@@ -836,15 +836,15 @@ export default function AdminPage() {
 
       {/* User Modal */}
       {isUserModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col">
-            <div className="p-6 border-b border-gray-200 flex-shrink-0">
-              <h3 className="text-xl font-bold text-gray-900">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-4">
+          <div className="bg-white rounded-t-xl sm:rounded-xl shadow-2xl w-full sm:max-w-md max-h-[90vh] flex flex-col">
+            <div className="p-4 md:p-6 border-b border-gray-200 shrink-0">
+              <h3 className="text-lg md:text-xl font-bold text-gray-900">
                 {editingUser ? 'ユーザーを編集' : '新しいユーザーを追加'}
               </h3>
             </div>
 
-            <div className="p-6 space-y-4 overflow-y-auto flex-1">
+            <div className="p-4 md:p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   名前 <span className="text-red-500">*</span>
@@ -967,11 +967,11 @@ export default function AdminPage() {
               </div>
             </div>
 
-            <div className="p-6 border-t border-gray-200 flex gap-3 flex-shrink-0">
+            <div className="p-4 md:p-6 border-t border-gray-200 flex gap-3 shrink-0">
               <button
                 onClick={() => setIsUserModalOpen(false)}
                 disabled={saving}
-                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <X size={18} />
                 キャンセル
@@ -979,7 +979,7 @@ export default function AdminPage() {
               <button
                 onClick={handleSaveUser}
                 disabled={saving}
-                className="flex-1 px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2 text-sm md:text-base"
               >
                 {saving ? (
                   <>
@@ -1000,16 +1000,16 @@ export default function AdminPage() {
 
       {/* Company Admin Management Modal */}
       {isAdminModalOpen && selectedCompany && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-            <div className="p-6 border-b border-gray-200 flex-shrink-0">
-              <h3 className="text-xl font-bold text-gray-900">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-4">
+          <div className="bg-white rounded-t-xl sm:rounded-xl shadow-2xl w-full sm:max-w-2xl max-h-[90vh] flex flex-col">
+            <div className="p-4 md:p-6 border-b border-gray-200 shrink-0">
+              <h3 className="text-lg md:text-xl font-bold text-gray-900 truncate">
                 {selectedCompany.name} - 管理者管理
               </h3>
-              <p className="text-sm text-gray-600 mt-1">会社管理者の追加・削除</p>
+              <p className="text-xs md:text-sm text-gray-600 mt-1">会社管理者の追加・削除</p>
             </div>
 
-            <div className="p-6 space-y-6 overflow-y-auto flex-1">
+            <div className="p-4 md:p-6 space-y-4 md:space-y-6 overflow-y-auto flex-1">
               {/* Current admins */}
               <div>
                 <h4 className="text-sm font-bold text-gray-700 mb-3">現在の管理者</h4>
@@ -1022,21 +1022,21 @@ export default function AdminPage() {
                     {companyAdmins.map((admin) => (
                       <div
                         key={admin.user_id}
-                        className="flex items-center justify-between bg-purple-50 border border-purple-200 rounded-lg p-3"
+                        className="flex items-center justify-between bg-purple-50 border border-purple-200 rounded-lg p-2.5 md:p-3"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                        <div className="flex items-center gap-2 md:gap-3 min-w-0">
+                          <div className="w-8 h-8 md:w-10 md:h-10 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm md:text-base shrink-0">
                             {admin.name.substring(0, 1)}
                           </div>
-                          <div>
-                            <div className="font-semibold text-gray-900">{admin.name}</div>
-                            <div className="text-sm text-gray-600">{admin.email}</div>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-gray-900 text-sm md:text-base truncate">{admin.name}</div>
+                            <div className="text-xs md:text-sm text-gray-600 truncate">{admin.email}</div>
                           </div>
                         </div>
                         <button
                           onClick={() => handleRemoveAdmin(admin.user_id)}
                           disabled={saving}
-                          className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-2 md:px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs md:text-sm transition-colors flex items-center gap-1 shrink-0 ml-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <X size={14} />
                           削除
@@ -1048,18 +1048,18 @@ export default function AdminPage() {
               </div>
 
               {/* Assign new admin */}
-              <div className="border-t border-gray-200 pt-6">
+              <div className="border-t border-gray-200 pt-4 md:pt-6">
                 <h4 className="text-sm font-bold text-gray-700 mb-3">新しい管理者を割り当て</h4>
                 {availableUsers.length === 0 ? (
                   <div className="text-sm text-gray-500 bg-gray-50 rounded-lg p-4 text-center">
                     割り当て可能なユーザーがいません
                   </div>
                 ) : (
-                  <div className="flex gap-3">
+                  <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
                     <select
                       value={selectedUserId}
                       onChange={(e) => setSelectedUserId(e.target.value)}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-sm md:text-base"
                     >
                       <option value="">ユーザーを選択...</option>
                       {availableUsers.map((user) => (
@@ -1071,7 +1071,7 @@ export default function AdminPage() {
                     <button
                       onClick={handleAssignAdmin}
                       disabled={!selectedUserId || saving}
-                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Shield size={18} />
                       割り当て
@@ -1081,11 +1081,11 @@ export default function AdminPage() {
               </div>
             </div>
 
-            <div className="p-6 border-t border-gray-200 flex-shrink-0">
+            <div className="p-4 md:p-6 border-t border-gray-200 shrink-0">
               <button
                 onClick={() => setIsAdminModalOpen(false)}
                 disabled={saving}
-                className="w-full px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <X size={18} />
                 閉じる
