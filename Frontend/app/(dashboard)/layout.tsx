@@ -99,14 +99,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         <nav className="flex-1 py-6 space-y-2 px-3 overflow-y-auto">
           <NavButton active={isActive('schedule')} onClick={() => setView('schedule')} icon={<Calendar size={20} />} label="スケジュール" />
           <NavButton active={isActive('shifts')} onClick={() => setView('shifts')} icon={<Notebook size={20} />} label="シフト管理" />
-
-          <div className="hidden md:block">
-            <NavButton active={isActive('search')} onClick={() => setView('search')} icon={<Search size={20} />} label="検索" />
-          </div>
-
-          <div className="hidden md:block">
-            <NavButton active={isActive('export')} onClick={() => setView('export')} icon={<Download size={20} />} label="データ出力" />
-          </div>
+          <NavButton active={isActive('search')} onClick={() => setView('search')} icon={<Search size={20} />} label="検索" />
+          <NavButton active={isActive('export')} onClick={() => setView('export')} icon={<Download size={20} />} label="データ出力" />
 
           {/* Admin-only navigation items */}
           {(currentUser?.role === 'COMPANY_ADMIN') && (

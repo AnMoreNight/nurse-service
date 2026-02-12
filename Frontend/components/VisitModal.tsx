@@ -104,6 +104,20 @@ export const VisitModal: React.FC<VisitModalProps> = ({
 
     // Check for unsaved changes
     const hasChanges = () => {
+        // For new visits, only check if meaningful data is entered
+        if (isNew) {
+            return (
+                patientName.trim() !== '' ||
+                address.trim() !== '' ||
+                notes.trim() !== '' ||
+                staffIds.length > 0 ||
+                date !== new Date().toISOString().split('T')[0] ||
+                (startTime !== '09:00' || endTime !== '10:00') ||
+                status !== 'REGULAR_NURSE'
+            );
+        }
+
+        // For existing visits, check all changes
         if (
             date !== visit.date ||
             startTime !== visit.startTime ||
@@ -111,7 +125,7 @@ export const VisitModal: React.FC<VisitModalProps> = ({
             patientName !== visit.patientName ||
             address !== (visit.address || '') ||
             status !== visit.status ||
-            notes !== visit.notes ||
+            notes !== (visit.notes || '') ||
             recurrence !== visit.recurrence
         ) return true;
 
@@ -716,23 +730,23 @@ export const VisitModal: React.FC<VisitModalProps> = ({
                         <div className="bg-white p-6 rounded-xl shadow-2xl border border-gray-200 max-w-sm w-full animate-in zoom-in-95 ring-1 ring-gray-100">
                             <div className="flex items-center gap-3 mb-3 text-amber-600">
                                 <AlertTriangle className="w-6 h-6" />
-                                <h4 className="text-lg font-bold text-gray-800">変更が保存されていません</h4>
+                                <h4 className="text-lg font-bold text-gray-800">未保存の変更があります</h4>
                             </div>
                             <p className="text-sm text-gray-600 mb-6 leading-relaxed">
-                                編集を中断しますか？<br />保存されていない変更はすべて破棄されます。
+                                {isNew ? '入力内容' : '変更'}を保存せずに閉じますか？<br />入力した内容は失われます。
                             </p>
                             <div className="flex justify-end gap-3">
                                 <button
                                     onClick={() => setShowUnsavedConfirm(false)}
                                     className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-bold transition-colors"
                                 >
-                                    キャンセル
+                                    戻る
                                 </button>
                                 <button
                                     onClick={() => { setShowUnsavedConfirm(false); onClose(); }}
                                     className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg text-sm font-bold shadow-sm transition-colors"
                                 >
-                                    保存せず終了する
+                                    {isNew ? '入力を破棄' : '変更を破棄'}
                                 </button>
                             </div>
                         </div>

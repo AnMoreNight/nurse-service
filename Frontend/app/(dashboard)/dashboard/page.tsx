@@ -54,6 +54,7 @@ function DashboardContent() {
   } = useApp();
 
   const { canManageUsers, canManageSettings } = useRoleAccess();
+  const { showConfirm } = useModal();
   const isReadOnly = currentUser?.role === 'NORMAL_USER';
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -102,16 +103,18 @@ function DashboardContent() {
   // Guard: if navigating away from settings with unsaved changes, confirm
   useEffect(() => {
     if (prevViewRef.current === 'settings' && view !== 'settings' && settingsDirtyRef.current) {
-      const leave = window.confirm('設定が保存されていません。このまま移動しますか？');
-      if (!leave) {
-        router.replace('/dashboard?view=settings');
-        prevViewRef.current = 'settings';
-        return;
-      }
-      settingsDirtyRef.current = false;
+      (async () => {
+        const leave = await showConfirm('設定が保存されていません。このまま移動しますか？');
+        if (!leave) {
+          router.replace('/dashboard?view=settings');
+          prevViewRef.current = 'settings';
+          return;
+        }
+        settingsDirtyRef.current = false;
+      })();
     }
     prevViewRef.current = view;
-  }, [view, router]);
+  }, [view, router, showConfirm]);
 
   // View-aware auto-refresh: only fetch data the current view needs
   useEffect(() => {
