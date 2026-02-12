@@ -279,12 +279,14 @@ function DashboardContent() {
     }
   };
 
-  const handleDeleteVisit = async (visitId: string, scope: RecurrenceScope = 'this') => {
+  const handleDeleteVisit = async (visitId: string, scope: RecurrenceScope = 'this', occurrenceDate?: string) => {
     if (isReadOnly) return;
 
     try {
-      const visit = filteredVisits.find(v => v.id === visitId);
-      await deleteSchedule(visitId, scope, visit?.date);
+      // Use the occurrence date passed from VisitModal (which has the correct displayed date),
+      // NOT the base schedule date from filteredVisits
+      const effectiveDate = occurrenceDate || filteredVisits.find(v => v.id === visitId)?.date;
+      await deleteSchedule(visitId, scope, effectiveDate);
       setSelectedVisit(null);
     } catch (err: any) {
       showToast(`削除に失敗しました: ${err.message || '不明なエラー'}`);

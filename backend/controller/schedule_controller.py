@@ -638,6 +638,8 @@ class ScheduleController:
                 db.add(exception_schedule)
                 await db.commit()
                 return {"message": "Occurrence deleted"}
+            # Safety: don't fall through to delete-all for "this" scope
+            return {"message": "No occurrence date provided"}
 
         elif delete_scope == "future":
             # End the recurring rule at the occurrence date
@@ -647,65 +649,90 @@ class ScheduleController:
             elif schedule.start_time:
                 occ_date = schedule.start_time.date() if isinstance(schedule.start_time, datetime) else schedule.start_time
 
-            if occ_date and schedule.recurring_rule:
-                rule = schedule.recurring_rule
 
-                # Use the schedule's actual start date as the reference for the first occurrence,
-                # NOT rule.start_date which may have been modified by previous updates
-                base_date = schedule.start_time.date() if isinstance(schedule.start_time, datetime) else schedule.start_time
 
-                # If deleting from on or before the schedule's base date,
-                # there are no past occurrences to preserve — delete entire series
-                if occ_date <= base_date:
-                    # Delete all exceptions in this series
-                    await db.execute(
-                        delete(Schedule).where(
-                            Schedule.recurring_series_id == schedule.recurring_series_id,
-                            Schedule.company_id == company_id,
-                            Schedule.is_exception == True
-                        )
-                    )
-                    # Clean up the orphaned recurring rule
-                    await db.delete(rule)
-                    await db.delete(schedule)
-                    await db.commit()
-                    return {"message": "Recurring series deleted"}
+            if not occ_date:
 
-                # Set rule end_date to one day before the occurrence (to exclude the occurrence date itself)
-                day_before = occ_date - timedelta(days=1)
-                rule.end_date = day_before
-                # Explicitly add to session to ensure the change is tracked and committed
-                db.add(rule)
+                return {"message": "No occurrence date provided"}
 
-                # Delete any exceptions that fall on or after the occurrence date
-                series_exceptions = await db.execute(
-                    select(Schedule).where(
+            # If recurring_rule relationship is missing, reload it explicitly
+            if not schedule.recurring_rule and schedule.recurring_rule_id:
+
+                rule_result = await db.execute(
+                    select(RecurringRule).where(RecurringRule.rule_id == schedule.recurring_rule_id)
+                )
+                rule_obj = rule_result.scalar_one_or_none()
+            else:
+                rule_obj = schedule.recurring_rule
+
+            if not rule_obj:
+                # No recurring rule found — cannot modify future occurrences, return safely
+
+                return {"message": "Recurring rule not found"}
+
+            # Use the schedule's actual start date as the reference for the first occurrence,
+            # NOT rule.start_date which may have been modified by previous updates
+            base_date = schedule.start_time.date() if isinstance(schedule.start_time, datetime) else schedule.start_time
+
+
+            # If deleting from on or before the schedule's base date,
+            # there are no past occurrences to preserve — delete entire series
+            if occ_date <= base_date:
+                # Delete all exceptions in this series
+                await db.execute(
+                    delete(Schedule).where(
                         Schedule.recurring_series_id == schedule.recurring_series_id,
                         Schedule.company_id == company_id,
                         Schedule.is_exception == True
                     )
                 )
-                for exc in series_exceptions.scalars().all():
-                    exc_date = exc.start_time.date() if isinstance(exc.start_time, datetime) else exc.start_time
-                    if exc_date >= occ_date:
-                        await db.delete(exc)
-
+                # Clean up the orphaned recurring rule
+                await db.delete(rule_obj)
+                await db.delete(schedule)
                 await db.commit()
-                return {"message": "Future occurrences deleted"}
+                return {"message": "Recurring series deleted"}
 
-        # delete_scope == "all" or fallback: delete entire series
-        if schedule.recurring_series_id:
-            await db.execute(
-                delete(Schedule).where(
+            # Set rule end_date to one day before the occurrence (to exclude the occurrence date itself)
+            day_before = occ_date - timedelta(days=1)
+            rule_obj.end_date = day_before
+
+            # Explicitly add to session to ensure the change is tracked and committed
+            db.add(rule_obj)
+
+            # Delete any exceptions that fall on or after the occurrence date
+            series_exceptions = await db.execute(
+                select(Schedule).where(
                     Schedule.recurring_series_id == schedule.recurring_series_id,
-                    Schedule.company_id == company_id
+                    Schedule.company_id == company_id,
+                    Schedule.is_exception == True
                 )
             )
-        else:
-            await db.delete(schedule)
+            for exc in series_exceptions.scalars().all():
+                exc_date = exc.start_time.date() if isinstance(exc.start_time, datetime) else exc.start_time
+                if exc_date >= occ_date:
+                    await db.delete(exc)
 
-        await db.commit()
-        return {"message": "Schedule deleted"}
+            await db.commit()
+
+            return {"message": "Future occurrences deleted"}
+
+        elif delete_scope == "all":
+            # Explicit "all" scope: delete entire series
+            if schedule.recurring_series_id:
+                await db.execute(
+                    delete(Schedule).where(
+                        Schedule.recurring_series_id == schedule.recurring_series_id,
+                        Schedule.company_id == company_id
+                    )
+                )
+            else:
+                await db.delete(schedule)
+
+            await db.commit()
+            return {"message": "Schedule deleted"}
+
+        # Unknown scope — don't delete anything
+        return {"message": "Unknown delete scope"}
     
     @staticmethod
     async def copy_schedule(db: AsyncSession, schedule_id: UUID, company_id: UUID):

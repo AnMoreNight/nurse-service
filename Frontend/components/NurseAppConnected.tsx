@@ -360,8 +360,41 @@ export default function NurseAppConnected() {
 
   const handleDeleteVisit = async (visitId: string, scope?: string, occurrenceDate?: string) => {
     try {
-      // Optimistic update: immediately remove from local state
-      setSchedules(prev => prev.filter(sch => sch.schedule_id !== visitId));
+      // Scope-aware optimistic update for recurring schedules
+      // All expanded occurrences share the same schedule_id, so we must
+      // filter by date to avoid removing past occurrences for "future" scope
+      setSchedules(prev => {
+        if (scope === 'future' && occurrenceDate) {
+          const targetSchedule = prev.find(sch => sch.schedule_id === visitId);
+          const targetSeriesId = targetSchedule?.recurring_series_id;
+
+          return prev.filter(sch => {
+            const isSameSeries = sch.schedule_id === visitId ||
+              (targetSeriesId && sch.recurring_series_id === targetSeriesId);
+            if (!isSameSeries) return true;
+            // Keep past occurrences, remove this date and future
+            const schDate = new Date(sch.start_time).toISOString().split('T')[0];
+            return schDate < occurrenceDate;
+          });
+        } else if (scope === 'this' && occurrenceDate) {
+          return prev.filter(sch => {
+            if (sch.schedule_id !== visitId) return true;
+            // Only remove the specific occurrence matching the date
+            const schDate = new Date(sch.start_time).toISOString().split('T')[0];
+            return schDate !== occurrenceDate;
+          });
+        } else {
+          // 'all' scope or non-recurring: remove all with matching schedule_id/series
+          const targetSchedule = prev.find(sch => sch.schedule_id === visitId);
+          const targetSeriesId = targetSchedule?.recurring_series_id;
+          return prev.filter(sch => {
+            if (targetSeriesId) {
+              return sch.schedule_id !== visitId && sch.recurring_series_id !== targetSeriesId;
+            }
+            return sch.schedule_id !== visitId;
+          });
+        }
+      });
 
       await scheduleService.delete(visitId, scope, occurrenceDate);
       showToast('スケジュールを削除しました');
