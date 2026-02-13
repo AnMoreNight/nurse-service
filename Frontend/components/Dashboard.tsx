@@ -71,8 +71,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const [dragOverColumnIndex, setDragOverColumnIndex] = useState<number | null>(null);
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
     const calendarRef = useRef<HTMLDivElement>(null);
-    const [now, setNow] = useState(new Date());
-
     const [moveRequest, setMoveRequest] = useState<{
         visitId: string;
         sourceStaffId: string;
@@ -83,17 +81,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
     // Guard: prevent click on hour slot from firing after a drag-and-drop
     const justDraggedRef = useRef(false);
 
-    useEffect(() => {
-        const interval = setInterval(() => setNow(new Date()), 60000);
-        return () => clearInterval(interval);
-    }, []);
-
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    const currentTimeTop = currentMinutes * MINUTE_HEIGHT;
-
     const [y, m, d] = currentDate.split('-').map(Number);
     const dateObj = new Date(y, m - 1, d);
-    const isToday = new Date().toDateString() === dateObj.toDateString();
     const dateDisplay = dateObj.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
 
     useEffect(() => {
@@ -411,7 +400,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                 <span className="relative -top-2 bg-gray-50 px-1">{hour > 0 ? hour : ''}</span>
                             </div>
                         ))}
-                        {isToday && <div className="absolute right-0 w-2 h-2 rounded-full bg-red-500 translate-x-1/2 z-40" style={{ top: `calc(${currentTimeTop}px + 90px)` }}></div>}
                     </div>
 
                     {staffList.map((staff, colIndex) => {
@@ -496,7 +484,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                 )}
 
                                 <div className="relative w-full h-full" id={`staff-container-${staff.id}`}>
-                                    {isToday && <div className="absolute inset-x-0 border-t-2 border-red-500 z-30 pointer-events-none opacity-80" style={{ top: `${currentTimeTop}px` }}></div>}
 
                                     {dropPreview && dropPreview.staffId === staff.id && dragState?.visit && dropPreview.time && (
                                         (() => {

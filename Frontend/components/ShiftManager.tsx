@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Staff, ShiftAssignment, ShiftType, CompanySettings } from '@/lib/types';
-import { ChevronLeft, ChevronRight, Moon, Sun, Palmtree, Plus, Edit, Trash2, Copy, Check, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Moon, Sun, Palmtree, Plus, Edit, Trash2, Users } from 'lucide-react';
 import { getEffectiveShiftType, toLocalISOString } from '@/lib/constants';
 import { useModal } from '@/contexts/ModalContext';
 import { getColorStyles } from '@/lib/utils';
@@ -81,7 +81,6 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
     localStorage.setItem('shiftManager_viewMonth', `${year}-${month}`);
   }, [viewDate]);
 
-  const [showCopyConfirm, setShowCopyConfirm] = useState(false);
   const [activeCell, setActiveCell] = useState<{ staffId: string; date: string; rect?: DOMRect } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -150,70 +149,6 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
     return <div className="w-5 h-5 md:w-7 md:h-7"></div>;
   };
 
-  const handleCopyLastMonth = async () => {
-    if (isReadOnly) return;
-
-    // Show confirmation dialog before copying
-    const confirmed = await showConfirm('前月のシフトを今月にコピーしますか？\n（全てのシフトと固定休みがコピーされます）');
-    if (!confirmed) return;
-
-    const lastMonth = new Date(year, month - 1, 1);
-    const lastMonthYear = lastMonth.getFullYear();
-    const lastMonthMonth = lastMonth.getMonth();
-    const daysInLastMonth = new Date(lastMonthYear, lastMonthMonth + 1, 0).getDate();
-
-    // Get all shifts from last month
-    const lastMonthShifts = shifts.filter(s => {
-      const [sy, sm] = s.date.split('-').map(Number);
-      return sy === lastMonthYear && sm === lastMonthMonth + 1;
-    });
-
-    // All shift types to copy (copy all assigned shifts)
-    const shiftTypesToCopy: ShiftType[] = ['work', 'holiday', 'night1', 'night2', 'night1_holiday', 'night2_holiday'];
-    let copiedCount = 0;
-
-    // For each day in current month, copy shifts if they exist on same day-of-month in last month
-    for (let day = 1; day <= daysInMonth; day++) {
-      if (day > daysInLastMonth) break;
-
-      const currentDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-
-      staff.forEach(s => {
-        const lastMonthShift = lastMonthShifts.find(sh => sh.staffId === s.id && sh.date.endsWith(`-${String(day).padStart(2, '0')}`));
-        // Copy if it's any of the shift types we want to copy
-        if (lastMonthShift && lastMonthShift.type && shiftTypesToCopy.includes(lastMonthShift.type)) {
-          onUpdateShift(s.id, currentDateStr, lastMonthShift.type);
-          copiedCount++;
-        }
-      });
-    }
-
-    // Also apply default weekly holidays (固定休み) for the entire month
-    for (let day = 1; day <= daysInMonth; day++) {
-      const currentDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const [y, m, d] = currentDateStr.split('-').map(Number);
-      const dayOfWeek = new Date(y, m - 1, d).getDay();
-
-      staff.forEach(s => {
-        // Check if this staff has default holidays for this day of week
-        if (s.defaultHolidayWeekDays && s.defaultHolidayWeekDays.includes(dayOfWeek)) {
-          // Only apply if there's no explicit shift already (don't override explicit shifts)
-          const existingShift = shifts.find(sh => sh.staffId === s.id && sh.date === currentDateStr);
-          if (!existingShift) {
-            onUpdateShift(s.id, currentDateStr, 'holiday');
-            copiedCount++;
-          }
-        }
-      });
-    }
-
-    setShowCopyConfirm(true);
-    setTimeout(() => setShowCopyConfirm(false), 2000);
-
-    // Optional: could add a console log for debugging
-    console.log(`Copied ${copiedCount} shifts and default holidays from last month`);
-  };
-
   // Show empty state if no staff
   if (staff.length === 0) {
     return (
@@ -249,15 +184,6 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
           </div>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          {!isReadOnly && (
-            <button
-              onClick={handleCopyLastMonth}
-              className="flex items-center gap-1.5 md:gap-2 bg-gray-600 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-full hover:bg-gray-700 transition-colors text-xs md:text-sm font-bold shadow-sm"
-            >
-              <Copy className="w-3.5 h-3.5 md:w-4 md:h-4" />
-              前月からコピー
-            </button>
-          )}
         </div>
       </div>
 
@@ -395,16 +321,6 @@ export const ShiftManager: React.FC<ShiftManagerProps> = ({
           </tbody >
         </table >
       </div >
-
-      {/* Copy Confirmation Toast */}
-      {
-        showCopyConfirm && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-5 py-3 rounded-full shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4">
-            <Check className="w-5 h-5 text-emerald-400" />
-            前月のシフトをコピーしました
-          </div>
-        )
-      }
 
       {/* Shift Type Dropdown */}
       {activeCell && activeCell.rect && (
