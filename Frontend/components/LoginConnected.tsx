@@ -22,6 +22,11 @@ export const LoginConnected: React.FC<LoginProps> = ({ onLogin }) => {
     try {
       const response = await authService.login({ email, password });
       authService.storeAuth(response.access_token, response.user);
+      
+      // Clear saved date to always show today's schedule on login
+      localStorage.removeItem('dashboard_currentDate');
+      localStorage.removeItem('shiftManager_viewMonth');
+      
       onLogin(response.access_token, response.user);
     } catch (err: any) {
       setError(err.message || 'ログインに失敗しました');

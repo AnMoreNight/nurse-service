@@ -27,6 +27,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       // Store auth data
       authService.storeAuth(response.access_token, response.user);
 
+      // Clear saved date to always show today's schedule on login
+      localStorage.removeItem('dashboard_currentDate');
+      localStorage.removeItem('shiftManager_viewMonth');
+
       // Convert to AuthUser format
       const authUser: AuthUser = {
         user_id: response.user.user_id,

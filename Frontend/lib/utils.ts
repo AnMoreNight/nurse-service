@@ -26,9 +26,12 @@ export const colorStyles: Record<string, { text: string; bg: string; bgLight: st
 };
 
 export const getColorStyles = (color: string) => {
+  // Normalize color name to lowercase for case-insensitive lookup
+  const normalizedColor = color?.toLowerCase() || '';
+  
   // If it's a named color, return the predefined styles
-  if (colorStyles[color]) {
-    return colorStyles[color];
+  if (colorStyles[normalizedColor]) {
+    return colorStyles[normalizedColor];
   }
   
   // If it's a hex color, generate styles dynamically
