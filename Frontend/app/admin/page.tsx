@@ -543,7 +543,7 @@ export default function AdminPage() {
                       <div className="min-w-0">
                         <h3 className="font-bold text-base md:text-lg text-gray-900 truncate">{company.name}</h3>
                         <p className="text-xs text-gray-500">
-                          {users.filter(u => u.company_id === company.company_id).length} ユーザー
+                          {company.user_count ?? 0} ユーザー
                         </p>
                       </div>
                     </div>

@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, func
 from models.orm import (
     Company, CompanySetting, User, Patient, Schedule, ScheduleStatus,
     ScheduleAssignment, Shift, WeeklyOffRule, UserInvitation,
@@ -22,7 +22,25 @@ class CompanyController:
     async def get_companies(db: AsyncSession):
         result = await db.execute(select(Company).order_by(Company.name))
         companies = result.scalars().all()
-        return companies
+        
+        # Get user counts for each company
+        companies_with_counts = []
+        for company in companies:
+            user_count_result = await db.execute(
+                select(func.count(User.user_id)).where(User.company_id == company.company_id)
+            )
+            user_count = user_count_result.scalar() or 0
+            
+            companies_with_counts.append({
+                "company_id": str(company.company_id),
+                "name": company.name,
+                "is_active": company.is_active,
+                "user_count": user_count,
+                "created_at": company.created_at.isoformat() if company.created_at else None,
+                "updated_at": company.updated_at.isoformat() if company.updated_at else None
+            })
+        
+        return companies_with_counts
 
     @staticmethod
     async def get_company(db: AsyncSession, company_id: UUID):
