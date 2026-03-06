@@ -1,7 +1,7 @@
 import { apiClient } from './apiClient';
 
 export interface LoginRequest {
-  email: string;
+  login_id: string;
   password: string;
 }
 
@@ -10,14 +10,14 @@ export interface LoginResponse {
   token_type: string;
   user: {
     user_id: string;
-    email: string;
+    login_id: string;
     role: string;
     name: string;
   };
 }
 
 export interface PasswordResetRequest {
-  email: string;
+  login_id: string;
 }
 
 export interface InvitationAccept {
@@ -71,7 +71,7 @@ export const authService = {
     return await apiClient.get('/auth/profile');
   },
 
-  updateProfile: async (data: { name?: string; email?: string }) => {
+  updateProfile: async (data: { name?: string; login_id?: string }) => {
     return await apiClient.put('/auth/profile', data);
   },
 

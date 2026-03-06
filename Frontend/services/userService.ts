@@ -3,7 +3,7 @@ import { apiClient } from './apiClient';
 export interface User {
   user_id: string;
   company_id?: string;
-  email: string;
+  login_id: string;
   role: string;
   name: string;
   profession?: string;
@@ -20,7 +20,7 @@ export interface User {
 }
 
 export interface UserCreate {
-  email: string;
+  login_id: string;
   password: string;
   role: string;
   name: string;
@@ -34,7 +34,7 @@ export interface UserCreate {
 
 export interface UserCreateByAdmin {
   company_id: string;
-  email: string;
+  login_id: string;
   password: string;
   role: string;
   name: string;
@@ -69,7 +69,7 @@ export interface UserUpdate {
 }
 
 export interface UserInvite {
-  email: string;
+  login_id: string;
   role: string;
 }
 

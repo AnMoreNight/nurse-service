@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Shield, Building2, Mail, Lock, User } from 'lucide-react';
+import { Shield, Building2, Lock, User } from 'lucide-react';
 
 export default function BootstrapPage() {
   const [formData, setFormData] = useState({
-    email: '',
+    login_id: '',
     password: '',
     name: '',
     company_name: '',
@@ -28,7 +28,7 @@ export default function BootstrapPage() {
           'x-bootstrap-secret': formData.bootstrap_secret,
         },
         body: JSON.stringify({
-          email: formData.email,
+          login_id: formData.login_id,
           password: formData.password,
           name: formData.name,
           company_name: formData.company_name,
@@ -123,17 +123,15 @@ export default function BootstrapPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-gray-600 mb-2">メールアドレス</label>
+            <label className="block text-sm font-bold text-gray-600 mb-2">ログインID</label>
             <div className="relative">
-              <Mail className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+              <User className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
               <input
-                type="email"
+                type="text"
                 className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-gray-50"
-                placeholder="メールアドレスを入力"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('正しいメールアドレスを入力してください')}
-                onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
+                placeholder="t.yamada.companyname"
+                value={formData.login_id}
+                onChange={(e) => setFormData({ ...formData, login_id: e.target.value })}
                 required
               />
             </div>

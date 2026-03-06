@@ -34,7 +34,7 @@ async def check_users():
             
             status = "✓" if user.company_id or user.role == "SUPER_ADMIN" else "✗"
             
-            print(f"{status} User: {user.name} ({user.email})")
+            print(f"{status} User: {user.name} ({user.login_id})")
             print(f"   Role: {user.role}")
             print(f"   Company ID: {user.company_id}")
             print(f"   Company: {company_name}")
@@ -47,7 +47,7 @@ async def check_users():
         if problematic:
             print("\n⚠️  ISSUE FOUND: The following users have no company_id but are not SUPER_ADMIN:")
             for user in problematic:
-                print(f"   - {user.name} ({user.email}) - Role: {user.role}")
+                print(f"   - {user.name} ({user.login_id}) - Role: {user.role}")
             print("\nThese users should have a company_id assigned.")
             print("To fix, you can either:")
             print("1. Delete these users and recreate them properly")

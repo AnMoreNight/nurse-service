@@ -4,14 +4,14 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { AuthUser } from '@/lib/types';
 import { authService } from '@/services/authService';
-import { Lock, Mail, LogIn, Loader2 } from 'lucide-react';
+import { Lock, User, LogIn, Loader2 } from 'lucide-react';
 
 interface LoginProps {
   onLogin: (user: AuthUser) => void;
 }
 
 export const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const [email, setEmail] = useState('');
+  const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -22,19 +22,16 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setIsLoading(true);
 
     try {
-      const response = await authService.login({ email, password });
+      const response = await authService.login({ login_id: loginId, password });
 
-      // Store auth data
       authService.storeAuth(response.access_token, response.user);
 
-      // Clear saved date to always show today's schedule on login
       localStorage.removeItem('dashboard_currentDate');
       localStorage.removeItem('shiftManager_viewMonth');
 
-      // Convert to AuthUser format
       const authUser: AuthUser = {
         user_id: response.user.user_id,
-        email: response.user.email,
+        login_id: response.user.login_id,
         name: response.user.name,
         role: response.user.role as 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'NORMAL_USER',
         company_id: (response.user as any).company_id || null,
@@ -88,17 +85,15 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         <div className="p-8">
           <form onSubmit={handleLogin} className="space-y-6">
             <div>
-              <label className="block text-sm font-bold text-gray-600 mb-2">メールアドレス</label>
+              <label className="block text-sm font-bold text-gray-600 mb-2">ログインID</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                <User className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                 <input
-                  type="email"
+                  type="text"
                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition-all bg-gray-50 focus:bg-white"
-                  placeholder="email@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('正しいメールアドレスを入力してください')}
-                  onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
+                  placeholder="t.yamada.companyname"
+                  value={loginId}
+                  onChange={(e) => setLoginId(e.target.value)}
                   required
                   disabled={isLoading}
                 />

@@ -526,7 +526,7 @@ export default function NurseAppConnected() {
   const handleAddStaff = async (staffData: any) => {
     try {
       await userService.create({
-        email: staffData.email || `${staffData.name}@example.com`,
+        login_id: staffData.login_id || `${staffData.name?.replace(/\s/g, '').toLowerCase()}.staff`,
         password: 'temp123',
         role: 'NORMAL_USER',
         name: staffData.name,
@@ -747,7 +747,7 @@ export default function NurseAppConnected() {
                   companyId={currentUser?.company_id || ''}
                   users={staff.map(s => ({
                     id: s.user_id,
-                    username: s.email,
+                    username: s.login_id,
                     name: s.name,
                     role: s.role === 'CompanyAdmin' ? 'admin' : 'user',
                     companyId: s.company_id || '',
@@ -755,7 +755,7 @@ export default function NurseAppConnected() {
                   })) as any}
                   onAddUser={async (user: any) => {
                     await userService.create({
-                      email: user.username,
+                      login_id: user.username,
                       password: user.password,
                       role: user.role === 'admin' ? 'CompanyAdmin' : 'NormalUser',
                       name: user.name,

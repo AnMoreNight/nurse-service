@@ -184,7 +184,7 @@ class ScheduleController:
                 "assigned_users": [
                     {
                         "user_id": str(a.user.user_id),
-                        "email": a.user.email,
+                        "login_id": a.user.login_id,
                         "role": a.user.role,
                         "name": a.user.name,
                         "profession": a.user.profession,

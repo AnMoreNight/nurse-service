@@ -78,10 +78,10 @@ export type UserRole = 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'NORMAL_USER';
 
 export interface AuthUser {
   user_id: string;
-  email: string;
+  login_id: string;
   name: string;
   role: UserRole;
-  company_id?: string | null; // Null for SUPER_ADMIN
+  company_id?: string | null;
   companyName?: string | null;
 }
 

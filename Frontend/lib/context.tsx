@@ -470,7 +470,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addStaff = useCallback(async (data: Partial<Staff>) => {
     try {
       await userService.create({
-        email: `${data.name?.replace(/\s/g, '').toLowerCase()}@company.local`,
+        login_id: `${data.name?.replace(/\s/g, '').toLowerCase()}.staff`,
         password: 'temppass123',
         role: 'NORMAL_USER',
         name: data.name || '',

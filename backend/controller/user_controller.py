@@ -10,17 +10,16 @@ import secrets
 
 class UserController:
     @staticmethod
-    async def create_user(db: AsyncSession, company_id: UUID, email: str, password: str, role: str, 
+    async def create_user(db: AsyncSession, company_id: UUID, login_id: str, password: str, role: str, 
                          name: str, profession: str = None, job_title: str = None, 
                          display_color: str = None, join_date: str = None, left_date: str = None):
-        # Check if email exists
-        existing = await db.execute(select(User).where(User.email == email))
+        existing = await db.execute(select(User).where(User.login_id == login_id))
         if existing.scalar_one_or_none():
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already exists")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="入力されたログインIDは既に使用されています。別のIDを指定してください。")
         
         new_user = User(
             company_id=company_id,
-            email=email,
+            login_id=login_id,
             password_hash=password,
             role=role,
             name=name,
@@ -35,7 +34,7 @@ class UserController:
         await db.flush()
         result_data = {
             "user_id": str(new_user.user_id),
-            "email": new_user.email,
+            "login_id": new_user.login_id,
             "role": new_user.role,
             "name": new_user.name
         }
@@ -44,13 +43,13 @@ class UserController:
         return result_data
 
     @staticmethod
-    async def invite_user(db: AsyncSession, company_id: UUID, email: str, role: str):
+    async def invite_user(db: AsyncSession, company_id: UUID, login_id: str, role: str):
         token = secrets.token_urlsafe(32)
         expires_at = datetime.utcnow() + timedelta(days=7)
         
         invite = UserInvitation(
             company_id=company_id,
-            email=email,
+            login_id=login_id,
             role=role,
             token=token,
             expires_at=expires_at
@@ -83,7 +82,7 @@ class UserController:
             {
                 "user_id": str(u.user_id),
                 "company_id": str(u.company_id) if u.company_id else None,
-                "email": u.email,
+                "login_id": u.login_id,
                 "role": u.role,
                 "name": u.name,
                 "profession": u.profession,
@@ -149,7 +148,7 @@ class UserController:
                     {
                         "user_id": str(u.user_id),
                         "company_id": str(u.company_id) if u.company_id else None,
-                        "email": u.email,
+                        "login_id": u.login_id,
                         "role": u.role,
                         "name": u.name,
                         "profession": u.profession,
@@ -180,7 +179,7 @@ class UserController:
                 {
                     "user_id": str(u.user_id),
                     "company_id": str(u.company_id) if u.company_id else None,
-                    "email": u.email,
+                    "login_id": u.login_id,
                     "role": u.role,
                     "name": u.name,
                     "profession": u.profession,
@@ -211,7 +210,7 @@ class UserController:
         return {
             "user_id": str(user.user_id),
             "company_id": str(user.company_id) if user.company_id else None,
-            "email": user.email,
+            "login_id": user.login_id,
             "role": user.role,
             "name": user.name,
             "profession": user.profession,
@@ -363,19 +362,18 @@ class UserController:
         return {"message": "User deleted permanently"}
     
     @staticmethod
-    async def create_user_by_admin(db: AsyncSession, company_id: UUID, email: str, password: str, 
+    async def create_user_by_admin(db: AsyncSession, company_id: UUID, login_id: str, password: str, 
                                    role: str, name: str, profession: str = None, 
                                    job_title: str = None, display_color: str = None, 
                                    join_date: str = None, left_date: str = None):
         """Create user by admin with explicit company_id - used by SUPER_ADMIN"""
-        # Check if email exists
-        existing = await db.execute(select(User).where(User.email == email))
+        existing = await db.execute(select(User).where(User.login_id == login_id))
         if existing.scalar_one_or_none():
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already exists")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="入力されたログインIDは既に使用されています。別のIDを指定してください。")
         
         new_user = User(
             company_id=company_id,
-            email=email,
+            login_id=login_id,
             password_hash=password,
             role=role,
             name=name,
@@ -391,7 +389,7 @@ class UserController:
         result_data = {
             "user_id": str(new_user.user_id),
             "company_id": str(new_user.company_id),
-            "email": new_user.email,
+            "login_id": new_user.login_id,
             "role": new_user.role,
             "name": new_user.name
         }
@@ -469,7 +467,7 @@ class UserController:
             {
                 "user_id": str(admin.user_id),
                 "company_id": str(admin.company_id),
-                "email": admin.email,
+                "login_id": admin.login_id,
                 "name": admin.name,
                 "role": admin.role,
                 "is_active": admin.is_active,

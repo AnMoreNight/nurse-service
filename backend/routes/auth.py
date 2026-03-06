@@ -9,11 +9,11 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 @router.post("/login")
 async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
-    return await AuthController.login(db, req.email, req.password)
+    return await AuthController.login(db, req.login_id, req.password)
 
 @router.post("/password-reset/request")
 async def request_password_reset(req: PasswordResetRequest, db: AsyncSession = Depends(get_db)):
-    return await AuthController.request_password_reset(db, req.email)
+    return await AuthController.request_password_reset(db, req.login_id)
 
 @router.post("/password-reset/confirm")
 async def reset_password(req: PasswordResetConfirm, db: AsyncSession = Depends(get_db)):
@@ -33,7 +33,7 @@ async def get_profile(request: Request, db: AsyncSession = Depends(get_db)):
 async def update_profile(req: UpdateProfileRequest, request: Request, db: AsyncSession = Depends(get_db)):
     """Update current user's profile (name and email)"""
     user = await get_current_user(request, db)
-    return await AuthController.update_profile(db, user["user_id"], req.name, req.email)
+    return await AuthController.update_profile(db, user["user_id"], req.name, req.login_id)
 
 @router.post("/change-password")
 async def change_password(req: ChangePasswordRequest, request: Request, db: AsyncSession = Depends(get_db)):

@@ -4,29 +4,28 @@ from datetime import datetime
 from uuid import UUID
 import re
 
-# Custom email validation that allows .local domains
-def validate_email(email: str) -> str:
-    """Validate email format, allowing .local and other internal domains"""
-    if not email or '@' not in email:
-        raise ValueError('メールアドレスの形式が正しくありません')
+def validate_login_id(login_id: str) -> str:
+    """Validate login ID: 3-100 chars, alphanumeric + period/underscore/hyphen.
+    Also accepts legacy email-format values for backward compatibility."""
+    if not login_id:
+        raise ValueError('ログインIDを入力してください')
     
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    local_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.local$'
+    pattern = r'^[a-zA-Z0-9._@+-]{3,100}$'
     
-    if not (re.match(pattern, email) or re.match(local_pattern, email)):
-        raise ValueError('メールアドレスの形式が正しくありません。正しい形式で入力してください（例: user@example.com）')
+    if not re.match(pattern, login_id):
+        raise ValueError('ログインIDは3〜100文字の半角英数字・ピリオド・アンダースコア・ハイフンで入力してください')
     
-    return email.lower()
+    return login_id.lower()
 
 # Auth Models
 class LoginRequest(BaseModel):
-    email: str
+    login_id: str
     password: str
     
-    @field_validator('email')
+    @field_validator('login_id')
     @classmethod
-    def validate_email_field(cls, v):
-        return validate_email(v)
+    def validate_login_id_field(cls, v):
+        return validate_login_id(v)
 
 class LoginResponse(BaseModel):
     access_token: str
@@ -34,12 +33,12 @@ class LoginResponse(BaseModel):
     user: dict
 
 class PasswordResetRequest(BaseModel):
-    email: str
+    login_id: str
     
-    @field_validator('email')
+    @field_validator('login_id')
     @classmethod
-    def validate_email_field(cls, v):
-        return validate_email(v)
+    def validate_login_id_field(cls, v):
+        return validate_login_id(v)
 
 class PasswordResetConfirm(BaseModel):
     token: str
@@ -56,13 +55,13 @@ class ChangePasswordRequest(BaseModel):
 
 class UpdateProfileRequest(BaseModel):
     name: Optional[str] = None
-    email: Optional[str] = None
+    login_id: Optional[str] = None
     
-    @field_validator('email')
+    @field_validator('login_id')
     @classmethod
-    def validate_email_field(cls, v):
+    def validate_login_id_field(cls, v):
         if v:
-            return validate_email(v)
+            return validate_login_id(v)
         return v
 
 # Company Models
@@ -80,7 +79,7 @@ class CompanyResponse(BaseModel):
 
 # User Models
 class UserCreate(BaseModel):
-    email: str
+    login_id: str
     password: str
     role: str
     name: str
@@ -88,19 +87,20 @@ class UserCreate(BaseModel):
     job_title: Optional[str] = None
     display_color: Optional[str] = None
     join_date: Optional[str] = None  # YYYY-MM-DD
-    left_date: Optional[str] = None  # YYYY-MM-DD    
-    @field_validator('email')
+    left_date: Optional[str] = None  # YYYY-MM-DD
+
+    @field_validator('login_id')
     @classmethod
-    def validate_email_field(cls, v):
-        return validate_email(v)
+    def validate_login_id_field(cls, v):
+        return validate_login_id(v)
 class UserInvite(BaseModel):
-    email: str
+    login_id: str
     role: str
     
-    @field_validator('email')
+    @field_validator('login_id')
     @classmethod
-    def validate_email_field(cls, v):
-        return validate_email(v)
+    def validate_login_id_field(cls, v):
+        return validate_login_id(v)
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
@@ -116,8 +116,8 @@ class UserUpdate(BaseModel):
 
 # Admin-specific user creation (includes company_id)
 class UserCreateByAdmin(BaseModel):
-    company_id: UUID  # Required for admin to specify which company
-    email: str
+    company_id: UUID
+    login_id: str
     password: str
     role: str
     name: str
@@ -127,10 +127,10 @@ class UserCreateByAdmin(BaseModel):
     join_date: Optional[str] = None  # YYYY-MM-DD
     left_date: Optional[str] = None  # YYYY-MM-DD
     
-    @field_validator('email')
+    @field_validator('login_id')
     @classmethod
-    def validate_email_field(cls, v):
-        return validate_email(v)
+    def validate_login_id_field(cls, v):
+        return validate_login_id(v)
 
 class AssignCompanyAdmin(BaseModel):
     company_id: UUID
@@ -146,7 +146,7 @@ class UserSortOrder(BaseModel):
 class UserResponse(BaseModel):
     user_id: UUID
     company_id: Optional[UUID]
-    email: str
+    login_id: str
     role: str
     name: str
     profession: Optional[str]

@@ -40,7 +40,7 @@ async def fix_users():
         
         print("\n=== Users Without Company ===\n")
         for user in problematic_users:
-            print(f"- {user.name} ({user.email}) - Role: {user.role}")
+            print(f"- {user.name} ({user.login_id}) - Role: {user.role}")
         
         print("\n" + "="*50)
         print("Enter the company number to assign ALL these users to:")
