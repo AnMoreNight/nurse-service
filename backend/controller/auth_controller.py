@@ -10,17 +10,16 @@ import secrets
 
 class AuthController:
     @staticmethod
-    async def login(db: AsyncSession, email: str, password: str):
-        # Single query: fetch user with company eagerly loaded
+    async def login(db: AsyncSession, login_id: str, password: str):
         result = await db.execute(
             select(User).options(
                 selectinload(User.company)
-            ).where(User.email == email)
+            ).where(User.login_id == login_id)
         )
         user = result.scalar_one_or_none()
 
         if not user:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="このメールアドレスは登録されていません")
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="このログインIDは登録されていません")
 
         if user.password_hash != password:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="パスワードが間違っています。管理者にお問い合わせください")
@@ -34,7 +33,7 @@ class AuthController:
             "user_id": str(user.user_id),
             "company_id": str(user.company_id) if user.company_id else None,
             "role": user.role,
-            "email": user.email
+            "login_id": user.login_id
         })
         
         return {
@@ -44,23 +43,22 @@ class AuthController:
                 "user_id": str(user.user_id),
                 "company_id": str(user.company_id) if user.company_id else None,
                 "company_name": company_name,
-                "email": user.email,
+                "login_id": user.login_id,
                 "role": user.role,
                 "name": user.name
             }
         }
     
     @staticmethod
-    async def request_password_reset(db: AsyncSession, email: str):
+    async def request_password_reset(db: AsyncSession, login_id: str):
         from models.orm import PasswordResetToken
         from services.email_service import email_service
         
-        result = await db.execute(select(User).where(User.email == email))
+        result = await db.execute(select(User).where(User.login_id == login_id))
         user = result.scalar_one_or_none()
         
         if not user:
-            # Return success message even if user doesn't exist (security best practice)
-            return {"message": "If email exists, reset link sent"}
+            return {"message": "If login_id exists, reset link sent"}
         
         token = secrets.token_urlsafe(32)
         expires_at = datetime.utcnow() + timedelta(hours=1)
@@ -73,18 +71,16 @@ class AuthController:
         db.add(reset_token)
         await db.commit()
         
-        # Send password reset email
         try:
             await email_service.send_password_reset_email(
-                email=user.email,
+                email=user.login_id,
                 reset_token=token,
                 user_name=user.name
             )
         except Exception as e:
-            # Log error but don't fail the request
             print(f"Failed to send password reset email: {e}")
         
-        return {"message": "If email exists, reset link sent"}
+        return {"message": "If login_id exists, reset link sent"}
     
     @staticmethod
     async def reset_password(db: AsyncSession, token: str, new_password: str):
@@ -129,10 +125,9 @@ class AuthController:
         if not invite:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired invitation")
         
-        # Create user
         new_user = User(
             company_id=invite.company_id,
-            email=invite.email,
+            login_id=invite.login_id,
             password_hash=password,
             role=invite.role,
             name=name,
@@ -161,7 +156,7 @@ class AuthController:
         
         return {
             "user_id": str(user.user_id),
-            "email": user.email,
+            "login_id": user.login_id,
             "name": user.name,
             "role": user.role,
             "company_id": str(user.company_id) if user.company_id else None,
@@ -175,8 +170,8 @@ class AuthController:
         }
     
     @staticmethod
-    async def update_profile(db: AsyncSession, user_id: UUID, name: str = None, email: str = None):
-        """Update user profile (name and email)"""
+    async def update_profile(db: AsyncSession, user_id: UUID, name: str = None, login_id: str = None):
+        """Update user profile (name and login_id)"""
         result = await db.execute(
             select(User).where(User.user_id == user_id)
         )
@@ -185,17 +180,16 @@ class AuthController:
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
         
-        # Check if email is already taken by another user
-        if email and email != user.email:
+        if login_id and login_id != user.login_id:
             existing = await db.execute(
-                select(User).where(User.email == email, User.user_id != user_id)
+                select(User).where(User.login_id == login_id, User.user_id != user_id)
             )
             if existing.scalar_one_or_none():
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="このメールアドレスは既に使用されています"
+                    detail="入力されたログインIDは既に使用されています。別のIDを指定してください。"
                 )
-            user.email = email
+            user.login_id = login_id
         
         if name:
             user.name = name

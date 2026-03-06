@@ -1,8 +1,9 @@
 from fastapi import APIRouter, HTTPException, status, Header, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, field_validator
 from models.orm import Company, User
+from models.schemas import validate_login_id
 from db.database import get_db
 from uuid import uuid4
 from datetime import datetime
@@ -11,10 +12,15 @@ import os
 router = APIRouter(prefix="/bootstrap", tags=["Bootstrap"])
 
 class BootstrapAdmin(BaseModel):
-    email: EmailStr
+    login_id: str
     password: str
     name: str
-    company_name: str | None = None  # Optional - for creating company + admin together
+    company_name: str | None = None
+
+    @field_validator('login_id')
+    @classmethod
+    def validate_login_id_field(cls, v):
+        return validate_login_id(v)
 
 @router.post("/create-admin")
 async def create_first_admin(
@@ -47,10 +53,9 @@ async def create_first_admin(
         db.add(company)
         await db.flush()
         
-        # Create COMPANY_ADMIN for this company
         user = User(
             company_id=company.company_id,
-            email=data.email,
+            login_id=data.login_id,
             password_hash=data.password,
             role="COMPANY_ADMIN",
             name=data.name,
@@ -58,10 +63,9 @@ async def create_first_admin(
         )
         company_id = str(company.company_id)
     else:
-        # Create pure SUPER_ADMIN with no company
         user = User(
-            company_id=None,  # System admin has no company
-            email=data.email,
+            company_id=None,
+            login_id=data.login_id,
             password_hash=data.password,
             role="SUPER_ADMIN",
             name=data.name,
@@ -78,6 +82,6 @@ async def create_first_admin(
         "message": f"{user.role} created successfully",
         "user_id": user_id,
         "company_id": company_id,
-        "email": user.email,
+        "login_id": user.login_id,
         "role": user.role
     }

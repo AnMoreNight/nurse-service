@@ -33,7 +33,7 @@ export default function AdminPage() {
   const [companyForm, setCompanyForm] = useState({
     name: '',
     create_admin: false,
-    admin_email: '',
+    admin_login_id: '',
     admin_password: '',
     admin_name: ''
   });
@@ -51,7 +51,7 @@ export default function AdminPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [userForm, setUserForm] = useState({
     name: '',
-    email: '',
+    login_id: '',
     password: '',
     role: 'COMPANY_ADMIN' as 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'NORMAL_USER',
     company_id: '',
@@ -150,7 +150,7 @@ export default function AdminPage() {
       setCompanyForm({
         name: company.name,
         create_admin: false,
-        admin_email: '',
+        admin_login_id: '',
         admin_password: '',
         admin_name: ''
       });
@@ -159,7 +159,7 @@ export default function AdminPage() {
       setCompanyForm({
         name: '',
         create_admin: false,
-        admin_email: '',
+        admin_login_id: '',
         admin_password: '',
         admin_name: ''
       });
@@ -188,15 +188,14 @@ export default function AdminPage() {
 
         // Create admin user for this company if requested
         if (companyForm.create_admin) {
-          if (!companyForm.admin_email || !companyForm.admin_password || !companyForm.admin_name) {
-            await showAlert('管理者を作成する場合は、名前、メール、パスワードが必要です', 'error');
+          if (!companyForm.admin_login_id || !companyForm.admin_password || !companyForm.admin_name) {
+            await showAlert('管理者を作成する場合は、名前、ログインID、パスワードが必要です', 'error');
             return;
           }
 
-          // Use admin endpoint with company_id
           await userService.createByAdmin({
             company_id: newCompany.company_id,
-            email: companyForm.admin_email,
+            login_id: companyForm.admin_login_id,
             password: companyForm.admin_password,
             name: companyForm.admin_name,
             role: 'COMPANY_ADMIN',
@@ -240,7 +239,7 @@ export default function AdminPage() {
       setEditingUser(user);
       setUserForm({
         name: user.name,
-        email: user.email,
+        login_id: user.login_id,
         password: user.password_plain || '',
         role: user.role as any,
         company_id: user.company_id || '',
@@ -251,7 +250,7 @@ export default function AdminPage() {
       setEditingUser(null);
       setUserForm({
         name: '',
-        email: '',
+        login_id: '',
         password: '',
         role: 'COMPANY_ADMIN',
         company_id: companies[0]?.company_id || '',
@@ -265,8 +264,8 @@ export default function AdminPage() {
 
   const handleSaveUser = async () => {
     try {
-      if (!userForm.name.trim() || !userForm.email.trim()) {
-        await showAlert('名前とメールアドレスは必須です', 'error');
+      if (!userForm.name.trim() || !userForm.login_id.trim()) {
+        await showAlert('名前とログインIDは必須です', 'error');
         return;
       }
 
@@ -302,7 +301,7 @@ export default function AdminPage() {
         // Use admin endpoint with company_id
         const createData: UserCreateByAdmin = {
           company_id: userForm.company_id,
-          email: userForm.email,
+          login_id: userForm.login_id,
           password: userForm.password,
           name: userForm.name,
           role: userForm.role,
@@ -599,7 +598,7 @@ export default function AdminPage() {
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700">名前</th>
-                    <th className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700 hidden sm:table-cell">メール</th>
+                    <th className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700 hidden sm:table-cell">ログインID</th>
                     <th className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700 hidden sm:table-cell">パスワード</th>
                     <th className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700">権限</th>
                     <th className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700 hidden md:table-cell">会社</th>
@@ -612,7 +611,7 @@ export default function AdminPage() {
                   {users.map((user) => (
                     <tr key={user.user_id} className="hover:bg-gray-50">
                       <td className="py-2 md:py-3 px-2 md:px-4 text-gray-900 text-xs md:text-sm">{user.name}</td>
-                      <td className="py-2 md:py-3 px-2 md:px-4 text-gray-600 text-xs md:text-sm hidden sm:table-cell max-w-[180px] truncate">{user.email}</td>
+                      <td className="py-2 md:py-3 px-2 md:px-4 text-gray-600 text-xs md:text-sm hidden sm:table-cell max-w-[180px] truncate">{user.login_id}</td>
                       <td className="py-2 md:py-3 px-2 md:px-4 text-gray-600 text-xs md:text-sm hidden sm:table-cell max-w-[120px] truncate">{user.password_plain || '-'}</td>
                       <td className="py-2 md:py-3 px-2 md:px-4">
                         <span className={`px-1.5 md:px-2 py-0.5 md:py-1 rounded text-[10px] md:text-xs font-medium whitespace-nowrap ${user.role === 'SUPER_ADMIN' ? 'bg-purple-100 text-purple-700' :
@@ -774,17 +773,16 @@ export default function AdminPage() {
 
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          管理者メール <span className="text-red-500">*</span>
+                          管理者ログインID <span className="text-red-500">*</span>
                         </label>
                         <input
-                          type="email"
-                          value={companyForm.admin_email}
-                          onChange={(e) => setCompanyForm({ ...companyForm, admin_email: e.target.value })}
-                          onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('正しいメールアドレスを入力してください')}
-                          onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
+                          type="text"
+                          value={companyForm.admin_login_id}
+                          onChange={(e) => setCompanyForm({ ...companyForm, admin_login_id: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none bg-white"
-                          placeholder="例: admin@example.com"
+                          placeholder="例: t.yamada.companyname"
                         />
+                        <p className="text-xs text-gray-500 mt-1">他社のユーザーIDとの重複を防ぐため、IDの末尾に会社名等を付けてください。</p>
                       </div>
 
                       <div>
@@ -862,20 +860,21 @@ export default function AdminPage() {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  メールアドレス <span className="text-red-500">*</span>
+                  ログインID <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="email"
-                  value={userForm.email}
-                  onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                  onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('正しいメールアドレスを入力してください')}
-                  onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
+                  type="text"
+                  value={userForm.login_id}
+                  onChange={(e) => setUserForm({ ...userForm, login_id: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
-                  placeholder="例: yamada@example.com"
+                  placeholder="例: t.yamada.companyname"
                   disabled={!!editingUser}
                 />
+                {!editingUser && (
+                  <p className="text-xs text-gray-500 mt-1">他社のユーザーIDとの重複を防ぐため、IDの末尾に会社名等を付けてください。</p>
+                )}
                 {editingUser && (
-                  <p className="text-xs text-gray-500 mt-1">※ メールアドレスは変更できません</p>
+                  <p className="text-xs text-gray-500 mt-1">※ ログインIDは変更できません</p>
                 )}
               </div>
 
@@ -1032,7 +1031,7 @@ export default function AdminPage() {
                           </div>
                           <div className="min-w-0">
                             <div className="font-semibold text-gray-900 text-sm md:text-base truncate">{admin.name}</div>
-                            <div className="text-xs md:text-sm text-gray-600 truncate">{admin.email}</div>
+                            <div className="text-xs md:text-sm text-gray-600 truncate">{admin.login_id}</div>
                           </div>
                         </div>
                         <button
@@ -1066,7 +1065,7 @@ export default function AdminPage() {
                       <option value="">ユーザーを選択...</option>
                       {availableUsers.map((user) => (
                         <option key={user.user_id} value={user.user_id}>
-                          {user.name} ({user.email})
+                          {user.name} ({user.login_id})
                         </option>
                       ))}
                     </select>

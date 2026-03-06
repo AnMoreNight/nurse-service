@@ -3,12 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { authService } from '@/services';
-import { User, Mail, Lock, Save, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { User, Lock, Save, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { Toast } from './Toast';
 
 interface ProfileData {
   user_id: string;
-  email: string;
+  login_id: string;
   name: string;
   role: string;
   company_id: string | null;
@@ -28,9 +28,8 @@ export default function ProfilePageConnected() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   
-  // Profile form state
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [loginId, setLoginId] = useState('');
   
   // Password form state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -50,7 +49,7 @@ export default function ProfilePageConnected() {
       const data = await authService.getProfile() as ProfileData;
       setProfile(data);
       setName(data.name || '');
-      setEmail(data.email || '');
+      setLoginId(data.login_id || '');
     } catch (error: any) {
       setToastMessage(error.message || 'プロフィールの読み込みに失敗しました');
       // Don't redirect, just show error
@@ -67,19 +66,18 @@ export default function ProfilePageConnected() {
       return;
     }
     
-    if (!email.trim()) {
-      setToastMessage('メールアドレスを入力してください');
+    if (!loginId.trim()) {
+      setToastMessage('ログインIDを入力してください');
       return;
     }
 
     try {
       setSaving(true);
-      await authService.updateProfile({ name, email });
+      await authService.updateProfile({ name, login_id: loginId });
       
-      // Update stored user
       const currentUser = authService.getStoredUser();
       if (currentUser) {
-        authService.setStoredUser({ ...currentUser, name, email });
+        authService.setStoredUser({ ...currentUser, name, login_id: loginId });
       }
       
       setToastMessage('プロフィールを更新しました');
@@ -182,7 +180,7 @@ export default function ProfilePageConnected() {
               </div>
               <div>
                 <h2 className="text-base md:text-lg font-bold text-slate-900">基本情報</h2>
-                <p className="text-xs text-slate-600">名前とメールアドレスを変更できます</p>
+                <p className="text-xs text-slate-600">名前とログインIDを変更できます</p>
               </div>
             </div>
 
@@ -202,17 +200,14 @@ export default function ProfilePageConnected() {
 
               <div>
                 <label className="block text-xs md:text-sm font-medium text-slate-700 mb-1.5">
-                  <Mail className="w-3 h-3 md:w-4 md:h-4 inline mr-1" />
-                  メールアドレス
+                  ログインID
                 </label>
                 <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('正しいメールアドレスを入力してください')}
-                  onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
+                  type="text"
+                  value={loginId}
+                  onChange={(e) => setLoginId(e.target.value)}
                   className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 md:px-4 md:py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition-all"
-                  placeholder="user@example.com"
+                  placeholder="t.yamada.companyname"
                 />
               </div>
 

@@ -7,7 +7,7 @@ import { authService } from '@/services/authService';
 
 export default function ForgotPasswordPage() {
     const router = useRouter();
-    const [email, setEmail] = useState('');
+    const [loginId, setLoginId] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [error, setError] = useState('');
@@ -18,7 +18,7 @@ export default function ForgotPasswordPage() {
         setIsSubmitting(true);
 
         try {
-            await authService.requestPasswordReset({ email });
+            await authService.requestPasswordReset({ login_id: loginId });
             setIsSuccess(true);
         } catch (err: any) {
             setError(err.message || 'パスワードリセットリクエストに失敗しました');
@@ -58,25 +58,23 @@ export default function ForgotPasswordPage() {
                 <div className="text-center mb-8">
                     <h1 className="text-3xl font-bold text-gray-800 mb-2">パスワードリセット</h1>
                     <p className="text-gray-600">
-                        登録されているメールアドレスを入力してください
+                        登録されているログインIDを入力してください
                     </p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
-                        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                            メールアドレス
+                        <label htmlFor="loginId" className="block text-sm font-medium text-gray-700 mb-2">
+                            ログインID
                         </label>
                         <input
-                            id="email"
-                            type="email"
+                            id="loginId"
+                            type="text"
                             required
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                            placeholder="example@nurseservice.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('正しいメールアドレスを入力してください')}
-                            onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
+                            placeholder="t.yamada.companyname"
+                            value={loginId}
+                            onChange={(e) => setLoginId(e.target.value)}
                         />
                     </div>
 

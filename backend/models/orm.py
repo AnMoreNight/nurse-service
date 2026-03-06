@@ -35,7 +35,7 @@ class User(Base):
     
     user_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     company_id = Column(UUID(as_uuid=True), ForeignKey("companies.company_id"), nullable=True)
-    email = Column(String(255), unique=True, nullable=False)
+    login_id = Column(String(255), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
     role = Column(String(50), default="NORMAL_USER")
     name = Column(String(255), nullable=False)
@@ -220,7 +220,7 @@ class UserInvitation(Base):
     
     invitation_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     company_id = Column(UUID(as_uuid=True), ForeignKey("companies.company_id"), nullable=False)
-    email = Column(String(255), nullable=False)
+    login_id = Column(String(255), nullable=False)
     role = Column(String(50), nullable=False)
     token = Column(String(255), unique=True, nullable=False)
     expires_at = Column(DateTime, nullable=False)
@@ -232,7 +232,7 @@ class UserInvitation(Base):
 
     __table_args__ = (
         Index('ix_user_invitations_company_id', 'company_id'),
-        Index('ix_user_invitations_email', 'email'),
+        Index('ix_user_invitations_login_id', 'login_id'),
     )
 
 class PasswordResetToken(Base):

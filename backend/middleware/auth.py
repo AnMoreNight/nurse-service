@@ -23,7 +23,7 @@ async def get_current_user(request: Request, db: AsyncSession) -> dict:
         "user_id": UUID(payload.get("user_id")),
         "company_id": UUID(payload.get("company_id")) if payload.get("company_id") else None,
         "role": payload.get("role"),
-        "email": payload.get("email")
+        "login_id": payload.get("login_id")
     }
     
     # Security check: Non-SUPER_ADMIN users MUST have a company_id

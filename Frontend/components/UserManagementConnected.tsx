@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '@/lib/context';
 import { userService, User, UserCreate, UserUpdate, PaginatedResponse } from '@/services';
-import { Plus, Pencil, Trash2, X, Save, Mail, Users as UsersIcon, Key } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Save, User as UserIcon, Users as UsersIcon, Key } from 'lucide-react';
 import { useModal } from '@/contexts/ModalContext';
 
 interface UserManagementConnectedProps {
@@ -25,7 +25,7 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
+    login_id: '',
     password: '',
     role: 'NORMAL_USER' as 'COMPANY_ADMIN' | 'NORMAL_USER',
     display_color: '#3B82F6'
@@ -69,7 +69,7 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
       setEditingUser(user);
       setFormData({
         name: user.name,
-        email: user.email,
+        login_id: user.login_id,
         password: '',
         role: user.role as any,
         display_color: user.display_color || '#3B82F6'
@@ -78,7 +78,7 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
       setEditingUser(null);
       setFormData({
         name: '',
-        email: '',
+        login_id: '',
         password: '',
         role: 'NORMAL_USER',
         display_color: '#3B82F6'
@@ -89,8 +89,8 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
 
   const handleSave = async () => {
     try {
-      if (!formData.name.trim() || !formData.email.trim()) {
-        await showAlert('名前とメールアドレスは必須です', 'error');
+      if (!formData.name.trim() || !formData.login_id.trim()) {
+        await showAlert('名前とログインIDは必須です', 'error');
         return;
       }
 
@@ -115,7 +115,7 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
           return;
         }
         const createData: UserCreate = {
-          email: formData.email,
+          login_id: formData.login_id,
           password: formData.password,
           name: formData.name,
           role: formData.role,
@@ -215,7 +215,7 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
           <thead className="bg-white border-b sticky top-0 z-10">
             <tr>
               <th className="px-2 md:px-6 py-2 md:py-4 text-[10px] md:text-xs font-bold text-gray-500 uppercase">名前</th>
-              <th className="px-2 md:px-6 py-2 md:py-4 text-[10px] md:text-xs font-bold text-gray-500 uppercase">メール</th>
+              <th className="px-2 md:px-6 py-2 md:py-4 text-[10px] md:text-xs font-bold text-gray-500 uppercase">ログインID</th>
               <th className="px-2 md:px-6 py-2 md:py-4 text-[10px] md:text-xs font-bold text-gray-500 uppercase hidden md:table-cell">職種</th>
               <th className="px-2 md:px-6 py-2 md:py-4 text-[10px] md:text-xs font-bold text-gray-500 uppercase">権限</th>
               <th className="px-2 md:px-6 py-2 md:py-4 text-[10px] md:text-xs font-bold text-gray-500 uppercase hidden sm:table-cell">状態</th>
@@ -236,7 +236,7 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
                     <div className="font-bold text-gray-800 text-xs md:text-sm truncate">{user.name}</div>
                   </div>
                 </td>
-                <td className="px-2 md:px-6 py-2 md:py-4 text-xs md:text-sm text-gray-600 truncate max-w-[120px] md:max-w-none">{user.email}</td>
+                <td className="px-2 md:px-6 py-2 md:py-4 text-xs md:text-sm text-gray-600 truncate max-w-[120px] md:max-w-none">{user.login_id}</td>
                 <td className="px-2 md:px-6 py-2 md:py-4 text-xs md:text-sm text-gray-600 hidden md:table-cell">{user.job_title || '-'}</td>
                 <td className="px-2 md:px-6 py-2 md:py-4">{getRoleBadge(user.role)}</td>
                 <td className="px-2 md:px-6 py-2 md:py-4 hidden sm:table-cell">
@@ -356,23 +356,24 @@ export const UserManagementConnected: React.FC<UserManagementConnectedProps> = (
 
               <div>
                 <label className="block text-sm font-bold text-gray-600 mb-2">
-                  メールアドレス <span className="text-red-500">*</span>
+                  ログインID <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                  <UserIcon className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                   <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('正しいメールアドレスを入力してください')}
-                    onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
+                    type="text"
+                    value={formData.login_id}
+                    onChange={(e) => setFormData({ ...formData, login_id: e.target.value })}
                     className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none"
-                    placeholder="例: yamada@example.com"
+                    placeholder="例: t.yamada.companyname"
                     disabled={!!editingUser}
                   />
                 </div>
+                {!editingUser && (
+                  <p className="text-xs text-gray-500 mt-1">他社のユーザーIDとの重複を防ぐため、IDの末尾に会社名等を付けてください。</p>
+                )}
                 {editingUser && (
-                  <p className="text-xs text-gray-500 mt-1">※ メールアドレスは変更できません</p>
+                  <p className="text-xs text-gray-500 mt-1">※ ログインIDは変更できません</p>
                 )}
               </div>
 

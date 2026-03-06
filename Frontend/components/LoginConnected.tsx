@@ -9,7 +9,7 @@ interface LoginProps {
 }
 
 export const LoginConnected: React.FC<LoginProps> = ({ onLogin }) => {
-  const [email, setEmail] = useState('');
+  const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -20,7 +20,7 @@ export const LoginConnected: React.FC<LoginProps> = ({ onLogin }) => {
     setLoading(true);
 
     try {
-      const response = await authService.login({ email, password });
+      const response = await authService.login({ login_id: loginId, password });
       authService.storeAuth(response.access_token, response.user);
       
       // Clear saved date to always show today's schedule on login
@@ -65,17 +65,15 @@ export const LoginConnected: React.FC<LoginProps> = ({ onLogin }) => {
         <div className="p-8">
           <form onSubmit={handleLogin} className="space-y-6">
             <div>
-              <label className="block text-sm font-bold text-gray-600 mb-2">メールアドレス</label>
+              <label className="block text-sm font-bold text-gray-600 mb-2">ログインID</label>
               <div className="relative">
                 <User className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                 <input
-                  type="email"
+                  type="text"
                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition-all bg-gray-50 focus:bg-white"
-                  placeholder="メールアドレスを入力"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('正しいメールアドレスを入力してください')}
-                  onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
+                  placeholder="t.yamada.companyname"
+                  value={loginId}
+                  onChange={(e) => setLoginId(e.target.value)}
                   disabled={loading}
                 />
               </div>

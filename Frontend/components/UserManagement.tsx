@@ -23,7 +23,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     const [isAdding, setIsAdding] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
-        email: '',
+        login_id: '',
         password: '',
         role: 'NORMAL_USER' as 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'NORMAL_USER'
     });
@@ -37,7 +37,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                 user_id: `new_${Date.now()}`,
                 company_id: companyId,
                 name: formData.name,
-                email: formData.email,
+                login_id: formData.login_id,
                 role: formData.role,
                 is_active: true,
                 sort_order: users.length,
@@ -51,7 +51,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
     const resetForm = () => {
         setFormData({
             name: '',
-            email: '',
+            login_id: '',
             password: '',
             role: 'NORMAL_USER'
         });
@@ -61,7 +61,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
         setEditingUser(user);
         setFormData({
             name: user.name,
-            email: user.email,
+            login_id: user.login_id,
             password: '',
             role: user.role as 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'NORMAL_USER'
         });
@@ -103,12 +103,10 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                             className="px-3 py-2 border rounded-lg"
                         />
                         <input
-                            type="email"
-                            placeholder="メール"
-                            value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('正しいメールアドレスを入力してください')}
-                            onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
+                            type="text"
+                            placeholder="ログインID (例: t.yamada.companyname)"
+                            value={formData.login_id}
+                            onChange={(e) => setFormData({ ...formData, login_id: e.target.value })}
                             className="px-3 py-2 border rounded-lg"
                         />
                         <input
@@ -151,7 +149,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                     <thead>
                         <tr className="border-b">
                             <th className="text-left py-2 px-2 md:px-4 text-xs md:text-sm">名前</th>
-                            <th className="text-left py-2 px-2 md:px-4 text-xs md:text-sm hidden sm:table-cell">メール</th>
+                            <th className="text-left py-2 px-2 md:px-4 text-xs md:text-sm hidden sm:table-cell">ログインID</th>
                             <th className="text-left py-2 px-2 md:px-4 text-xs md:text-sm hidden md:table-cell">職種</th>
                             <th className="text-left py-2 px-2 md:px-4 text-xs md:text-sm">権限</th>
                             <th className="text-right py-2 px-2 md:px-4 text-xs md:text-sm">操作</th>
@@ -161,7 +159,7 @@ export const UserManagement: React.FC<UserManagementProps> = ({
                         {users.map((user) => (
                             <tr key={user.user_id} className="border-b hover:bg-gray-50">
                                 <td className="py-2 px-2 md:px-4 text-xs md:text-sm">{user.name}</td>
-                                <td className="py-2 px-2 md:px-4 text-xs md:text-sm hidden sm:table-cell truncate max-w-[150px]">{user.email}</td>
+                                <td className="py-2 px-2 md:px-4 text-xs md:text-sm hidden sm:table-cell truncate max-w-[150px]">{user.login_id}</td>
                                 <td className="py-2 px-2 md:px-4 text-xs md:text-sm hidden md:table-cell">{user.job_title || '-'}</td>
                                 <td className="py-2 px-2 md:px-4">
                                     <span className={`px-1.5 md:px-2 py-0.5 md:py-1 rounded text-[10px] md:text-xs ${user.role === 'COMPANY_ADMIN' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'

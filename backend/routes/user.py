@@ -19,14 +19,14 @@ async def create_user(req: UserCreate, request: Request, db: AsyncSession = Depe
             detail="Cannot create users without a company. SUPER_ADMIN should use /users/admin/create endpoint."
         )
     return await UserController.create_user(
-        db, user["company_id"], req.email, req.password, req.role, req.name,
+        db, user["company_id"], req.login_id, req.password, req.role, req.name,
         req.profession, req.job_title, req.display_color, req.join_date, req.left_date
     )
 
 @router.post("/invite")
 async def invite_user(req: UserInvite, request: Request, db: AsyncSession = Depends(get_db)):
     user = await require_company_admin(request, db)  # Admin only
-    return await UserController.invite_user(db, user["company_id"], req.email, req.role)
+    return await UserController.invite_user(db, user["company_id"], req.login_id, req.role)
 
 @router.get("/all-users")
 async def get_all_users(
@@ -121,7 +121,7 @@ async def create_user_by_admin(req: UserCreateByAdmin, request: Request, db: Asy
     """SUPER_ADMIN creates a user for any company"""
     await require_super_admin(request, db)
     return await UserController.create_user_by_admin(
-        db, req.company_id, req.email, req.password, req.role, req.name,
+        db, req.company_id, req.login_id, req.password, req.role, req.name,
         req.profession, req.job_title, req.display_color, req.join_date, req.left_date
     )
 

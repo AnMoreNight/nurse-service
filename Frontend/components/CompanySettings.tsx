@@ -21,7 +21,7 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
 
   // New Status Form State
   const [newStatusLabel, setNewStatusLabel] = useState('');
-  const [newStatusColor, setNewStatusColor] = useState('blue');
+  const [newStatusColor, setNewStatusColor] = useState('#3B82F6');
 
   // New Job Title Form State
   const [newJobTitle, setNewJobTitle] = useState('');
@@ -69,7 +69,7 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
     const newKey = `CUSTOM_${Date.now()}`;
     setVisitStatuses([...visitStatuses, { key: newKey, label: newStatusLabel, color: newStatusColor }]);
     setNewStatusLabel('');
-    setNewStatusColor('blue');
+    setNewStatusColor('#3B82F6');
   };
 
   const handleDeleteStatus = async (key: string) => {
@@ -97,21 +97,6 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
     });
     setIsDirty(false);
   };
-
-  const colorOptions = [
-    { val: 'blue', label: '青' },
-    { val: 'red', label: '赤' },
-    { val: 'orange', label: '橙' },
-    { val: 'green', label: '緑' },
-    { val: 'purple', label: '紫' },
-    { val: 'gray', label: '灰' },
-    { val: 'teal', label: '青緑' },
-    { val: 'emerald', label: 'エメラルド' },
-    { val: 'rose', label: 'ローズ' },
-    { val: 'amber', label: '琥珀' },
-    { val: 'cyan', label: 'シアン' },
-    { val: 'indigo', label: 'インディゴ' },
-  ];
 
   return (
     <div className="h-full bg-white rounded-none md:rounded-xl shadow-none md:shadow-sm border-0 md:border border-gray-200 overflow-auto flex flex-col">
@@ -171,15 +156,15 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
                       />
                     </td>
                     <td className="px-2 md:px-6 py-2 md:py-4">
-                      <select
-                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white cursor-pointer"
-                        value={status.color}
-                        onChange={(e) => handleStatusChange(index, 'color', e.target.value)}
-                      >
-                        {colorOptions.map(c => (
-                          <option key={c.val} value={c.val}>{c.label}</option>
-                        ))}
-                      </select>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={status.color.startsWith('#') ? status.color : '#3B82F6'}
+                          onChange={(e) => handleStatusChange(index, 'color', e.target.value)}
+                          className="w-10 h-10 rounded border border-gray-300 cursor-pointer"
+                        />
+                        <span className="text-sm text-gray-600">{status.color}</span>
+                      </div>
                     </td>
                     <td className="px-2 md:px-6 py-2 md:py-4 text-center">
                       <span
@@ -216,15 +201,15 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
                     />
                   </td>
                   <td className="px-2 md:px-6 py-2 md:py-4">
-                    <select
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white cursor-pointer"
-                      value={newStatusColor}
-                      onChange={(e) => setNewStatusColor(e.target.value)}
-                    >
-                      {colorOptions.map(c => (
-                        <option key={c.val} value={c.val}>{c.label}</option>
-                      ))}
-                    </select>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={newStatusColor}
+                        onChange={(e) => setNewStatusColor(e.target.value)}
+                        className="w-10 h-10 rounded border border-gray-300 cursor-pointer"
+                      />
+                      <span className="text-sm text-gray-600">{newStatusColor}</span>
+                    </div>
                   </td>
                   <td className="px-2 md:px-6 py-2 md:py-4 text-center">
                     <span
