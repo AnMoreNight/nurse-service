@@ -27,6 +27,12 @@ export default function ProfilePageConnected() {
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToastMessage(message);
+    setToastType(type);
+  };
   
   const [name, setName] = useState('');
   const [loginId, setLoginId] = useState('');
@@ -51,7 +57,7 @@ export default function ProfilePageConnected() {
       setName(data.name || '');
       setLoginId(data.login_id || '');
     } catch (error: any) {
-      setToastMessage(error.message || 'プロフィールの読み込みに失敗しました');
+      showToast(error.message || 'プロフィールの読み辿みに失敗しました', 'error');
       // Don't redirect, just show error
     } finally {
       setLoading(false);
@@ -62,12 +68,12 @@ export default function ProfilePageConnected() {
     e.preventDefault();
     
     if (!name.trim()) {
-      setToastMessage('名前を入力してください');
+      showToast('名前を入力してください', 'error');
       return;
     }
     
     if (!loginId.trim()) {
-      setToastMessage('ログインIDを入力してください');
+      showToast('ログインIDを入力してください', 'error');
       return;
     }
 
@@ -80,10 +86,10 @@ export default function ProfilePageConnected() {
         authService.setStoredUser({ ...currentUser, name, login_id: loginId });
       }
       
-      setToastMessage('プロフィールを更新しました');
+      showToast('プロフィールを更新しました');
       await loadProfile();
     } catch (error: any) {
-      setToastMessage(error.message || 'プロフィールの更新に失敗しました');
+      showToast(error.message || 'プロフィールの更新に失敗しました', 'error');
     } finally {
       setSaving(false);
     }
@@ -93,36 +99,36 @@ export default function ProfilePageConnected() {
     e.preventDefault();
     
     if (!currentPassword) {
-      setToastMessage('現在のパスワードを入力してください');
+      showToast('現在のパスワードを入力してください', 'error');
       return;
     }
     
     if (!newPassword) {
-      setToastMessage('新しいパスワードを入力してください');
+      showToast('新しいパスワードを入力してください', 'error');
       return;
     }
     
     if (newPassword.length < 6) {
-      setToastMessage('新しいパスワードは6文字以上にしてください');
+      showToast('新しいパスワードは6文字以上にしてください', 'error');
       return;
     }
     
     if (newPassword !== confirmPassword) {
-      setToastMessage('新しいパスワードが一致しません');
+      showToast('新しいパスワードが一致しません', 'error');
       return;
     }
 
     try {
       setSaving(true);
       await authService.changePassword({ current_password: currentPassword, new_password: newPassword });
-      setToastMessage('パスワードを変更しました');
+      showToast('パスワードを変更しました');
       
       // Clear password fields
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (error: any) {
-      setToastMessage(error.message || 'パスワードの変更に失敗しました');
+      showToast(error.message || 'パスワードの変更に失敗しました', 'error');
     } finally {
       setSaving(false);
     }
@@ -175,7 +181,7 @@ export default function ProfilePageConnected() {
           {/* Profile Information Card */}
           <div className="bg-white rounded-lg md:rounded-xl border border-slate-200 shadow-sm p-4 md:p-6">
             <div className="flex items-center gap-2 md:gap-3 mb-4 md:mb-6">
-              <div className="w-8 h-8 md:w-10 md:h-10 bg-teal-600 rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 md:w-10 md:h-10 bg-teal-600 rounded-full flex items-center justify-center shrink-0">
                 <User className="w-4 h-4 md:w-5 md:h-5 text-white" />
               </div>
               <div>
@@ -244,7 +250,7 @@ export default function ProfilePageConnected() {
           {/* Change Password Card */}
           <div className="bg-white rounded-lg md:rounded-xl border border-slate-200 shadow-sm p-4 md:p-6">
             <div className="flex items-center gap-2 md:gap-3 mb-4 md:mb-6">
-              <div className="w-8 h-8 md:w-10 md:h-10 bg-orange-600 rounded-full flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 md:w-10 md:h-10 bg-orange-600 rounded-full flex items-center justify-center shrink-0">
                 <Lock className="w-4 h-4 md:w-5 md:h-5 text-white" />
               </div>
               <div>
@@ -334,7 +340,7 @@ export default function ProfilePageConnected() {
       </div>
 
       {toastMessage && (
-        <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
+        <Toast message={toastMessage} onClose={() => setToastMessage(null)} type={toastType} />
       )}
     </div>
   );

@@ -77,8 +77,9 @@ interface AppContextType {
   clearError: () => void;
 
   // Toast
-  showToast: (message: string) => void;
+  showToast: (message: string, type?: 'success' | 'error') => void;
   toastMessage: string | null;
+  toastType: 'success' | 'error';
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -171,6 +172,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Error & toast state
   const [error, setError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
   // Real-time polling state
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -269,8 +271,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   }, [currentUser, startPolling, stopPolling]);
 
-  const showToast = useCallback((message: string) => {
+  const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
     setToastMessage(message);
+    setToastType(type);
     setTimeout(() => setToastMessage(null), 3000);
   }, []);
 
@@ -781,6 +784,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       clearError,
       showToast,
       toastMessage,
+      toastType,
     }}>
       {children}
     </AppContext.Provider>

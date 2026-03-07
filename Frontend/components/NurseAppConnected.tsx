@@ -59,6 +59,7 @@ export default function NurseAppConnected() {
   const [staffFormState, setStaffFormState] = useState<{ isOpen: boolean, initialStaff?: any }>({ isOpen: false });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
 
@@ -139,7 +140,7 @@ export default function NurseAppConnected() {
       }
     } catch (error: any) {
       if (!silent) {
-        showToast(error.message || 'データの読み込みに失敗しました');
+        showToast(error.message || 'データの読み込みに失敗しました', 'error');
       }
     } finally {
       if (isInitial) {
@@ -170,8 +171,9 @@ export default function NurseAppConnected() {
     setShifts([]);
   };
 
-  const showToast = (message: string) => {
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToastMessage(message);
+    setToastType(type);
     setTimeout(() => setToastMessage(null), 3000);
   };
 
@@ -289,7 +291,7 @@ export default function NurseAppConnected() {
       // Silent background refresh - won't interrupt user
       loadData(false, true);
     } catch (error: any) {
-      showToast(error.message || '追加に失敗しました');
+      showToast(error.message || '追加に失敗しました', 'error');
     }
   };
 
@@ -353,7 +355,7 @@ export default function NurseAppConnected() {
       // Background refresh for server reconciliation
       loadData(false, true);
     } catch (error: any) {
-      showToast(error.message || '更新に失敗しました');
+      showToast(error.message || '更新に失敗しました', 'error');
       loadData(false, true);
     }
   };
@@ -401,7 +403,7 @@ export default function NurseAppConnected() {
       // Background refresh for server reconciliation
       loadData(false, true);
     } catch (error: any) {
-      showToast(error.message || '削除に失敗しました');
+      showToast(error.message || '削除に失敗しました', 'error');
       loadData(false, true);
     }
   };
@@ -450,7 +452,7 @@ export default function NurseAppConnected() {
       // Background refresh for server reconciliation
       loadData(false, true);
     } catch (error: any) {
-      showToast(error.message || '移動に失敗しました');
+      showToast(error.message || '移動に失敗しました', 'error');
       // Revert optimistic update on error by refreshing from server
       loadData(false, true);
     }
@@ -510,13 +512,13 @@ export default function NurseAppConnected() {
             loadData(false, true);
           })().catch((error: any) => {
             // On error, revert by reloading
-            showToast(error.message || 'シフト更新に失敗しました');
+            showToast(error.message || 'シフト更新に失敗しました', 'error');
             loadData(false, true);
           });
           return currentShifts;
         });
       } catch (error: any) {
-        showToast(error.message || 'シフト更新に失敗しました');
+        showToast(error.message || 'シフト更新に失敗しました', 'error');
         loadData(false, true);
       }
     }, 500);
@@ -540,7 +542,7 @@ export default function NurseAppConnected() {
       // Silent background refresh - won't interrupt user
       loadData(false, true);
     } catch (error: any) {
-      showToast(error.message || '追加に失敗しました');
+      showToast(error.message || '追加に失敗しました', 'error');
     }
   };
 
@@ -557,7 +559,7 @@ export default function NurseAppConnected() {
       // Silent background refresh - won't interrupt user
       loadData(false, true);
     } catch (error: any) {
-      showToast(error.message || '更新に失敗しました');
+      showToast(error.message || '更新に失敗しました', 'error');
     }
   };
 
@@ -576,7 +578,7 @@ export default function NurseAppConnected() {
       // Silent background refresh - won't interrupt user
       loadData(false, true);
     } catch (error: any) {
-      showToast(error.message || '並び替えに失敗しました');
+      showToast(error.message || '並び替えに失敗しました', 'error');
     }
   };
 
@@ -590,7 +592,7 @@ export default function NurseAppConnected() {
       a.click();
       showToast('エクスポートしました');
     } catch (error: any) {
-      showToast(error.message || 'エクスポートに失敗しました');
+      showToast(error.message || 'エクスポートに失敗しました', 'error');
     }
   };
 
@@ -604,7 +606,7 @@ export default function NurseAppConnected() {
       a.click();
       showToast('エクスポートしました');
     } catch (error: any) {
-      showToast(error.message || 'エクスポートに失敗しました');
+      showToast(error.message || 'エクスポートに失敗しました', 'error');
     }
   };
 
@@ -812,7 +814,7 @@ export default function NurseAppConnected() {
                       // Reload data to reflect changes - silently
                       loadData(false, true);
                     } catch (error: any) {
-                      showToast(error.message || '設定の保存に失敗しました');
+                      showToast(error.message || '設定の保存に失敗しました', 'error');
                     } finally {
                       setLoading(false);
                     }
@@ -890,7 +892,7 @@ export default function NurseAppConnected() {
         />
       )}
 
-      {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage(null)} />}
+      {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage(null)} type={toastType} />}
     </div>
   );
 }
