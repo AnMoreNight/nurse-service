@@ -6,6 +6,7 @@ import { Repeat, ChevronLeft, ChevronRight, ChevronDown, Moon, GripVertical, Not
 import { MiniCalendar } from './MiniCalendar';
 import { RecurrenceScopeModal } from './RecurrenceScopeModal';
 import { getEffectiveShiftType } from '@/lib/constants';
+import { getColorStyles } from '@/lib/utils';
 
 interface DashboardProps {
     visits: VisitWithStaff[];
@@ -304,39 +305,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
     const getVisitStyles = (visit: VisitWithStaff, isHoliday: boolean) => {
         const config = companySettings.visitStatuses.find(s => s.key === visit.status);
-        const colorMap: Record<string, { bg: string; border: string; text: string; hover: string }> = {
-            blue: { bg: 'bg-blue-100', border: 'border-blue-500', text: 'text-blue-900', hover: 'hover:bg-blue-200' },
-            red: { bg: 'bg-red-100', border: 'border-red-500', text: 'text-red-900', hover: 'hover:bg-red-200' },
-            green: { bg: 'bg-green-100', border: 'border-green-500', text: 'text-green-900', hover: 'hover:bg-green-200' },
-            emerald: { bg: 'bg-emerald-100', border: 'border-emerald-500', text: 'text-emerald-900', hover: 'hover:bg-emerald-200' },
-            yellow: { bg: 'bg-yellow-100', border: 'border-yellow-500', text: 'text-yellow-900', hover: 'hover:bg-yellow-200' },
-            orange: { bg: 'bg-orange-100', border: 'border-orange-500', text: 'text-orange-900', hover: 'hover:bg-orange-200' },
-            purple: { bg: 'bg-purple-100', border: 'border-purple-500', text: 'text-purple-900', hover: 'hover:bg-purple-200' },
-            pink: { bg: 'bg-pink-100', border: 'border-pink-500', text: 'text-pink-900', hover: 'hover:bg-pink-200' },
-            gray: { bg: 'bg-gray-200', border: 'border-gray-400', text: 'text-gray-500', hover: 'hover:bg-gray-300' },
-            indigo: { bg: 'bg-indigo-100', border: 'border-indigo-500', text: 'text-indigo-900', hover: 'hover:bg-indigo-200' },
-            teal: { bg: 'bg-teal-100', border: 'border-teal-500', text: 'text-teal-900', hover: 'hover:bg-teal-200' },
-            cyan: { bg: 'bg-cyan-100', border: 'border-cyan-500', text: 'text-cyan-900', hover: 'hover:bg-cyan-200' },
+        const color = config?.color || 'blue';
+        const styles = getColorStyles(color);
+
+        const isCancelled = config && visit.status === config.key && config.label?.includes('キャンセル') ||
+            (config?.color === 'gray' && !config?.label?.includes('その他'));
+
+        return {
+            inlineStyle: {
+                backgroundColor: styles.bgLight,
+                borderLeftColor: styles.bg,
+                color: styles.text,
+            } as React.CSSProperties,
+            extraClass: isCancelled ? 'line-through' : '',
+            opacity: isHoliday ? 'opacity-90 shadow-sm' : 'opacity-100 shadow-sm',
         };
-
-        let colors = colorMap.blue;
-        let extraClasses = '';
-        let opacity = 'opacity-100 shadow-sm';
-
-        if (config) {
-            colors = colorMap[config.color] || colorMap.blue;
-            if (visit.status === 'CANCELLED') {
-                extraClasses = 'line-through';
-                opacity = 'opacity-80';
-            }
-        }
-
-        if (isHoliday) {
-            opacity = 'opacity-90'; // Keep original color on days off, just slightly faded
-        }
-
-        const bgClass = `${colors.bg} ${colors.border} ${colors.text} ${colors.hover} ${extraClasses}`;
-        return { bgClass, opacity };
     };
 
     return (
@@ -365,24 +348,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <div className="hidden md:flex items-center gap-3 overflow-x-auto max-w-[50%]">
                     <div className="flex items-center gap-2 text-xs text-gray-500 mr-4 whitespace-nowrap">
                         {companySettings.visitStatuses.map(status => {
-                            const legendColorMap: Record<string, string> = {
-                                blue: 'bg-blue-100 border-blue-500',
-                                red: 'bg-red-100 border-red-500',
-                                green: 'bg-green-100 border-green-500',
-                                emerald: 'bg-emerald-100 border-emerald-500',
-                                yellow: 'bg-yellow-100 border-yellow-500',
-                                orange: 'bg-orange-100 border-orange-500',
-                                purple: 'bg-purple-100 border-purple-500',
-                                pink: 'bg-pink-100 border-pink-500',
-                                gray: 'bg-gray-200 border-gray-400',
-                                indigo: 'bg-indigo-100 border-indigo-500',
-                                teal: 'bg-teal-100 border-teal-500',
-                                cyan: 'bg-cyan-100 border-cyan-500',
-                            };
-                            const colorClass = legendColorMap[status.color] || legendColorMap.blue;
+                            const legendStyles = getColorStyles(status.color);
                             return (
                                 <React.Fragment key={status.key}>
-                                    <span className={`w-3 h-3 ${colorClass} border rounded-sm inline-block ml-2 first:ml-0`}></span>
+                                    <span className="w-3 h-3 border rounded-sm inline-block ml-2 first:ml-0" style={{ backgroundColor: legendStyles.bgLight, borderColor: legendStyles.bg }}></span>
                                     {status.label}
                                 </React.Fragment>
                             );
@@ -488,7 +457,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                     {dropPreview && dropPreview.staffId === staff.id && dragState?.visit && dropPreview.time && (
                                         (() => {
                                             const visit = dragState.visit;
-                                            const { bgClass, opacity } = getVisitStyles(visit, isHoliday);
+                                            const { inlineStyle, extraClass, opacity } = getVisitStyles(visit, isHoliday);
                                             const startMins = timeToMinutes(visit.startTime);
                                             const endMins = timeToMinutes(visit.endTime);
                                             let duration = endMins - startMins;
@@ -500,8 +469,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                                             return (
                                                 <div
-                                                    className={`absolute rounded-lg border-l-4 p-1 sm:p-1.5 md:p-2.5 text-[10px] sm:text-xs overflow-hidden z-50 pointer-events-none shadow-lg ${bgClass} ${opacity}`}
-                                                    style={{ top: dropPreview.top, height: `${Math.max(height, 30)}px`, left: '4px', width: 'calc(100% - 8px)' }}
+                                                    className={`absolute rounded-lg border-l-4 p-1 sm:p-1.5 md:p-2.5 text-[10px] sm:text-xs overflow-hidden z-50 pointer-events-none shadow-lg ${extraClass} ${opacity}`}
+                                                    style={{ ...inlineStyle, top: dropPreview.top, height: `${Math.max(height, 30)}px`, left: '4px', width: 'calc(100% - 8px)' }}
                                                 >
                                                     <div className="flex justify-between items-start gap-1">
                                                         <span className="font-bold truncate text-[10px] sm:text-xs md:text-sm leading-tight">{dropPreview.time} {visit.patientName}</span>
@@ -528,7 +497,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                         const height = getHeight(visit.startTime, visit.endTime);
                                         // Get layout for side-by-side display of overlapping schedules
                                         const layout = layoutMap.get(visitIndex) || { left: '0%', width: '100%' };
-                                        const { bgClass, opacity } = getVisitStyles(visit, isHoliday);
+                                        const { inlineStyle, extraClass, opacity } = getVisitStyles(visit, isHoliday);
                                         const isBeingDragged = dragState?.id === visit.id;
                                         const uniqueKey = `${visit.id}-${currentDate}-${staff.id}-${visitIndex}`;
 
@@ -541,8 +510,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                                 onDragOver={(e) => handleDragOverWithTime(e, staff.id)}
                                                 onDrop={(e) => handleContainerDrop(e, staff.id)}
                                                 onClick={(e) => { e.stopPropagation(); if (!justDraggedRef.current) onSelectVisit(visit); }}
-                                                className={`absolute rounded-lg border-l-4 p-1 sm:p-1.5 md:p-2.5 text-[10px] sm:text-xs transition-all select-none overflow-hidden z-10 ${bgClass} ${opacity} ${isBeingDragged ? 'opacity-0' : ''} ${isReadOnly ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'}`}
+                                                className={`absolute rounded-lg border-l-4 p-1 sm:p-1.5 md:p-2.5 text-[10px] sm:text-xs transition-all select-none overflow-hidden z-10 ${extraClass} ${opacity} ${isBeingDragged ? 'opacity-0' : ''} ${isReadOnly ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'}`}
                                                 style={{
+                                                    ...inlineStyle,
                                                     top: `${top}px`,
                                                     height: `${Math.max(height, 30)}px`,
                                                     left: `calc(${layout.left} + 2px)`,
