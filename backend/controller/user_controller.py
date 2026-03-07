@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete, case
+from sqlalchemy import select, update, delete, case, func
 from models.orm import User, UserInvitation
 from fastapi import HTTPException, status
 from uuid import UUID, uuid4
@@ -13,7 +13,7 @@ class UserController:
     async def create_user(db: AsyncSession, company_id: UUID, login_id: str, password: str, role: str, 
                          name: str, profession: str = None, job_title: str = None, 
                          display_color: str = None, join_date: str = None, left_date: str = None):
-        existing = await db.execute(select(User).where(User.login_id == login_id))
+        existing = await db.execute(select(User).where(func.lower(User.login_id) == login_id.lower()))
         if existing.scalar_one_or_none():
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="入力されたログインIDは既に使用されています。別のIDを指定してください。")
         
@@ -367,7 +367,7 @@ class UserController:
                                    job_title: str = None, display_color: str = None, 
                                    join_date: str = None, left_date: str = None):
         """Create user by admin with explicit company_id - used by SUPER_ADMIN"""
-        existing = await db.execute(select(User).where(User.login_id == login_id))
+        existing = await db.execute(select(User).where(func.lower(User.login_id) == login_id.lower()))
         if existing.scalar_one_or_none():
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="入力されたログインIDは既に使用されています。別のIDを指定してください。")
         

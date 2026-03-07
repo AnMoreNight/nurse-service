@@ -4,7 +4,16 @@ import React, { useState, useEffect } from 'react';
 import { CompanySettings } from '@/lib/types';
 import { Settings, Plus, Trash2, Save, Loader2 } from 'lucide-react';
 import { useModal } from '@/contexts/ModalContext';
-import { getColorStyles } from '@/lib/utils';
+import { getColorStyles, colorStyles } from '@/lib/utils';
+
+const colorNameToHex: Record<string, string> = Object.fromEntries(
+  Object.entries(colorStyles).map(([name, styles]) => [name, styles.bg])
+);
+
+function resolveHexColor(color: string): string {
+  if (color?.startsWith('#')) return color;
+  return colorNameToHex[color?.toLowerCase()] || '#3B82F6';
+}
 
 interface CompanySettingsProps {
   settings: CompanySettings;
@@ -91,10 +100,15 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
   };
 
   const handleSave = async () => {
+    const normalizedStatuses = visitStatuses.map(s => ({
+      ...s,
+      color: resolveHexColor(s.color),
+    }));
     onSave({
-      visitStatuses,
+      visitStatuses: normalizedStatuses,
       jobTitles
     });
+    setVisitStatuses(normalizedStatuses);
     setIsDirty(false);
   };
 
@@ -159,11 +173,11 @@ export const CompanySettingsView: React.FC<CompanySettingsProps> = ({ settings, 
                       <div className="flex items-center gap-2">
                         <input
                           type="color"
-                          value={status.color.startsWith('#') ? status.color : '#3B82F6'}
+                          value={resolveHexColor(status.color)}
                           onChange={(e) => handleStatusChange(index, 'color', e.target.value)}
                           className="w-10 h-10 rounded border border-gray-300 cursor-pointer"
                         />
-                        <span className="text-sm text-gray-600">{status.color}</span>
+                        <span className="text-sm text-gray-600">{resolveHexColor(status.color)}</span>
                       </div>
                     </td>
                     <td className="px-2 md:px-6 py-2 md:py-4 text-center">

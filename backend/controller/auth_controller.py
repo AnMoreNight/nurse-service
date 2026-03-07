@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from models.orm import User, Company
 from utils.utils import create_access_token
@@ -14,7 +14,7 @@ class AuthController:
         result = await db.execute(
             select(User).options(
                 selectinload(User.company)
-            ).where(User.login_id == login_id)
+            ).where(func.lower(User.login_id) == login_id.lower())
         )
         user = result.scalar_one_or_none()
 
@@ -180,9 +180,9 @@ class AuthController:
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
         
-        if login_id and login_id != user.login_id:
+        if login_id and login_id.lower() != (user.login_id or '').lower():
             existing = await db.execute(
-                select(User).where(User.login_id == login_id, User.user_id != user_id)
+                select(User).where(func.lower(User.login_id) == login_id.lower(), User.user_id != user_id)
             )
             if existing.scalar_one_or_none():
                 raise HTTPException(

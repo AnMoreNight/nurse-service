@@ -5,12 +5,24 @@ from uuid import UUID
 import re
 
 def validate_login_id(login_id: str) -> str:
-    """Validate login ID: 3-100 chars, alphanumeric + period/underscore/hyphen.
-    Also accepts legacy email-format values for backward compatibility."""
+    """Strict validation for new login IDs: 3-100 chars, alphanumeric + period/underscore/hyphen only."""
     if not login_id:
         raise ValueError('ログインIDを入力してください')
     
-    pattern = r'^[a-zA-Z0-9._@+-]{3,100}$'
+    pattern = r'^[a-zA-Z0-9._\-]{3,100}$'
+    
+    if not re.match(pattern, login_id):
+        raise ValueError('ログインIDは3〜100文字の半角英数字・ピリオド・アンダースコア・ハイフンで入力してください')
+    
+    return login_id.lower()
+
+
+def validate_login_id_compat(login_id: str) -> str:
+    """Lenient validation that also accepts legacy email-format values (with @ and +)."""
+    if not login_id:
+        raise ValueError('ログインIDを入力してください')
+    
+    pattern = r'^[a-zA-Z0-9._@+\-]{3,100}$'
     
     if not re.match(pattern, login_id):
         raise ValueError('ログインIDは3〜100文字の半角英数字・ピリオド・アンダースコア・ハイフンで入力してください')
@@ -25,7 +37,7 @@ class LoginRequest(BaseModel):
     @field_validator('login_id')
     @classmethod
     def validate_login_id_field(cls, v):
-        return validate_login_id(v)
+        return validate_login_id_compat(v)
 
 class LoginResponse(BaseModel):
     access_token: str
@@ -38,7 +50,7 @@ class PasswordResetRequest(BaseModel):
     @field_validator('login_id')
     @classmethod
     def validate_login_id_field(cls, v):
-        return validate_login_id(v)
+        return validate_login_id_compat(v)
 
 class PasswordResetConfirm(BaseModel):
     token: str
@@ -61,7 +73,7 @@ class UpdateProfileRequest(BaseModel):
     @classmethod
     def validate_login_id_field(cls, v):
         if v:
-            return validate_login_id(v)
+            return validate_login_id_compat(v)
         return v
 
 # Company Models
