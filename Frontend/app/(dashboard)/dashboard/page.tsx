@@ -32,6 +32,7 @@ function DashboardContent() {
     error,
     clearError,
     toastMessage,
+    toastType,
     showToast,
     isRefreshing,
     refreshData,
@@ -74,6 +75,7 @@ function DashboardContent() {
   const [staffFormState, setStaffFormState] = useState<{ isOpen: boolean, initialStaff?: Staff }>({ isOpen: false });
   const [suggestionState, setSuggestionState] = useState<{ isOpen: boolean; initialValues?: any }>({ isOpen: false });
   const [localToast, setLocalToast] = useState<string | null>(null);
+  const [localToastType, setLocalToastType] = useState<'success' | 'error'>('success');
   const [isSaving, setIsSaving] = useState(false);
   const settingsDirtyRef = useRef(false);
   const prevViewRef = useRef(view);
@@ -220,6 +222,7 @@ function DashboardContent() {
     } catch (err: any) {
       console.error('Export failed:', err);
       setLocalToast('エクスポートに失敗しました');
+      setLocalToastType('error');
     }
   };
 
@@ -275,7 +278,7 @@ function DashboardContent() {
       }
       setSelectedVisit(null);
     } catch (err: any) {
-      showToast(`更新に失敗しました: ${err.message || '不明なエラー'}`);
+      showToast(`更新に失敗しました: ${err.message || '不明なエラー'}`, 'error');
     }
   };
 
@@ -289,7 +292,7 @@ function DashboardContent() {
       await deleteSchedule(visitId, scope, effectiveDate);
       setSelectedVisit(null);
     } catch (err: any) {
-      showToast(`削除に失敗しました: ${err.message || '不明なエラー'}`);
+      showToast(`削除に失敗しました: ${err.message || '不明なエラー'}`, 'error');
     }
   };
 
@@ -345,7 +348,7 @@ function DashboardContent() {
         date: currentDate,
       }, scope);
     } catch (err: any) {
-      showToast(`移動に失敗しました: ${err.message || '不明なエラー'}`);
+      showToast(`移動に失敗しました: ${err.message || '不明なエラー'}`, 'error');
     }
   };
 
@@ -355,7 +358,7 @@ function DashboardContent() {
     try {
       await updateShift(staffId, date, type);
     } catch (err: any) {
-      showToast(`シフト更新に失敗しました`);
+      showToast(`シフト更新に失敗しました`, 'error');
     }
   };
 
@@ -370,7 +373,7 @@ function DashboardContent() {
       const sortOrders = newStaffList.map((s, idx) => ({ userId: s.id, sortOrder: idx }));
       await reorderStaff(sortOrders);
     } catch (err: any) {
-      showToast(`並び替えに失敗しました`);
+      showToast(`並び替えに失敗しました`, 'error');
     }
   };
 
@@ -390,7 +393,7 @@ function DashboardContent() {
       }
       setStaffFormState({ isOpen: false });
     } catch (err: any) {
-      showToast(`スタッフの保存に失敗しました: ${err.message || '不明なエラー'}`);
+      showToast(`スタッフの保存に失敗しました: ${err.message || '不明なエラー'}`, 'error');
     }
   };
 
@@ -398,7 +401,7 @@ function DashboardContent() {
     try {
       await deleteStaff(staffId);
     } catch (err: any) {
-      showToast(`スタッフの削除に失敗しました`);
+      showToast(`スタッフの削除に失敗しました`, 'error');
     }
   };
 
@@ -406,7 +409,7 @@ function DashboardContent() {
     try {
       await resignStaff(staffId);
     } catch (err: any) {
-      showToast(`退職処理に失敗しました`);
+      showToast(`退職処理に失敗しました`, 'error');
     }
   };
 
@@ -529,7 +532,7 @@ function DashboardContent() {
                     showToast('設定を保存しました');
                     await refreshStatuses();
                   } catch (error: any) {
-                    showToast(`保存に失敗しました: ${error.message || '不明なエラー'}`);
+                    showToast(`保存に失敗しました: ${error.message || '不明なエラー'}`, 'error');
                   } finally {
                     setIsSaving(false);
                   }
@@ -542,10 +545,10 @@ function DashboardContent() {
       </div>
 
       {view === 'search' && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-white/30 backdrop-blur-md" onClick={() => window.history.back()} />
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div className="flex items-center justify-between p-6 border-b bg-linear-to-r from-blue-50 to-indigo-50">
               <h2 className="text-2xl font-bold text-gray-800">スケジュール検索</h2>
               <button onClick={() => window.history.back()} className="p-2 hover:bg-white/80 rounded-lg transition-colors">
                 <X size={24} className="text-gray-600" />
@@ -562,10 +565,10 @@ function DashboardContent() {
       )}
 
       {view === 'export' && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-white/30 backdrop-blur-md" onClick={() => window.history.back()} />
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-green-50 to-emerald-50">
+            <div className="flex items-center justify-between p-6 border-b bg-linear-to-r from-green-50 to-emerald-50">
               <h2 className="text-2xl font-bold text-gray-800">データ出力</h2>
               <button onClick={() => window.history.back()} className="p-2 hover:bg-white/80 rounded-lg transition-colors">
                 <X size={24} className="text-gray-600" />
@@ -601,7 +604,7 @@ function DashboardContent() {
         />
       )}
 
-      {(toastMessage || localToast) && <Toast message={toastMessage || localToast!} onClose={() => setLocalToast(null)} />}
+      {(toastMessage || localToast) && <Toast message={toastMessage || localToast!} onClose={() => setLocalToast(null)} type={toastMessage ? toastType : localToastType} />}
     </>
   );
 }
