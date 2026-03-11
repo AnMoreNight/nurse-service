@@ -15,6 +15,27 @@ class CompanyController:
         company = Company(name=name, is_active=True)
         db.add(company)
         await db.flush()
+        
+        # Create default statuses for new company
+        default_statuses = [
+            {"name": "通常訪問(看護)", "color": "blue", "sort_order": 0},
+            {"name": "通常訪問(リハ)", "color": "emerald", "sort_order": 1},
+            {"name": "緊急訪問", "color": "red", "sort_order": 2},
+            {"name": "その他", "color": "orange", "sort_order": 3},
+            {"name": "キャンセル", "color": "gray", "sort_order": 4},
+        ]
+        
+        for status_data in default_statuses:
+            status = ScheduleStatus(
+                company_id=company.company_id,
+                name=status_data["name"],
+                color=status_data["color"],
+                sort_order=status_data["sort_order"],
+                is_active=True,
+                is_default=False
+            )
+            db.add(status)
+        
         await db.commit()
         return company
 
