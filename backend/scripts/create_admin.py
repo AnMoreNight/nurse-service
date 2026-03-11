@@ -4,10 +4,10 @@ from dotenv import load_dotenv
 
 load_dotenv('.env')
 
-url = "http://localhost:5000/bootstrap/create-admin"
+url = "https://comorebi-date.com/backend-dev-v1/bootstrap/create-admin"
 headers = {"X-Bootstrap-Secret": os.getenv("BOOTSTRAP_SECRET")}
 data = {
-    "login_id": "admin@nurseservice.com",
+    "login_id": "admin1nurseservice.com",
     "password": "Admin@123",
     "name": "Super Admin"
 }

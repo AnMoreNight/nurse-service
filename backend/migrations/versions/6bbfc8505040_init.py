@@ -1,8 +1,8 @@
 """init
 
-Revision ID: 4d8961528eb0
+Revision ID: 6bbfc8505040
 Revises: 
-Create Date: 2026-01-12 19:27:40.900976
+Create Date: 2026-03-09 19:37:26.911640
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '4d8961528eb0'
+revision: str = '6bbfc8505040'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -33,7 +33,7 @@ def upgrade() -> None:
     sa.Column('rule_id', sa.UUID(), nullable=False),
     sa.Column('frequency', sa.String(length=50), nullable=True),
     sa.Column('day_of_week', postgresql.ARRAY(sa.Integer()), nullable=True),
-    sa.Column('week_of_month', sa.Integer(), nullable=True),
+    sa.Column('week_of_month', postgresql.ARRAY(sa.Integer()), nullable=True),
     sa.Column('day_of_week_monthly', sa.Integer(), nullable=True),
     sa.Column('month_of_year', sa.Integer(), nullable=True),
     sa.Column('day_of_month', sa.Integer(), nullable=True),
@@ -67,6 +67,8 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['company_id'], ['companies.company_id'], ),
     sa.PrimaryKeyConstraint('patient_id')
     )
+    op.create_index('ix_patients_company_id', 'patients', ['company_id'], unique=False)
+    op.create_index('ix_patients_company_id_is_active', 'patients', ['company_id', 'is_active'], unique=False)
     op.create_table('schedule_statuses',
     sa.Column('status_id', sa.UUID(), nullable=False),
     sa.Column('company_id', sa.UUID(), nullable=False),
@@ -79,10 +81,11 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['company_id'], ['companies.company_id'], ),
     sa.PrimaryKeyConstraint('status_id')
     )
+    op.create_index('ix_schedule_statuses_company_id', 'schedule_statuses', ['company_id'], unique=False)
     op.create_table('user_invitations',
     sa.Column('invitation_id', sa.UUID(), nullable=False),
     sa.Column('company_id', sa.UUID(), nullable=False),
-    sa.Column('email', sa.String(length=255), nullable=False),
+    sa.Column('login_id', sa.String(length=255), nullable=False),
     sa.Column('role', sa.String(length=50), nullable=False),
     sa.Column('token', sa.String(length=255), nullable=False),
     sa.Column('expires_at', sa.DateTime(), nullable=False),
@@ -92,10 +95,12 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('invitation_id'),
     sa.UniqueConstraint('token')
     )
+    op.create_index('ix_user_invitations_company_id', 'user_invitations', ['company_id'], unique=False)
+    op.create_index('ix_user_invitations_login_id', 'user_invitations', ['login_id'], unique=False)
     op.create_table('users',
     sa.Column('user_id', sa.UUID(), nullable=False),
     sa.Column('company_id', sa.UUID(), nullable=True),
-    sa.Column('email', sa.String(length=255), nullable=False),
+    sa.Column('login_id', sa.String(length=255), nullable=False),
     sa.Column('password_hash', sa.String(length=255), nullable=False),
     sa.Column('role', sa.String(length=50), nullable=True),
     sa.Column('name', sa.String(length=255), nullable=False),
@@ -112,8 +117,10 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['company_id'], ['companies.company_id'], ),
     sa.PrimaryKeyConstraint('user_id'),
-    sa.UniqueConstraint('email')
+    sa.UniqueConstraint('login_id')
     )
+    op.create_index('ix_users_company_id', 'users', ['company_id'], unique=False)
+    op.create_index('ix_users_company_id_role', 'users', ['company_id', 'role'], unique=False)
     op.create_table('audit_logs',
     sa.Column('log_id', sa.UUID(), nullable=False),
     sa.Column('company_id', sa.UUID(), nullable=True),
@@ -128,6 +135,9 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['users.user_id'], ),
     sa.PrimaryKeyConstraint('log_id')
     )
+    op.create_index('ix_audit_logs_company_id', 'audit_logs', ['company_id'], unique=False)
+    op.create_index('ix_audit_logs_created_at', 'audit_logs', ['created_at'], unique=False)
+    op.create_index('ix_audit_logs_user_id', 'audit_logs', ['user_id'], unique=False)
     op.create_table('password_reset_tokens',
     sa.Column('token_id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
@@ -139,6 +149,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('token_id'),
     sa.UniqueConstraint('token')
     )
+    op.create_index('ix_password_reset_tokens_user_id', 'password_reset_tokens', ['user_id'], unique=False)
     op.create_table('schedules',
     sa.Column('schedule_id', sa.UUID(), nullable=False),
     sa.Column('company_id', sa.UUID(), nullable=False),
@@ -163,6 +174,11 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['status_id'], ['schedule_statuses.status_id'], ),
     sa.PrimaryKeyConstraint('schedule_id')
     )
+    op.create_index('ix_schedules_company_id', 'schedules', ['company_id'], unique=False)
+    op.create_index('ix_schedules_company_id_start_time', 'schedules', ['company_id', 'start_time'], unique=False)
+    op.create_index('ix_schedules_recurring_rule_id', 'schedules', ['recurring_rule_id'], unique=False)
+    op.create_index('ix_schedules_recurring_rule_id_is_exception', 'schedules', ['recurring_rule_id', 'is_exception'], unique=False)
+    op.create_index('ix_schedules_recurring_series_id', 'schedules', ['recurring_series_id'], unique=False)
     op.create_table('shifts',
     sa.Column('shift_id', sa.UUID(), nullable=False),
     sa.Column('company_id', sa.UUID(), nullable=False),
@@ -177,6 +193,9 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['users.user_id'], ),
     sa.PrimaryKeyConstraint('shift_id')
     )
+    op.create_index('ix_shifts_company_id', 'shifts', ['company_id'], unique=False)
+    op.create_index('ix_shifts_company_id_shift_date', 'shifts', ['company_id', 'shift_date'], unique=False)
+    op.create_index('ix_shifts_user_id_shift_date', 'shifts', ['user_id', 'shift_date'], unique=False)
     op.create_table('weekly_off_rules',
     sa.Column('rule_id', sa.UUID(), nullable=False),
     sa.Column('company_id', sa.UUID(), nullable=False),
@@ -189,6 +208,8 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['users.user_id'], ),
     sa.PrimaryKeyConstraint('rule_id')
     )
+    op.create_index('ix_weekly_off_rules_company_id', 'weekly_off_rules', ['company_id'], unique=False)
+    op.create_index('ix_weekly_off_rules_company_id_user_id', 'weekly_off_rules', ['company_id', 'user_id'], unique=False)
     op.create_table('schedule_assignments',
     sa.Column('schedule_id', sa.UUID(), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
@@ -197,21 +218,44 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['users.user_id'], ),
     sa.PrimaryKeyConstraint('schedule_id', 'user_id')
     )
+    op.create_index('ix_schedule_assignments_user_id', 'schedule_assignments', ['user_id'], unique=False)
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_index('ix_schedule_assignments_user_id', table_name='schedule_assignments')
     op.drop_table('schedule_assignments')
+    op.drop_index('ix_weekly_off_rules_company_id_user_id', table_name='weekly_off_rules')
+    op.drop_index('ix_weekly_off_rules_company_id', table_name='weekly_off_rules')
     op.drop_table('weekly_off_rules')
+    op.drop_index('ix_shifts_user_id_shift_date', table_name='shifts')
+    op.drop_index('ix_shifts_company_id_shift_date', table_name='shifts')
+    op.drop_index('ix_shifts_company_id', table_name='shifts')
     op.drop_table('shifts')
+    op.drop_index('ix_schedules_recurring_series_id', table_name='schedules')
+    op.drop_index('ix_schedules_recurring_rule_id_is_exception', table_name='schedules')
+    op.drop_index('ix_schedules_recurring_rule_id', table_name='schedules')
+    op.drop_index('ix_schedules_company_id_start_time', table_name='schedules')
+    op.drop_index('ix_schedules_company_id', table_name='schedules')
     op.drop_table('schedules')
+    op.drop_index('ix_password_reset_tokens_user_id', table_name='password_reset_tokens')
     op.drop_table('password_reset_tokens')
+    op.drop_index('ix_audit_logs_user_id', table_name='audit_logs')
+    op.drop_index('ix_audit_logs_created_at', table_name='audit_logs')
+    op.drop_index('ix_audit_logs_company_id', table_name='audit_logs')
     op.drop_table('audit_logs')
+    op.drop_index('ix_users_company_id_role', table_name='users')
+    op.drop_index('ix_users_company_id', table_name='users')
     op.drop_table('users')
+    op.drop_index('ix_user_invitations_login_id', table_name='user_invitations')
+    op.drop_index('ix_user_invitations_company_id', table_name='user_invitations')
     op.drop_table('user_invitations')
+    op.drop_index('ix_schedule_statuses_company_id', table_name='schedule_statuses')
     op.drop_table('schedule_statuses')
+    op.drop_index('ix_patients_company_id_is_active', table_name='patients')
+    op.drop_index('ix_patients_company_id', table_name='patients')
     op.drop_table('patients')
     op.drop_table('company_settings')
     op.drop_table('recurring_rules')
