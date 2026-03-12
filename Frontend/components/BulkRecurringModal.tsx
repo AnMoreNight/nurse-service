@@ -24,14 +24,15 @@ interface BulkRecurringModalProps {
   onClose: () => void;
 }
 
+// JS convention: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
 const WEEKDAYS = [
-  { value: 6, label: '日' },
-  { value: 0, label: '月' },
-  { value: 1, label: '火' },
-  { value: 2, label: '水' },
-  { value: 3, label: '木' },
-  { value: 4, label: '金' },
-  { value: 5, label: '土' },
+  { value: 0, label: '日' },
+  { value: 1, label: '月' },
+  { value: 2, label: '火' },
+  { value: 3, label: '水' },
+  { value: 4, label: '木' },
+  { value: 5, label: '金' },
+  { value: 6, label: '土' },
 ];
 
 export const BulkRecurringModal: React.FC<BulkRecurringModalProps> = ({
