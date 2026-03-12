@@ -94,7 +94,7 @@ export const BulkRecurringModal: React.FC<BulkRecurringModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/40 z-110 flex justify-center items-center p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
         <div className="p-5 border-b bg-linear-to-r from-teal-50 to-emerald-50 flex justify-between items-center shrink-0">
           <div>
             <h3 className="text-lg font-bold text-teal-800 flex items-center gap-2">
