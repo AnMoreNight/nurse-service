@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { X, RefreshCw, Calendar, Clock, MapPin, User, FileText, Loader2 } from 'lucide-react';
+import { X, RefreshCw, Calendar, Clock, MapPin, User, Users, FileText, Loader2 } from 'lucide-react';
 import { Staff, CompanySettings } from '@/lib/types';
 
 interface BulkRecurringModalProps {
