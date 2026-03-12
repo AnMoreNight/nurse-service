@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { X, RefreshCw, Calendar, Clock, MapPin, User, Users, FileText, Loader2 } from 'lucide-react';
+import { getColorStyles } from '@/lib/utils';
 import { Staff, CompanySettings } from '@/lib/types';
 
 interface BulkRecurringModalProps {
@@ -254,15 +255,35 @@ export const BulkRecurringModal: React.FC<BulkRecurringModalProps> = ({
 
           <div>
             <label className="block text-xs font-bold text-gray-500 mb-1.5">ステータス</label>
-            <select
-              value={statusId}
-              onChange={(e) => setStatusId(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none bg-white text-sm"
-            >
-              {statuses.map(s => (
-                <option key={s.status_id} value={s.status_id}>{s.name}</option>
-              ))}
-            </select>
+            {(() => {
+              const selected = statuses.find(s => s.status_id === statusId);
+              const styles = selected ? getColorStyles(selected.color) : null;
+              return (
+                <select
+                  value={statusId}
+                  onChange={(e) => setStatusId(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none text-sm font-bold cursor-pointer"
+                  style={styles ? {
+                    backgroundColor: styles.bgLight,
+                    color: styles.text,
+                    borderColor: styles.border,
+                  } : undefined}
+                >
+                  {statuses.map(s => {
+                    const st = getColorStyles(s.color);
+                    return (
+                      <option
+                        key={s.status_id}
+                        value={s.status_id}
+                        style={{ backgroundColor: st.bgLight, color: st.text }}
+                      >
+                        {s.name}
+                      </option>
+                    );
+                  })}
+                </select>
+              );
+            })()}
           </div>
 
           <div>
