@@ -92,4 +92,30 @@ export const scheduleService = {
   },
 
   cleanupDuplicates: () => apiClient.post<{ deleted_count: number; kept_count: number }>('/schedules/cleanup-duplicates', {}),
+
+  bulkSpecialInstruction: (data: {
+    company_id?: string;
+    patient_name: string;
+    visit_address?: string;
+    start_date: string;
+    start_time: string;
+    end_time: string;
+    status_id: string;
+    memo?: string;
+    assigned_user_ids: string[];
+    days?: number;
+  }) => apiClient.post<{ created_count: number; schedule_ids: string[]; start_date: string; end_date: string }>('/schedules/bulk-special-instruction', data),
+
+  bulkRecurring: (data: {
+    company_id?: string;
+    patient_name: string;
+    visit_address?: string;
+    start_date: string;
+    start_time: string;
+    end_time: string;
+    day_of_week: number[];
+    status_id: string;
+    memo?: string;
+    assigned_user_ids: string[];
+  }) => apiClient.post<{ schedule_id: string; recurring_series_id: string }>('/schedules/bulk-recurring', data),
 };

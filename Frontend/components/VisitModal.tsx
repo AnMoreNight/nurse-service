@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { VisitWithStaff, Staff, RecurrenceRule, RecurrenceScope, CompanySettings } from '@/lib/types';
-import { X, Save, User, Trash2, FileText, Repeat, Users, Check, MapPin, ExternalLink, Copy, Calendar, Sparkles, AlertTriangle } from 'lucide-react';
+import { X, Save, User, Trash2, FileText, Repeat, Users, Check, MapPin, ExternalLink, Copy, Calendar, Sparkles, AlertTriangle, ClipboardList } from 'lucide-react';
 import { RecurrenceScopeModal } from './RecurrenceScopeModal';
 import { useModal } from '@/contexts/ModalContext';
 import { getColorStyles } from '@/lib/utils';
@@ -17,6 +17,7 @@ interface VisitModalProps {
     onDelete: (visitId: string, scope?: RecurrenceScope, occurrenceDate?: string) => void;
     onDuplicate?: (visit: VisitWithStaff) => void;
     onAiQuery?: (data: { patientName: string; address: string; date: string; staffIds: string[] }) => void;
+    onSpecialInstruction?: (data: { date: string; startTime: string; endTime: string; staffIds: string[]; patientName: string; visitAddress?: string; statusId: string; memo?: string }) => void;
     isReadOnly?: boolean;
 }
 
@@ -30,6 +31,7 @@ export const VisitModal: React.FC<VisitModalProps> = ({
     onDelete,
     onDuplicate,
     onAiQuery,
+    onSpecialInstruction,
     isReadOnly = false
 }) => {
     const isNew = visit.id.startsWith('new_') || visit.id.startsWith('ai_') || visit.id.startsWith('dup_');
@@ -318,7 +320,20 @@ export const VisitModal: React.FC<VisitModalProps> = ({
                         {isNew ? <Sparkles className="w-5 h-5 text-indigo-500" /> : <FileText className="w-5 h-5 text-gray-600" />}
                         {isNew ? '新規訪問予定' : '訪問詳細'}
                     </h3>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                        {!isReadOnly && onSpecialInstruction && (
+                            <button
+                                onClick={() => onSpecialInstruction({
+                                    date, startTime, endTime, staffIds,
+                                    patientName, visitAddress: address, statusId: status, memo: notes,
+                                })}
+                                className="px-2.5 py-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors flex items-center gap-1"
+                                title="特別指示期間の一括登録"
+                            >
+                                <ClipboardList className="w-3.5 h-3.5" />
+                                <span className="hidden md:inline">特指示</span>
+                            </button>
+                        )}
                         {!isNew && !isReadOnly && onDuplicate && (
                             <button
                                 onClick={() => onDuplicate(visit)}

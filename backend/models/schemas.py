@@ -226,6 +226,31 @@ class StatusBulkUpdate(BaseModel):
     """Bulk update request containing all statuses"""
     statuses: list[StatusItem]
 
+# Bulk Schedule Models
+class BulkSpecialInstructionCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    patient_name: str
+    visit_address: Optional[str] = None
+    start_date: str  # YYYY-MM-DD
+    start_time: str  # HH:MM
+    end_time: str    # HH:MM
+    status_id: UUID
+    memo: Optional[str] = None
+    assigned_user_ids: list[UUID]
+    days: int = 14
+
+class BulkRecurringCreate(BaseModel):
+    company_id: Optional[UUID] = None
+    patient_name: str
+    visit_address: Optional[str] = None
+    start_date: str  # YYYY-MM-DD
+    start_time: str  # HH:MM
+    end_time: str    # HH:MM
+    day_of_week: list[int]  # 0=Mon, 1=Tue, ... 6=Sun
+    status_id: UUID
+    memo: Optional[str] = None
+    assigned_user_ids: list[UUID]
+
 # Schedule Models
 class RecurringRuleCreate(BaseModel):
     frequency: str  # Weekly, Monthly, Yearly

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { VisitWithStaff, Staff, ShiftAssignment, ShiftType, CompanySettings, RecurrenceScope } from '@/lib/types';
-import { Repeat, ChevronLeft, ChevronRight, ChevronDown, Moon, GripVertical, Notebook } from 'lucide-react';
+import { Repeat, ChevronLeft, ChevronRight, ChevronDown, Moon, GripVertical, Notebook, CalendarPlus } from 'lucide-react';
 import { MiniCalendar } from './MiniCalendar';
 import { RecurrenceScopeModal } from './RecurrenceScopeModal';
 import { getEffectiveShiftType } from '@/lib/constants';
@@ -25,6 +25,7 @@ interface DashboardProps {
     monthlyStats: Record<string, number>;
     companySettings: CompanySettings;
     isReadOnly?: boolean;
+    onBulkRecurring?: () => void;
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -65,7 +66,8 @@ const minutesToTime = (totalMinutes: number) => {
 
 export const Dashboard: React.FC<DashboardProps> = ({
     visits, staffList, shifts = [], currentDate, onSelectVisit, onMoveVisit, onAddVisitSlot,
-    onPrevDate, onNextDate, onToday, onDateSelect, onUpdateShift, onReorderStaff, monthlyStats, companySettings, isReadOnly = false
+    onPrevDate, onNextDate, onToday, onDateSelect, onUpdateShift, onReorderStaff, monthlyStats, companySettings, isReadOnly = false,
+    onBulkRecurring
 }) => {
     const [dragState, setDragState] = useState<{ id: string, sourceStaffId: string, clickOffsetY?: number, visit?: VisitWithStaff } | null>(null);
     const [dropPreview, setDropPreview] = useState<{ staffId: string; time: string; top: number; } | null>(null);
@@ -344,6 +346,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             </div>
                         )}
                     </div>
+                    {onBulkRecurring && !isReadOnly && (
+                        <button
+                            onClick={onBulkRecurring}
+                            className="px-2.5 py-1.5 text-xs font-bold text-teal-600 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg transition-colors flex items-center gap-1 whitespace-nowrap"
+                            title="定期訪問の一括登録"
+                        >
+                            <CalendarPlus className="w-3.5 h-3.5" />
+                            <span className="hidden md:inline">一括登録</span>
+                        </button>
+                    )}
                 </div>
                 <div className="hidden md:flex items-center gap-3 overflow-x-auto max-w-[50%]">
                     <div className="flex items-center gap-2 text-xs text-gray-500 mr-4 whitespace-nowrap">

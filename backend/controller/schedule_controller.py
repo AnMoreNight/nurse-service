@@ -83,7 +83,93 @@ class ScheduleController:
             "schedule_id": str(schedule.schedule_id),
             "recurring_series_id": str(recurring_series_id) if recurring_series_id else None
         }
-    
+
+    @staticmethod
+    async def bulk_create_special_instruction(
+        db: AsyncSession, company_id: UUID, patient_name: str, visit_address: str,
+        start_date_str: str, start_time_str: str, end_time_str: str,
+        status_id: UUID, memo: str, assigned_user_ids: list[UUID], days: int = 14
+    ):
+        base_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        created_ids = []
+
+        for day_offset in range(days):
+            current_date = base_date + timedelta(days=day_offset)
+            start_dt = datetime.combine(current_date, datetime.strptime(start_time_str, "%H:%M").time())
+            end_dt = datetime.combine(current_date, datetime.strptime(end_time_str, "%H:%M").time())
+
+            schedule = Schedule(
+                company_id=company_id,
+                patient_name=patient_name,
+                visit_address=visit_address,
+                start_time=start_dt,
+                end_time=end_dt,
+                status_id=status_id,
+                memo=memo,
+                is_exception=False,
+            )
+            db.add(schedule)
+            await db.flush()
+
+            for user_id in assigned_user_ids:
+                db.add(ScheduleAssignment(schedule_id=schedule.schedule_id, user_id=user_id))
+
+            created_ids.append(str(schedule.schedule_id))
+
+        await db.commit()
+        return {
+            "created_count": len(created_ids),
+            "schedule_ids": created_ids,
+            "start_date": start_date_str,
+            "end_date": str(base_date + timedelta(days=days - 1)),
+        }
+
+    @staticmethod
+    async def bulk_create_recurring(
+        db: AsyncSession, company_id: UUID, patient_name: str, visit_address: str,
+        start_date_str: str, start_time_str: str, end_time_str: str,
+        day_of_week: list[int], status_id: UUID, memo: str, assigned_user_ids: list[UUID]
+    ):
+        base_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        start_dt = datetime.combine(base_date, datetime.strptime(start_time_str, "%H:%M").time())
+        end_dt = datetime.combine(base_date, datetime.strptime(end_time_str, "%H:%M").time())
+
+        rule = RecurringRule(
+            frequency="weekly",
+            day_of_week=day_of_week,
+            interval=1,
+            start_date=base_date,
+            end_date=None,
+        )
+        db.add(rule)
+        await db.flush()
+
+        recurring_series_id = uuid4()
+        schedule = Schedule(
+            company_id=company_id,
+            patient_name=patient_name,
+            visit_address=visit_address,
+            start_time=start_dt,
+            end_time=end_dt,
+            status_id=status_id,
+            memo=memo,
+            recurring_rule_id=rule.rule_id,
+            recurring_series_id=recurring_series_id,
+            recurrence_index=0,
+            is_exception=False,
+        )
+        db.add(schedule)
+        await db.flush()
+
+        for user_id in assigned_user_ids:
+            db.add(ScheduleAssignment(schedule_id=schedule.schedule_id, user_id=user_id))
+
+        await db.commit()
+        return {
+            "schedule_id": str(schedule.schedule_id),
+            "recurring_series_id": str(recurring_series_id),
+        }
+
     @staticmethod
     async def get_schedules(db: AsyncSession, company_id: UUID, start_date: str = None,
                            end_date: str = None, patient_name: str = None, filter_by_user: UUID = None):

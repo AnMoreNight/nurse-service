@@ -9,6 +9,8 @@ import { StaffFormModal } from '@/components/StaffFormModal';
 import { ScheduleSuggestionModal } from '@/components/ScheduleSuggestionModal';
 import { SearchVisitsModal } from '@/components/SearchVisitsModal';
 import { ExportModal } from '@/components/ExportModal';
+import { SpecialInstructionModal } from '@/components/SpecialInstructionModal';
+import { BulkRecurringModal } from '@/components/BulkRecurringModal';
 import { Toast } from '@/components/Toast';
 import { useApp, useRoleAccess } from '@/lib/context';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -77,6 +79,11 @@ function DashboardContent() {
   const [localToast, setLocalToast] = useState<string | null>(null);
   const [localToastType, setLocalToastType] = useState<'success' | 'error'>('success');
   const [isSaving, setIsSaving] = useState(false);
+  const [specialInstructionData, setSpecialInstructionData] = useState<{
+    date: string; startTime: string; endTime: string; staffIds: string[];
+    patientName: string; visitAddress?: string; statusId: string; memo?: string;
+  } | null>(null);
+  const [isBulkRecurringOpen, setIsBulkRecurringOpen] = useState(false);
   const settingsDirtyRef = useRef(false);
   const prevViewRef = useRef(view);
 
@@ -316,6 +323,50 @@ function DashboardContent() {
     showToast('複製しました');
   };
 
+  const handleSpecialInstruction = (data: {
+    date: string; startTime: string; endTime: string; staffIds: string[];
+    patientName: string; visitAddress?: string; statusId: string; memo?: string;
+  }) => {
+    setSpecialInstructionData(data);
+  };
+
+  const handleSubmitSpecialInstruction = async (data: {
+    start_date: string; start_time: string; end_time: string; assigned_user_ids: string[];
+    patient_name: string; visit_address?: string; status_id: string; memo?: string;
+  }) => {
+    try {
+      const result = await scheduleService.bulkSpecialInstruction({
+        company_id: currentUser?.company_id || undefined,
+        ...data,
+      });
+      setSpecialInstructionData(null);
+      showToast(`${result.created_count}件の訪問予定を一括登録しました`);
+      await refreshVisits();
+    } catch (err: any) {
+      showToast(`一括登録に失敗しました: ${err.message || '不明なエラー'}`, 'error');
+      throw err;
+    }
+  };
+
+  const handleSubmitBulkRecurring = async (data: {
+    patient_name: string; visit_address?: string; start_date: string;
+    start_time: string; end_time: string; day_of_week: number[];
+    status_id: string; memo?: string; assigned_user_ids: string[];
+  }) => {
+    try {
+      await scheduleService.bulkRecurring({
+        company_id: currentUser?.company_id || undefined,
+        ...data,
+      });
+      setIsBulkRecurringOpen(false);
+      showToast('定期訪問を登録しました');
+      await refreshVisits();
+    } catch (err: any) {
+      showToast(`登録に失敗しました: ${err.message || '不明なエラー'}`, 'error');
+      throw err;
+    }
+  };
+
   const handleMoveVisit = async (visitId: string, sourceStaffId: string, targetStaffId: string, newStartTime: string, scope: RecurrenceScope = 'this') => {
     if (isReadOnly) return;
 
@@ -479,6 +530,7 @@ function DashboardContent() {
             onToday={() => setCurrentDate(toLocalISOString(new Date()))} onDateSelect={setCurrentDate}
             onUpdateShift={handleUpdateShift} onReorderStaff={handleReorderStaff} monthlyStats={monthlyStats}
             companySettings={companySettings} isReadOnly={isReadOnly}
+            onBulkRecurring={!isReadOnly ? () => setIsBulkRecurringOpen(true) : undefined}
           />
         )}
 
@@ -586,6 +638,7 @@ function DashboardContent() {
           visit={selectedVisit} staffList={filteredStaff} statuses={statuses} companySettings={companySettings}
           onClose={() => setSelectedVisit(null)} onUpdate={handleUpdateVisit} onDelete={handleDeleteVisit}
           onDuplicate={handleDuplicateVisit} onAiQuery={!isReadOnly ? (data) => { setSelectedVisit(null); setSuggestionState({ isOpen: true, initialValues: data }); } : undefined}
+          onSpecialInstruction={!isReadOnly ? handleSpecialInstruction : undefined}
           isReadOnly={isReadOnly}
         />
       )}
@@ -601,6 +654,33 @@ function DashboardContent() {
         <ScheduleSuggestionModal
           onClose={() => setSuggestionState({ isOpen: false })} staffList={filteredStaff}
           allVisits={allVisits} onApply={handleApplySuggestion} initialValues={suggestionState.initialValues}
+        />
+      )}
+
+      {specialInstructionData && (
+        <SpecialInstructionModal
+          defaultDate={specialInstructionData.date}
+          defaultStartTime={specialInstructionData.startTime}
+          defaultEndTime={specialInstructionData.endTime}
+          defaultStaffIds={specialInstructionData.staffIds}
+          patientName={specialInstructionData.patientName}
+          visitAddress={specialInstructionData.visitAddress}
+          statusId={specialInstructionData.statusId}
+          memo={specialInstructionData.memo}
+          staffList={filteredStaff}
+          onSubmit={handleSubmitSpecialInstruction}
+          onClose={() => setSpecialInstructionData(null)}
+        />
+      )}
+
+      {isBulkRecurringOpen && (
+        <BulkRecurringModal
+          currentDate={currentDate}
+          staffList={filteredStaff}
+          statuses={statuses}
+          companySettings={companySettings}
+          onSubmit={handleSubmitBulkRecurring}
+          onClose={() => setIsBulkRecurringOpen(false)}
         />
       )}
 

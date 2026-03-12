@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Request, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
-from models.schemas import ScheduleCreate, ScheduleUpdate, ScheduleCopy
+from models.schemas import ScheduleCreate, ScheduleUpdate, ScheduleCopy, BulkSpecialInstructionCreate, BulkRecurringCreate
 from controller.schedule_controller import ScheduleController
 from db.database import get_db
 from middleware.auth import get_current_user, require_company_admin
@@ -76,6 +76,26 @@ async def export_schedules_csv(
         content=csv_content,
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=schedules.csv"}
+    )
+
+@router.post("/bulk-special-instruction")
+async def bulk_special_instruction(req: BulkSpecialInstructionCreate, request: Request, db: AsyncSession = Depends(get_db)):
+    user = await require_company_admin(request, db)
+    company_id = req.company_id if (user["role"] == "SUPER_ADMIN" and req.company_id) else user["company_id"]
+    return await ScheduleController.bulk_create_special_instruction(
+        db, company_id, req.patient_name, req.visit_address,
+        req.start_date, req.start_time, req.end_time,
+        req.status_id, req.memo, req.assigned_user_ids, req.days
+    )
+
+@router.post("/bulk-recurring")
+async def bulk_recurring(req: BulkRecurringCreate, request: Request, db: AsyncSession = Depends(get_db)):
+    user = await require_company_admin(request, db)
+    company_id = req.company_id if (user["role"] == "SUPER_ADMIN" and req.company_id) else user["company_id"]
+    return await ScheduleController.bulk_create_recurring(
+        db, company_id, req.patient_name, req.visit_address,
+        req.start_date, req.start_time, req.end_time,
+        req.day_of_week, req.status_id, req.memo, req.assigned_user_ids
     )
 
 @router.post("/cleanup-duplicates")
