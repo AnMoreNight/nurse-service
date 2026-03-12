@@ -35,14 +35,12 @@ jobs:
             docker stop nur-backend-staging 2>/dev/null || true
             docker rm   nur-backend-staging 2>/dev/null || true
 
-            # Start fresh staging container on port 8010
+            # Start fresh staging container on port 8010 using dev.env on the VPS
             docker run -d \
               --name nur-backend-staging \
               --restart unless-stopped \
               -p 8010:8000 \
-              -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
-              -e JWT_SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}" \
-              -e BOOTSTRAP_SECRET="${{ secrets.BOOTSTRAP_SECRET }}" \
+              --env-file /root/deploy/dev.env \
               superdev78/nur-backend:staging
 
             echo "Staging backend running on port 8010"
