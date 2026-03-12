@@ -1,0 +1,49 @@
+name: Deploy new_feat Branch (Staging)
+
+on:
+  push:
+    branches: [ new_feat ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push staging backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: superdev78/nur-backend:staging
+
+      - name: Deploy staging container on VPS (port 8010)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y sshpass
+          sshpass -p '${{ secrets.VPS_PASSWORD }}' ssh -o StrictHostKeyChecking=no root@85.131.253.225 '
+            docker pull superdev78/nur-backend:staging
+
+            # Stop and remove existing staging container if running
+            docker stop nur-backend-staging 2>/dev/null || true
+            docker rm   nur-backend-staging 2>/dev/null || true
+
+            # Start fresh staging container on port 8010
+            docker run -d \
+              --name nur-backend-staging \
+              --restart unless-stopped \
+              -p 8010:8000 \
+              -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+              -e JWT_SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}" \
+              -e BOOTSTRAP_SECRET="${{ secrets.BOOTSTRAP_SECRET }}" \
+              superdev78/nur-backend:staging
+
+            echo "Staging backend running on port 8010"
+          '
