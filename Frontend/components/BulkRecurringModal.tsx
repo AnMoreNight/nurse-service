@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, RefreshCw, Calendar, Clock, MapPin, User, Users, FileText, Loader2, CheckCircle2 } from 'lucide-react';
 import { getColorStyles } from '@/lib/utils';
 import { Staff, CompanySettings } from '@/lib/types';
@@ -55,6 +55,20 @@ export const BulkRecurringModal: React.FC<BulkRecurringModalProps> = ({
   const [isSuccess, setIsSuccess] = useState(false);
   const [staffSearch, setStaffSearch] = useState('');
   const [isStaffDropdownOpen, setIsStaffDropdownOpen] = useState(false);
+  const staffDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (staffDropdownRef.current && !staffDropdownRef.current.contains(e.target as Node)) {
+        setIsStaffDropdownOpen(false);
+        setStaffSearch('');
+      }
+    };
+    if (isStaffDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isStaffDropdownOpen]);
 
   const toggleDay = (day: number) => {
     setSelectedDays(prev =>
@@ -66,8 +80,6 @@ export const BulkRecurringModal: React.FC<BulkRecurringModalProps> = ({
     setSelectedStaffIds(prev =>
       prev.includes(staffId) ? prev.filter(id => id !== staffId) : [...prev, staffId]
     );
-    setIsStaffDropdownOpen(false);
-    setStaffSearch('');
   };
 
   const filteredStaff = staffList.filter(s =>
@@ -229,7 +241,7 @@ export const BulkRecurringModal: React.FC<BulkRecurringModalProps> = ({
             <label className="block text-xs font-bold text-gray-500 mb-1.5">
               担当スタッフ <span className="text-red-400">*</span>
             </label>
-            <div className="relative">
+            <div className="relative" ref={staffDropdownRef}>
               <div
                 className="w-full px-3 py-2 border rounded-lg bg-white text-sm cursor-pointer flex items-center justify-between min-h-[38px]"
                 onClick={() => setIsStaffDropdownOpen(!isStaffDropdownOpen)}
