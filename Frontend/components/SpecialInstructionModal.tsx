@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { X, Sparkles, Calendar, Clock, Users, Loader2 } from 'lucide-react';
+import { X, Sparkles, Calendar, Clock, Users, Loader2, CheckCircle2 } from 'lucide-react';
 import { Staff } from '@/lib/types';
 
 interface SpecialInstructionModalProps {
@@ -23,7 +23,7 @@ interface SpecialInstructionModalProps {
     visit_address?: string;
     status_id: string;
     memo?: string;
-  }) => Promise<void>;
+  }) => Promise<number | undefined>;
   onClose: () => void;
 }
 
@@ -45,6 +45,7 @@ export const SpecialInstructionModal: React.FC<SpecialInstructionModalProps> = (
   const [endTime, setEndTime] = useState(defaultEndTime);
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>(defaultStaffIds);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successCount, setSuccessCount] = useState<number | null>(null);
 
   const DAYS = 14;
 
@@ -71,7 +72,7 @@ export const SpecialInstructionModal: React.FC<SpecialInstructionModalProps> = (
     if (!startDate || !startTime || !endTime || selectedStaffIds.length === 0) return;
     setIsSubmitting(true);
     try {
-      await onSubmit({
+      const count = await onSubmit({
         start_date: startDate,
         start_time: startTime,
         end_time: endTime,
@@ -81,7 +82,7 @@ export const SpecialInstructionModal: React.FC<SpecialInstructionModalProps> = (
         status_id: statusId,
         memo,
       });
-      onClose();
+      setSuccessCount(count ?? DAYS);
     } catch {
       // Error handled by parent
     } finally {
@@ -102,6 +103,28 @@ export const SpecialInstructionModal: React.FC<SpecialInstructionModalProps> = (
           </button>
         </div>
 
+        {successCount !== null ? (
+          <div className="p-10 flex flex-col items-center gap-4 text-center">
+            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
+              <CheckCircle2 className="w-9 h-9 text-green-500" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-gray-800">一括登録が完了しました</p>
+              <p className="text-sm text-gray-500 mt-1">
+                <span className="font-bold text-indigo-600">{successCount}件</span>の訪問予定を登録しました
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                {startDate} 〜 {endDateDisplay}
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="mt-2 px-8 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition-colors"
+            >
+              閉じる
+            </button>
+          </div>
+        ) : (
         <div className="p-5 space-y-5">
           <div className="bg-indigo-50/60 border border-indigo-100 rounded-xl p-3 text-sm text-indigo-700">
             指定された期間（土日祝含む）に対して、毎日同じ内容の訪問予定を一括作成します。
@@ -203,6 +226,7 @@ export const SpecialInstructionModal: React.FC<SpecialInstructionModalProps> = (
             この期間で一括生成
           </button>
         </div>
+        )}
       </div>
     </div>
   );

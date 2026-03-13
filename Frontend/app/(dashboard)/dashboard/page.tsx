@@ -333,15 +333,14 @@ function DashboardContent() {
   const handleSubmitSpecialInstruction = async (data: {
     start_date: string; start_time: string; end_time: string; assigned_user_ids: string[];
     patient_name: string; visit_address?: string; status_id: string; memo?: string;
-  }) => {
+  }): Promise<number | undefined> => {
     try {
       const result = await scheduleService.bulkSpecialInstruction({
         company_id: currentUser?.company_id || undefined,
         ...data,
       });
-      setSpecialInstructionData(null);
-      showToast(`${result.created_count}件の訪問予定を一括登録しました`);
       await refreshVisits();
+      return result.created_count;
     } catch (err: any) {
       showToast(`一括登録に失敗しました: ${err.message || '不明なエラー'}`, 'error');
       throw err;
@@ -358,8 +357,6 @@ function DashboardContent() {
         company_id: currentUser?.company_id || undefined,
         ...data,
       });
-      setIsBulkRecurringOpen(false);
-      showToast('定期訪問を登録しました');
       await refreshVisits();
     } catch (err: any) {
       showToast(`登録に失敗しました: ${err.message || '不明なエラー'}`, 'error');

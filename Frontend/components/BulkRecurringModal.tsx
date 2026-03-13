@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { X, RefreshCw, Calendar, Clock, MapPin, User, Users, FileText, Loader2 } from 'lucide-react';
+import { X, RefreshCw, Calendar, Clock, MapPin, User, Users, FileText, Loader2, CheckCircle2 } from 'lucide-react';
 import { getColorStyles } from '@/lib/utils';
 import { Staff, CompanySettings } from '@/lib/types';
 
@@ -52,6 +52,7 @@ export const BulkRecurringModal: React.FC<BulkRecurringModalProps> = ({
   const [statusId, setStatusId] = useState(statuses[0]?.status_id || '');
   const [memo, setMemo] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [staffSearch, setStaffSearch] = useState('');
   const [isStaffDropdownOpen, setIsStaffDropdownOpen] = useState(false);
 
@@ -86,7 +87,7 @@ export const BulkRecurringModal: React.FC<BulkRecurringModalProps> = ({
         memo: memo || undefined,
         assigned_user_ids: selectedStaffIds,
       });
-      onClose();
+      setIsSuccess(true);
     } catch {
       // Error handled by parent
     } finally {
@@ -110,6 +111,29 @@ export const BulkRecurringModal: React.FC<BulkRecurringModalProps> = ({
           </button>
         </div>
 
+        {isSuccess ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-12 gap-4 text-center">
+            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
+              <CheckCircle2 className="w-9 h-9 text-green-500" />
+            </div>
+            <div>
+              <p className="text-lg font-bold text-gray-800">定期訪問を登録しました</p>
+              <p className="text-sm text-gray-500 mt-1">
+                <span className="font-bold text-teal-600">{patientName}</span> さんの定期訪問スケジュールを作成しました
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                {startDate} 〜 毎週{selectedDays.map(d => ['日','月','火','水','木','金','土'][d]).join('・')}曜日
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="mt-2 px-8 py-2.5 bg-teal-600 text-white rounded-lg text-sm font-bold hover:bg-teal-700 transition-colors"
+            >
+              閉じる
+            </button>
+          </div>
+        ) : (
+        <>
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           <div>
             <label className="block text-xs font-bold text-gray-500 mb-1.5">
@@ -318,6 +342,8 @@ export const BulkRecurringModal: React.FC<BulkRecurringModalProps> = ({
             登録
           </button>
         </div>
+        </>
+        )}
       </div>
     </div>
   );
