@@ -125,6 +125,7 @@ export const SpecialInstructionModal: React.FC<SpecialInstructionModalProps> = (
             </button>
           </div>
         ) : (
+        <>
         <div className="p-5 space-y-5">
           <div className="bg-indigo-50/60 border border-indigo-100 rounded-xl p-3 text-sm text-indigo-700">
             指定された期間（土日祝含む）に対して、毎日同じ内容の訪問予定を一括作成します。
@@ -226,6 +227,7 @@ export const SpecialInstructionModal: React.FC<SpecialInstructionModalProps> = (
             この期間で一括生成
           </button>
         </div>
+        </>
         )}
       </div>
     </div>
