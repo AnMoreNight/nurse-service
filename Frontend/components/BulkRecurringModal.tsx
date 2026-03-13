@@ -66,6 +66,8 @@ export const BulkRecurringModal: React.FC<BulkRecurringModalProps> = ({
     setSelectedStaffIds(prev =>
       prev.includes(staffId) ? prev.filter(id => id !== staffId) : [...prev, staffId]
     );
+    setIsStaffDropdownOpen(false);
+    setStaffSearch('');
   };
 
   const filteredStaff = staffList.filter(s =>
