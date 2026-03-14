@@ -70,6 +70,40 @@ export const BulkRecurringModal: React.FC<BulkRecurringModalProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isStaffDropdownOpen]);
 
+  const DURATIONS = [30, 40, 60, 90, 120];
+
+  const currentDurationMins = (() => {
+    if (!startTime || !endTime) return 0;
+    const [sh, sm] = startTime.split(':').map(Number);
+    const [eh, em] = endTime.split(':').map(Number);
+    let diff = (eh * 60 + em) - (sh * 60 + sm);
+    if (diff < 0) diff += 24 * 60;
+    return diff;
+  })();
+
+  const handleStartTimeChange = (newStartTime: string) => {
+    setStartTime(newStartTime);
+    if (!newStartTime || !endTime) return;
+    const [oldH, oldM] = startTime.split(':').map(Number);
+    const [endH, endM] = endTime.split(':').map(Number);
+    let duration = (endH * 60 + endM) - (oldH * 60 + oldM);
+    if (duration < 0) duration += 24 * 60;
+    const [newH, newM] = newStartTime.split(':').map(Number);
+    const newEndMins = newH * 60 + newM + duration;
+    const finalH = Math.floor(newEndMins / 60) % 24;
+    const finalM = newEndMins % 60;
+    setEndTime(`${String(finalH).padStart(2, '0')}:${String(finalM).padStart(2, '0')}`);
+  };
+
+  const applyDuration = (mins: number) => {
+    if (!startTime) return;
+    const [h, m] = startTime.split(':').map(Number);
+    const totalMins = h * 60 + m + mins;
+    const newH = Math.floor(totalMins / 60) % 24;
+    const newM = totalMins % 60;
+    setEndTime(`${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`);
+  };
+
   const toggleDay = (day: number) => {
     setSelectedDays(prev =>
       prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
@@ -199,7 +233,7 @@ export const BulkRecurringModal: React.FC<BulkRecurringModalProps> = ({
                 <input
                   type="time"
                   value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
+                  onChange={(e) => handleStartTimeChange(e.target.value)}
                   className="flex-1 px-2 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none bg-white text-sm"
                 />
                 <span className="text-gray-400 text-xs">〜</span>
@@ -209,6 +243,22 @@ export const BulkRecurringModal: React.FC<BulkRecurringModalProps> = ({
                   onChange={(e) => setEndTime(e.target.value)}
                   className="flex-1 px-2 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none bg-white text-sm"
                 />
+              </div>
+              <div className="flex gap-1.5 mt-2">
+                {DURATIONS.map(mins => (
+                  <button
+                    key={mins}
+                    type="button"
+                    onClick={() => applyDuration(mins)}
+                    className={`px-2 py-1 text-xs rounded-md border transition-colors ${
+                      currentDurationMins === mins
+                        ? 'bg-teal-600 text-white border-teal-600'
+                        : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-100'
+                    }`}
+                  >
+                    {mins}分
+                  </button>
+                ))}
               </div>
             </div>
           </div>
