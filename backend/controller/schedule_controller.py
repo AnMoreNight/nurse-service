@@ -131,43 +131,73 @@ class ScheduleController:
         day_of_week: list[int], status_id: UUID, memo: str, assigned_user_ids: list[UUID]
     ):
         base_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
-        start_dt = datetime.combine(base_date, datetime.strptime(start_time_str, "%H:%M").time())
-        end_dt = datetime.combine(base_date, datetime.strptime(end_time_str, "%H:%M").time())
+        start_time_obj = datetime.strptime(start_time_str, "%H:%M").time()
+        end_time_obj = datetime.strptime(end_time_str, "%H:%M").time()
 
-        rule = RecurringRule(
-            frequency="weekly",
-            day_of_week=day_of_week,
-            interval=1,
-            start_date=base_date,
-            end_date=None,
-        )
-        db.add(rule)
-        await db.flush()
+        normalized_days = sorted({int(d) for d in (day_of_week or []) if 0 <= int(d) <= 6})
+        if not normalized_days:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="day_of_week must contain at least one weekday"
+            )
 
-        recurring_series_id = uuid4()
-        schedule = Schedule(
-            company_id=company_id,
-            patient_name=patient_name,
-            visit_address=visit_address,
-            start_time=start_dt,
-            end_time=end_dt,
-            status_id=status_id,
-            memo=memo,
-            recurring_rule_id=rule.rule_id,
-            recurring_series_id=recurring_series_id,
-            recurrence_index=0,
-            is_exception=False,
-        )
-        db.add(schedule)
-        await db.flush()
+        # Use JS weekday convention to match frontend: 0=Sun .. 6=Sat
+        base_js_dow = (base_date.weekday() + 1) % 7
+        created_series = []
 
-        for user_id in assigned_user_ids:
-            db.add(ScheduleAssignment(schedule_id=schedule.schedule_id, user_id=user_id))
+        for dow in normalized_days:
+            offset = (dow - base_js_dow) % 7
+            series_start_date = base_date + timedelta(days=offset)
+            start_dt = datetime.combine(series_start_date, start_time_obj)
+            end_dt = datetime.combine(series_start_date, end_time_obj)
+
+            # Create one independent weekly series per weekday so future updates
+            # only affect that weekday's schedules.
+            rule = RecurringRule(
+                frequency="weekly",
+                day_of_week=[dow],
+                interval=1,
+                start_date=series_start_date,
+                end_date=None,
+            )
+            db.add(rule)
+            await db.flush()
+
+            recurring_series_id = uuid4()
+            schedule = Schedule(
+                company_id=company_id,
+                patient_name=patient_name,
+                visit_address=visit_address,
+                start_time=start_dt,
+                end_time=end_dt,
+                status_id=status_id,
+                memo=memo,
+                recurring_rule_id=rule.rule_id,
+                recurring_series_id=recurring_series_id,
+                recurrence_index=0,
+                is_exception=False,
+            )
+            db.add(schedule)
+            await db.flush()
+
+            for user_id in assigned_user_ids:
+                db.add(ScheduleAssignment(schedule_id=schedule.schedule_id, user_id=user_id))
+
+            created_series.append({
+                "schedule_id": str(schedule.schedule_id),
+                "recurring_series_id": str(recurring_series_id),
+                "day_of_week": dow,
+            })
 
         await db.commit()
+
+        # Backward-compatible fields retained (first created series)
+        first = created_series[0]
         return {
-            "schedule_id": str(schedule.schedule_id),
-            "recurring_series_id": str(recurring_series_id),
+            "created_count": len(created_series),
+            "items": created_series,
+            "schedule_id": first["schedule_id"],
+            "recurring_series_id": first["recurring_series_id"],
         }
 
     @staticmethod
@@ -549,9 +579,32 @@ class ScheduleController:
                     except (ValueError, TypeError):
                         new_end_date = original_end_date
 
+                # Legacy bulk-recurring data may store multiple weekdays in one weekly series.
+                # When editing "future" from one occurrence, split only that weekday into
+                # the updated series and keep the remaining weekdays unchanged.
+                original_days = sorted(set(original_rule.day_of_week or []))
+                requested_days_raw = rd.get('day_of_week', original_rule.day_of_week)
+                if requested_days_raw is None:
+                    requested_days = []
+                elif isinstance(requested_days_raw, list):
+                    requested_days = sorted(set(requested_days_raw))
+                else:
+                    requested_days = [requested_days_raw]
+
+                clicked_day = (occurrence_date.weekday() + 1) % 7
+                split_by_clicked_weekday = (
+                    original_rule.frequency == "weekly"
+                    and len(original_days) > 1
+                    and rd.get('frequency', original_rule.frequency) == "weekly"
+                    and requested_days == original_days
+                    and clicked_day in original_days
+                )
+
+                effective_new_day_of_week = [clicked_day] if split_by_clicked_weekday else new_day_of_week
+
                 new_rule = RecurringRule(
                     frequency=rd.get('frequency', original_rule.frequency),
-                    day_of_week=new_day_of_week,
+                    day_of_week=effective_new_day_of_week,
                     week_of_month=new_week_of_month,
                     day_of_week_monthly=rd.get('day_of_week_monthly', original_rule.day_of_week_monthly),
                     month_of_year=rd.get('month_of_year', original_rule.month_of_year),
@@ -592,6 +645,48 @@ class ScheduleController:
                 for user_id in user_ids_to_assign:
                     db.add(ScheduleAssignment(schedule_id=new_schedule.schedule_id, user_id=user_id))
 
+                remaining_days = [d for d in original_days if d != clicked_day] if split_by_clicked_weekday else []
+                remaining_series_id = None
+
+                if remaining_days:
+                    remaining_rule = RecurringRule(
+                        frequency=original_rule.frequency,
+                        day_of_week=remaining_days,
+                        week_of_month=original_rule.week_of_month,
+                        day_of_week_monthly=original_rule.day_of_week_monthly,
+                        month_of_year=original_rule.month_of_year,
+                        day_of_month=original_rule.day_of_month,
+                        interval=original_rule.interval,
+                        start_date=occurrence_date,
+                        end_date=original_end_date,
+                    )
+                    db.add(remaining_rule)
+                    await db.flush()
+
+                    remaining_series_id = uuid4()
+                    remaining_start = datetime.combine(occurrence_date, schedule.start_time.time())
+                    remaining_end = datetime.combine(occurrence_date, schedule.end_time.time())
+
+                    remaining_schedule = Schedule(
+                        company_id=schedule.company_id,
+                        patient_id=schedule.patient_id,
+                        patient_name=schedule.patient_name,
+                        visit_address=schedule.visit_address,
+                        start_time=remaining_start,
+                        end_time=remaining_end,
+                        status_id=schedule.status_id,
+                        memo=schedule.memo,
+                        recurring_rule_id=remaining_rule.rule_id,
+                        recurring_series_id=remaining_series_id,
+                        recurrence_index=0,
+                        is_exception=False,
+                    )
+                    db.add(remaining_schedule)
+                    await db.flush()
+
+                    for user_id in [a.user_id for a in schedule.assignments]:
+                        db.add(ScheduleAssignment(schedule_id=remaining_schedule.schedule_id, user_id=user_id))
+
                 # Step 5: Migrate exceptions from old series to new series
                 # Exceptions on/after occurrence_date belong to the new series now
                 old_series_id = schedule.recurring_series_id
@@ -606,7 +701,11 @@ class ScheduleController:
                     for exc in exceptions_result.scalars().all():
                         exc_date = exc.start_time.date() if isinstance(exc.start_time, datetime) else exc.start_time
                         if exc_date >= occurrence_date:
-                            exc.recurring_series_id = new_series_id
+                            if remaining_series_id:
+                                exc_dow = (exc_date.weekday() + 1) % 7
+                                exc.recurring_series_id = remaining_series_id if exc_dow in remaining_days else new_series_id
+                            else:
+                                exc.recurring_series_id = new_series_id
 
         
         elif update_scope == "future" and schedule.is_exception and not schedule.recurring_rule_id:

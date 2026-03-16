@@ -315,8 +315,8 @@ function DashboardContent() {
       date: currentDate, // Use current date instead of empty
       startTime: visit.startTime, // Copy time
       endTime: visit.endTime, // Copy time
-      staffIds: [],
-      staffMembers: [],
+      staffIds: [...visit.staffIds],
+      staffMembers: visit.staffMembers ? [...visit.staffMembers] : filteredStaff.filter(s => visit.staffIds.includes(s.id)),
       recurrence: visit.recurrence, // Copy recurrence setting
       recurrenceRule: visit.recurrenceRule, // Copy recurrence rule
     });

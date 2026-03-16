@@ -117,5 +117,10 @@ export const scheduleService = {
     status_id: string;
     memo?: string;
     assigned_user_ids: string[];
-  }) => apiClient.post<{ schedule_id: string; recurring_series_id: string }>('/schedules/bulk-recurring', data),
+  }) => apiClient.post<{
+    created_count: number;
+    items: { schedule_id: string; recurring_series_id: string; day_of_week: number }[];
+    schedule_id: string;
+    recurring_series_id: string;
+  }>('/schedules/bulk-recurring', data),
 };

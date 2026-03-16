@@ -246,7 +246,7 @@ class BulkRecurringCreate(BaseModel):
     start_date: str  # YYYY-MM-DD
     start_time: str  # HH:MM
     end_time: str    # HH:MM
-    day_of_week: list[int]  # 0=Mon, 1=Tue, ... 6=Sun
+    day_of_week: list[int]  # 0=Sun, 1=Mon, ... 6=Sat
     status_id: UUID
     memo: Optional[str] = None
     assigned_user_ids: list[UUID]
