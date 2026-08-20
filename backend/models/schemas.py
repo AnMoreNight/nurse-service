@@ -286,6 +286,7 @@ class ScheduleUpdate(BaseModel):
     assigned_user_ids: Optional[list[UUID]] = None
     recurring_rule: Optional[RecurringRuleCreate] = None
     update_scope: Optional[str] = "this"  # this, future, all
+    occurrence_date: Optional[str] = None  # YYYY-MM-DD date of the occurrence being edited (for scope="this")
 
 class ScheduleCopy(BaseModel):
     patient_name: str

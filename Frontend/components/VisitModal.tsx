@@ -13,7 +13,7 @@ interface VisitModalProps {
     statuses: { status_id: string; name: string; color: string; }[];
     companySettings: CompanySettings;
     onClose: () => void;
-    onUpdate: (updatedVisit: VisitWithStaff, scope?: RecurrenceScope) => void | Promise<void>;
+    onUpdate: (updatedVisit: VisitWithStaff, scope?: RecurrenceScope, occurrenceDate?: string) => void | Promise<void>;
     onDelete: (visitId: string, scope?: RecurrenceScope, occurrenceDate?: string) => void;
     onDuplicate?: (visit: VisitWithStaff) => void;
     onAiQuery?: (data: { patientName: string; address: string; date: string; staffIds: string[] }) => void;
@@ -198,7 +198,10 @@ export const VisitModal: React.FC<VisitModalProps> = ({
         onClose();
 
         try {
-            await onUpdate(updatedVisit, scope);
+            // Pass the occurrence's original date (before this edit) so scope="this"
+            // edits that move a recurring occurrence to a different date can exclude
+            // the original date instead of leaving a duplicate behind.
+            await onUpdate(updatedVisit, scope, visit.date);
         } catch (err) {
             console.error('Failed to save:', err);
         }

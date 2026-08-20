@@ -368,7 +368,7 @@ class ScheduleController:
     
     @staticmethod
     async def update_schedule(db: AsyncSession, schedule_id: UUID, company_id: UUID,
-                             update_scope: str = "this", **updates):
+                             update_scope: str = "this", occurrence_date: Optional[str] = None, **updates):
         result = await db.execute(
             select(Schedule).options(
                 selectinload(Schedule.assignments),
@@ -470,17 +470,31 @@ class ScheduleController:
             return {"message": "Schedule updated with recurrence", "schedule_id": str(schedule_id)}
         
         if update_scope == "this":
-            # Check if this is a recurring schedule (not an exception) with a new occurrence date
-            occurrence_date = None
+            # Determine the new occurrence date from the incoming start_time (if changed)
+            new_occurrence_date = None
             if 'start_time' in updates and updates['start_time']:
                 new_start_time = updates['start_time']
                 if isinstance(new_start_time, datetime):
-                    occurrence_date = new_start_time.date()
+                    new_occurrence_date = new_start_time.date()
                 elif isinstance(new_start_time, str):
-                    occurrence_date = datetime.fromisoformat(new_start_time.replace('Z', '+00:00')).date()
-            
+                    new_occurrence_date = datetime.fromisoformat(new_start_time.replace('Z', '+00:00')).date()
+
+            # Determine the date of the occurrence actually being edited (before this
+            # update), so we can tell whether it's being moved to a different date.
+            # Expanded (virtual) occurrences all share the base schedule's schedule_id,
+            # so schedule.start_time is only correct for the anchor occurrence - the
+            # client must tell us which date it clicked on via occurrence_date.
+            original_occurrence_date = None
+            if occurrence_date:
+                try:
+                    original_occurrence_date = datetime.strptime(occurrence_date, "%Y-%m-%d").date()
+                except (ValueError, TypeError):
+                    original_occurrence_date = None
+            if not original_occurrence_date:
+                original_occurrence_date = schedule.start_time.date() if isinstance(schedule.start_time, datetime) else schedule.start_time
+
             # If this is a recurring schedule (has rule), create an exception
-            if schedule.recurring_rule_id and not schedule.is_exception and occurrence_date:
+            if schedule.recurring_rule_id and not schedule.is_exception and new_occurrence_date:
                 # Create a new exception schedule for this specific occurrence
                 exception_schedule = Schedule(
                     company_id=schedule.company_id,
@@ -498,16 +512,36 @@ class ScheduleController:
                 )
                 db.add(exception_schedule)
                 await db.flush()
-                
+
+                # If the occurrence moved to a different date, the base recurrence rule
+                # would otherwise keep regenerating the original date too. Add a deleted
+                # placeholder exception to exclude it, same as delete_schedule() does.
+                if original_occurrence_date and original_occurrence_date != new_occurrence_date:
+                    deleted_placeholder = Schedule(
+                        company_id=schedule.company_id,
+                        patient_id=schedule.patient_id,
+                        patient_name=schedule.patient_name,
+                        visit_address=schedule.visit_address,
+                        start_time=datetime.combine(original_occurrence_date, datetime.min.time()),
+                        end_time=datetime.combine(original_occurrence_date, datetime.min.time()),
+                        status_id=None,
+                        memo="__deleted__",
+                        recurring_rule_id=None,
+                        recurring_series_id=schedule.recurring_series_id,
+                        recurrence_index=0,
+                        is_exception=True
+                    )
+                    db.add(deleted_placeholder)
+
                 # Add assignments to exception
                 if assigned_user_ids is not None:
                     user_ids_to_assign = assigned_user_ids
                 else:
                     user_ids_to_assign = [a.user_id for a in schedule.assignments]
-                
+
                 for user_id in user_ids_to_assign:
                     db.add(ScheduleAssignment(schedule_id=exception_schedule.schedule_id, user_id=user_id))
-                
+
                 await db.commit()
                 return {"message": "Schedule updated", "schedule_id": str(exception_schedule.schedule_id)}
             else:

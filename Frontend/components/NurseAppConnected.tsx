@@ -304,6 +304,7 @@ export default function NurseAppConnected() {
       if (updates.notes !== undefined) updateData.memo = updates.notes;
       if (updates.staffIds) updateData.assigned_user_ids = updates.staffIds;
       if (updates.scope) updateData.update_scope = updates.scope;
+      if (updates.occurrenceDate) updateData.occurrence_date = updates.occurrenceDate;
 
       if (updates.date || updates.startTime || updates.endTime) {
         const visit = visits.find(v => v.id === visitId);
@@ -446,6 +447,7 @@ export default function NurseAppConnected() {
         start_time: newStartTimeISO,
         end_time: newEndTimeISO,
         update_scope: scope || 'this',
+        occurrence_date: visit.date,
       });
 
       showToast('スケジュールを移動しました');
@@ -848,11 +850,11 @@ export default function NurseAppConnected() {
           statuses={statuses}
           companySettings={companySettings}
           onClose={() => setSelectedVisit(null)}
-          onUpdate={async (updatedVisit, scope) => {
+          onUpdate={async (updatedVisit, scope, occurrenceDate) => {
             if (updatedVisit.id.startsWith('new_')) {
               await handleAddVisit(updatedVisit);
             } else {
-              await handleUpdateVisit(updatedVisit.id, { ...updatedVisit, scope });
+              await handleUpdateVisit(updatedVisit.id, { ...updatedVisit, scope, occurrenceDate });
             }
             setSelectedVisit(null);
           }}

@@ -42,10 +42,11 @@ async def update_schedule(schedule_id: UUID, req: ScheduleUpdate, request: Reque
     user = await require_company_admin(request, db)  # Admin only
     update_data = req.model_dump(exclude_unset=True)
     update_scope = update_data.pop('update_scope', 'this')
+    occurrence_date = update_data.pop('occurrence_date', None)
     # SUPER_ADMIN can specify company_id for impersonation, others use their own
     company_id = update_data.pop('company_id', None)
     effective_company_id = company_id if (user["role"] == "SUPER_ADMIN" and company_id) else user["company_id"]
-    return await ScheduleController.update_schedule(db, schedule_id, effective_company_id, update_scope, **update_data)
+    return await ScheduleController.update_schedule(db, schedule_id, effective_company_id, update_scope, occurrence_date, **update_data)
 
 @router.delete("/{schedule_id}")
 async def delete_schedule(

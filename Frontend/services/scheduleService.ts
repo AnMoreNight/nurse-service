@@ -55,6 +55,7 @@ export interface ScheduleUpdate {
   assigned_user_ids?: string[];
   recurring_rule?: RecurringRule;
   update_scope?: 'this' | 'future' | 'all';
+  occurrence_date?: string;
 }
 
 export const scheduleService = {
