@@ -215,9 +215,9 @@ class ScheduleController:
             query_start = date.today() - timedelta(days=30)
             query_end = date.today() + timedelta(days=365)
 
-        # Safety limit: cap at 1 year expansion
-        if (query_end - query_start).days > 365:
-            query_end = query_start + timedelta(days=365)
+        # Safety limit: cap at 3 years expansion (search may span the past 2 years)
+        if (query_end - query_start).days > 3 * 365:
+            query_end = query_start + timedelta(days=3 * 365)
 
         # Use selectinload instead of joinedload to avoid cartesian product
         # selectinload issues separate IN queries which is faster for 1-to-many
@@ -762,14 +762,44 @@ class ScheduleController:
                     Schedule.company_id == company_id
                 )
             )
-            series_schedules = all_in_series.scalars().all()
+            # Deleted-occurrence placeholders only mark excluded dates; leave them untouched
+            series_schedules = [s for s in all_in_series.scalars().all() if s.memo != "__deleted__"]
             series_schedule_ids = [s.schedule_id for s in series_schedules]
-            
+
             for s in series_schedules:
                 for key, value in updates.items():
-                    if value is not None and hasattr(s, key):
-                        setattr(s, key, value)
-            
+                    if value is None or not hasattr(s, key):
+                        continue
+                    if key in ('start_time', 'end_time') and isinstance(value, datetime):
+                        # Apply only the new time of day; each record keeps its own date so
+                        # the series anchor and moved occurrences don't collapse onto one day
+                        value = datetime.combine(getattr(s, key).date(), value.time())
+                    setattr(s, key, value)
+
+            # Apply recurrence rule changes (e.g. weekly -> biweekly) to the series rule
+            if recurring_rule_data and schedule.recurring_rule:
+                rule = schedule.recurring_rule
+                week_of_month_val = recurring_rule_data.get('week_of_month')
+                if week_of_month_val is not None:
+                    if isinstance(week_of_month_val, list):
+                        week_of_month_val = week_of_month_val if len(week_of_month_val) > 0 else None
+                    else:
+                        week_of_month_val = [week_of_month_val]
+
+                day_of_week_val = recurring_rule_data.get('day_of_week')
+                if day_of_week_val is not None and isinstance(day_of_week_val, list) and len(day_of_week_val) == 0:
+                    day_of_week_val = None
+
+                rule.frequency = recurring_rule_data.get('frequency', rule.frequency)
+                rule.interval = recurring_rule_data.get('interval', 1)
+                rule.day_of_week = day_of_week_val
+                rule.week_of_month = week_of_month_val
+                rule.day_of_week_monthly = recurring_rule_data.get('day_of_week_monthly')
+                rule.day_of_month = recurring_rule_data.get('day_of_month')
+                # Keep the existing end date unless a new one is given (a split series must stay ended)
+                if recurring_rule_data.get('end_date'):
+                    rule.end_date = datetime.strptime(recurring_rule_data['end_date'], "%Y-%m-%d").date()
+
             if assigned_user_ids is not None:
                 await db.execute(
                     delete(ScheduleAssignment).where(

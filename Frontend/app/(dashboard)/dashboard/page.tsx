@@ -40,6 +40,8 @@ function DashboardContent() {
     refreshData,
     refreshStaff,
     refreshVisits,
+    setVisitDate,
+    fetchVisitsInRange,
     refreshShifts,
     refreshStatuses,
     addSchedule,
@@ -91,6 +93,11 @@ function DashboardContent() {
   useEffect(() => {
     localStorage.setItem('dashboard_currentDate', currentDate);
   }, [currentDate]);
+
+  // Load visits around the shown date so past dates are visible too
+  useEffect(() => {
+    setVisitDate(currentDate);
+  }, [currentDate, setVisitDate]);
 
   const companyId = currentUser?.company_id;
 
@@ -605,7 +612,7 @@ function DashboardContent() {
             </div>
             <div className="overflow-auto max-h-[calc(90vh-88px)]">
               <SearchVisitsModal
-                onClose={() => window.history.back()} allVisits={allVisits} staffList={filteredStaff}
+                onClose={() => window.history.back()} fetchVisits={fetchVisitsInRange} staffList={filteredStaff}
                 companySettings={companySettings} onSelectVisit={(visit) => { setCurrentDate(visit.date); setSelectedVisit(visit); }}
               />
             </div>

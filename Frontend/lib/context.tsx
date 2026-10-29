@@ -8,6 +8,7 @@ import { scheduleService, Schedule } from '@/services/scheduleService';
 import { shiftService, Shift } from '@/services/shiftService';
 import { statusService, ScheduleStatus } from '@/services/statusService';
 import { createDateTime } from '@/lib/timeUtils';
+import { toLocalISOString } from '@/lib/constants';
 
 // Default settings for fallback
 const DEFAULT_SETTINGS: CompanySettings = {
@@ -45,6 +46,8 @@ interface AppContextType {
   refreshData: (silent?: boolean) => Promise<void>;
   refreshStaff: () => Promise<void>;
   refreshVisits: () => Promise<void>;
+  setVisitDate: (date: string) => void;
+  fetchVisitsInRange: (startDate: string, endDate: string) => Promise<Visit[]>;
   refreshShifts: () => Promise<void>;
   refreshStatuses: () => Promise<void>;
 
@@ -150,6 +153,16 @@ function shiftToAssignment(shift: Shift): ShiftAssignment {
   };
 }
 
+// Date window of visits to load for the date shown on screen:
+// from the start of the previous month to the end of the month 12 months later
+function visitRangeFor(dateStr: string): { start: string; end: string } {
+  const [y, m] = dateStr.split('-').map(Number);
+  return {
+    start: toLocalISOString(new Date(y, m - 2, 1)),
+    end: toLocalISOString(new Date(y, m + 12, 0)),
+  };
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   // Auth state
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
@@ -179,6 +192,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const lastDataHashRef = useRef<string>('');
   const [isPollingActive, setIsPollingActive] = useState(false);
 
+  // Loaded visit window; follows the date shown on the schedule screen
+  const visitRangeRef = useRef(visitRangeFor(toLocalISOString(new Date())));
+
   // Generate hash of current data for change detection
   const generateDataHash = useCallback(() => {
     const visitSummary = visits.slice(0, 50).map(v =>
@@ -205,12 +221,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       try {
         // Quick check - get data counts/timestamps without full refresh
+        const range = visitRangeRef.current;
         const [staffData, scheduleData, shiftData, statusData] = await Promise.all([
           userService.getAll(currentUser.company_id),
-          scheduleService.getAll(undefined, undefined, undefined, currentUser.company_id),
+          scheduleService.getAll(range.start, range.end, undefined, currentUser.company_id),
           shiftService.getAll(),
           statusService.getAll(currentUser.company_id),
         ]);
+
+        // The user moved to another date window while this poll was in flight
+        if (range !== visitRangeRef.current) return;
 
         // Generate hash of new data - include enough detail to detect moves/updates
         const visitSummary = scheduleData.slice(0, 50).map((s: any) =>
@@ -386,15 +406,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refreshVisits = useCallback(async () => {
     if (!currentUser || !localStorage.getItem('token')) return;
+    const range = visitRangeRef.current;
     setActiveRefreshes(c => c + 1);
     try {
-      const schedules = await scheduleService.getAll(undefined, undefined, undefined, currentUser.company_id);
+      const schedules = await scheduleService.getAll(range.start, range.end, undefined, currentUser.company_id);
+      // Ignore a response for a date window the user has already left
+      if (range !== visitRangeRef.current) return;
       setVisits(schedules.map(scheduleToVisit));
     } catch (err: any) {
       setError(err.message || 'Failed to load visits');
     } finally {
       setActiveRefreshes(c => Math.max(0, c - 1));
     }
+  }, [currentUser]);
+
+  // Called by the schedule screen when the shown date changes; reloads only
+  // when the date falls in a different window
+  const setVisitDate = useCallback((date: string) => {
+    const next = visitRangeFor(date);
+    const current = visitRangeRef.current;
+    if (next.start === current.start && next.end === current.end) return;
+    visitRangeRef.current = next;
+    refreshVisits();
+  }, [refreshVisits]);
+
+  // One-off load for screens with their own date range (e.g. search)
+  const fetchVisitsInRange = useCallback(async (startDate: string, endDate: string) => {
+    if (!currentUser) return [];
+    const schedules = await scheduleService.getAll(startDate, endDate, undefined, currentUser.company_id);
+    return schedules.map(scheduleToVisit);
   }, [currentUser]);
 
   const refreshShifts = useCallback(async () => {
@@ -765,6 +805,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       refreshData,
       refreshStaff,
       refreshVisits,
+      setVisitDate,
+      fetchVisitsInRange,
       refreshShifts,
       refreshStatuses,
       addStaff,
