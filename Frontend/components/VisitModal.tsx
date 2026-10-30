@@ -247,6 +247,8 @@ export const VisitModal: React.FC<VisitModalProps> = ({
     const getRecurrenceMode = () => {
         if (recurrence === 'none') return 'none';
         if (recurrence === 'custom' && recurrenceRule) {
+            // Biweekly is stored as weekly with interval 2
+            if (recurrenceRule.frequency === 'weekly' && recurrenceRule.interval === 2) return 'biweekly';
             return recurrenceRule.frequency;
         }
         return 'none';
@@ -270,11 +272,13 @@ export const VisitModal: React.FC<VisitModalProps> = ({
             const dateObj = new Date(y, m - 1, d);
             const dayOfWeek = dateObj.getDay();
             const dayOfMonth = dateObj.getDate();
+            const isBiweekly = mode === 'biweekly';
+            const frequency = (isBiweekly ? 'weekly' : mode) as 'daily' | 'weekly' | 'monthly' | 'yearly';
 
             setRecurrenceRule({
-                frequency: mode as 'daily' | 'weekly' | 'monthly' | 'yearly',
-                interval: 1,
-                weekDays: mode === 'weekly' ? [dayOfWeek] : [],
+                frequency,
+                interval: isBiweekly ? 2 : 1,
+                weekDays: frequency === 'weekly' ? [dayOfWeek] : [],
                 endType: 'never',
                 weekNos: [],
                 // For monthly, default to "by date" mode
@@ -549,7 +553,7 @@ export const VisitModal: React.FC<VisitModalProps> = ({
                             <div className="relative">
                                 <Repeat className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                                 <div className="w-full pl-9 pr-3 py-2 border rounded-lg bg-gray-100 text-gray-700 text-sm">
-                                    {recurrenceRule.frequency === 'weekly' && `毎週 (${weekDayLabels[recurrenceRule.weekDays?.[0]] || ''}曜日)`}
+                                    {recurrenceRule.frequency === 'weekly' && `${recurrenceRule.interval === 2 ? '隔週' : '毎週'} (${weekDayLabels[recurrenceRule.weekDays?.[0]] || ''}曜日)`}
                                     {recurrenceRule.frequency === 'monthly' && '毎月'}
                                     {recurrenceRule.frequency === 'yearly' && '毎年'}
                                     {recurrenceRule.frequency === 'daily' && '毎日'}
@@ -570,6 +574,7 @@ export const VisitModal: React.FC<VisitModalProps> = ({
                                 >
                                     <option value="none">しない</option>
                                     <option value="weekly">毎週{date ? ` (${getDayOfWeekLabel()}曜日)` : ''}</option>
+                                    <option value="biweekly">隔週（2週間ごと）{date ? ` (${getDayOfWeekLabel()}曜日)` : ''}</option>
                                     <option value="monthly">毎月</option>
                                     <option value="yearly">毎年</option>
                                 </select>

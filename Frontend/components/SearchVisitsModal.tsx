@@ -1,21 +1,21 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
-import { VisitWithStaff, Staff, CompanySettings } from '@/lib/types';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Visit, VisitWithStaff, Staff, CompanySettings } from '@/lib/types';
 import { X, Search, Calendar, User, Clock, MapPin, ArrowRight } from 'lucide-react';
-import { checkVisitVisibility, toLocalISOString } from '@/lib/constants';
+import { toLocalISOString } from '@/lib/constants';
 import { getColorStyles } from '@/lib/utils';
 
 interface SearchVisitsModalProps {
     onClose: () => void;
-    allVisits: VisitWithStaff[];
+    fetchVisits: (startDate: string, endDate: string) => Promise<Visit[]>;
     staffList: Staff[];
     companySettings: CompanySettings;
     onSelectVisit: (visit: VisitWithStaff) => void;
 }
 
 export const SearchVisitsModal: React.FC<SearchVisitsModalProps> = ({
-    onClose, allVisits, staffList, companySettings, onSelectVisit
+    onClose, fetchVisits, staffList, companySettings, onSelectVisit
 }) => {
     // Default range: 1 month before to 3 months ahead
     const today = new Date();
@@ -27,6 +27,37 @@ export const SearchVisitsModal: React.FC<SearchVisitsModalProps> = ({
     const [startDate, setStartDate] = useState(toLocalISOString(defaultStart));
     const [endDate, setEndDate] = useState(toLocalISOString(defaultEnd));
     const [searchQuery, setSearchQuery] = useState('');
+    const [allVisits, setAllVisits] = useState<Visit[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [loadError, setLoadError] = useState(false);
+
+    // Load the selected period from the server so any past date can be searched
+    useEffect(() => {
+        if (!startDate || !endDate || startDate > endDate) {
+            setAllVisits([]);
+            return;
+        }
+        let cancelled = false;
+        const timer = setTimeout(async () => {
+            setIsLoading(true);
+            setLoadError(false);
+            try {
+                const visits = await fetchVisits(startDate, endDate);
+                if (!cancelled) setAllVisits(visits);
+            } catch {
+                if (!cancelled) {
+                    setAllVisits([]);
+                    setLoadError(true);
+                }
+            } finally {
+                if (!cancelled) setIsLoading(false);
+            }
+        }, 300);
+        return () => {
+            cancelled = true;
+            clearTimeout(timer);
+        };
+    }, [startDate, endDate, fetchVisits]);
 
     // Helper to remove all whitespace (half-width, full-width, tabs, etc.)
     const stripSpaces = (str: string) => str.replace(/\s+/g, '');
@@ -50,43 +81,35 @@ export const SearchVisitsModal: React.FC<SearchVisitsModalProps> = ({
         if (!startDate || !endDate) return [];
 
         const results: VisitWithStaff[] = [];
-        const start = new Date(startDate);
-        const end = new Date(endDate);
         // Remove spaces from the query for matching
         const normalizedQuery = stripSpaces(searchQuery.toLowerCase());
 
-        // Iterate through every day in the range to catch recurring instances
-        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            const currentDateStr = toLocalISOString(d);
+        // The server already expands recurring visits into dated occurrences
+        allVisits.forEach(visit => {
+            // 1. Check date range
+            if (visit.date < startDate || visit.date > endDate) return;
 
-            allVisits.forEach(visit => {
-                // 1. Check date visibility (Recurrence logic)
-                if (checkVisitVisibility(visit, currentDateStr)) {
+            // 2. Check Text Match (if query exists)
+            if (normalizedQuery) {
+                const textData = [
+                    visit.patientName || '',
+                    visit.address || '',
+                    visit.notes || '',
+                    visit.status || '',
+                    // Staff names
+                    staffList.filter(s => visit.staffIds.includes(s.id)).map(s => s.name).join('')
+                ].join(''); // Join without spaces
 
-                    // 2. Check Text Match (if query exists)
-                    if (normalizedQuery) {
-                        const textData = [
-                            visit.patientName || '',
-                            visit.address || '',
-                            visit.notes || '',
-                            visit.status || '',
-                            // Staff names
-                            staffList.filter(s => visit.staffIds.includes(s.id)).map(s => s.name).join('')
-                        ].join(''); // Join without spaces
+                // Normalize target text by removing spaces and converting to lowercase
+                if (!stripSpaces(textData.toLowerCase()).includes(normalizedQuery)) return;
+            }
 
-                        // Normalize target text by removing spaces and converting to lowercase
-                        if (!stripSpaces(textData.toLowerCase()).includes(normalizedQuery)) return;
-                    }
-
-                    // 3. Create Instance
-                    results.push({
-                        ...visit,
-                        date: currentDateStr, // Important: Overwrite with the specific instance date
-                        staffMembers: staffList.filter(s => visit.staffIds.includes(s.id))
-                    });
-                }
+            // 3. Create Instance
+            results.push({
+                ...visit,
+                staffMembers: staffList.filter(s => visit.staffIds.includes(s.id))
             });
-        }
+        });
 
         // Sort by date then time
         return results.sort((a, b) => {
@@ -159,7 +182,7 @@ export const SearchVisitsModal: React.FC<SearchVisitsModalProps> = ({
                             />
                         </div>
                         <div className="ml-auto text-xs font-bold text-gray-500">
-                            {searchResults.length} 件 ヒット
+                            {isLoading ? '読み込み中...' : `${searchResults.length} 件 ヒット`}
                         </div>
                     </div>
                 </div>
@@ -169,7 +192,9 @@ export const SearchVisitsModal: React.FC<SearchVisitsModalProps> = ({
                     {searchResults.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-gray-400">
                             <Search className="w-10 h-10 md:w-12 md:h-12 mb-2 opacity-20" />
-                            <p className="text-sm md:text-base">条件に一致する予定はありません</p>
+                            <p className="text-sm md:text-base">
+                                {isLoading ? '読み込み中...' : loadError ? '予定を読み込めませんでした。期間を変えて再度お試しください' : '条件に一致する予定はありません'}
+                            </p>
                         </div>
                     ) : (
                         <div className="space-y-2 md:space-y-3">
